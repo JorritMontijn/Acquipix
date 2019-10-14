@@ -6,42 +6,54 @@
 %% define paths
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
-strLogDir = 'E:\Jorrit\Files\Logs'; %where are the logs saved?
+strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 
-%% query user input
-%define output filename
-fprintf('\n%s started...\n',mfilename);
-thisDir = which(mfilename);
-intOffset = length(mfilename) + 2;
-strDir = thisDir(1:end-intOffset);
-fprintf('Saving logs in directory %s; loading textures from %s\n',strLogDir,strTexDir);
-strOldPath = cd(strLogDir);
-cd(strTexDir);
-cd(strOldPath);
-boolAcceptInput = false;
-while ~boolAcceptInput
-	strMouse = input('Block name and mouse (e.g., B3_MouseX): ', 's');
-	c = clock;
-	strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),mfilename,strMouse);
+
+%% query user input for recording name
+strRecording = input('Recording name (e.g., MouseX): ', 's');
+c = clock;
+strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
+
+%% initialize connection with SpikeGLX
+fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
+[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
+fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+
+%% check disk space available
+strDataDirSGL = GetDataDir(hSGL);
+jFileObj = java.io.File(strDataDirSGL);
+dblFreeB = jFileObj.getFreeSpace;
+dblFreeGB = dblFreeB/(1024^3);
+if dblFreeGB < 100
+	warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);
+end
+
+%% set output locations for logs
+try
+	%define output filename
+	strThisDir = which(mfilename);
+	intOffset = length(mfilename) + 2;
+	strDir = strThisDir(1:end-intOffset);
+	fprintf('Saving output in directory %s; loading textures from %s\n',strSessionDir,strTexDir);
+	strOldPath = cd(strTexDir);
+	cd(strOldPath);
 	if isa(strFilename,'char') && ~isempty(strFilename)
-		if exist([strLogDir filesep strFilename],'file') || exist([strLogDir filesep strFilename '.mat'],'file')
-			warning('off','backtrace')
-			warning([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
-			warning('on','backtrace')
-			strResp = input('Do you want to overwrite the file? (Y/N)','s');
-			if strcmpi(strResp,'Y')
-				boolAcceptInput = true;
-			else
-				boolAcceptInput = false;
-			end
-		else
-			boolAcceptInput = true;
+		%make directory
+		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
+		if ~exist(strOutputDir,'dir')
+			mkdir(strOutputDir);
+		end
+		strOldPath = cd(strOutputDir);
+		%check if file does not exist
+		if exist([strOutputDir filesep strFilename],'file') || exist([strOutputDir filesep strFilename '.mat'],'file')
+			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
 		end
 	end
+catch
+	CloseSGL(hSGL);
 end
-fprintf('Saving output to file "%s.mat"\n',strFilename);
 
 %% check if temporary directory exists, clean or make
 strTempDir = 'X:\JorritMontijn\TempObjects';
@@ -66,30 +78,26 @@ else
 end
 
 %% general parameters
+fprintf('Preparing variables...\n');
 %general variable definitions
-sDas = struct;
-sDas.dasno = 0;
 structEP = struct; %structureElectroPhysiology
 
 %get default settings in Set
-runSettingsEphys;
+intUseDaqDevice = 1; %set to 0 to skip I/O
 
 %assign filename
 structEP.strFile = mfilename;
 
-%Das Card variable
-intDasCard = 1; %0: debug; 1; new USB on Leonie's setup 2: old PCI on Leonie's setup
-
 %screen params
-structEP.debug = 0;
+structEP.debug = 1;
 
 %% stimulus params
 %visual space parameters
 sStimParams = struct;
 sStimParams.strStimType = 'SquareGrating';
 sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParams.dblSubjectPosY_cm = -5; % cm; relative to center of screen
-sStimParams.dblScreenDistance_cm = 12; % cm; measured
+sStimParams.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
+sStimParams.dblScreenDistance_cm = 14; % cm; measured
 sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
@@ -100,7 +108,7 @@ sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard 
 
 %screen variables
 sStimParams.intUseScreen = 2; %which screen to use
-sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+sStimParams.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
 sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
 sStimParams.dblScreenHeight_cm = 29; % cm; measured [29]
@@ -158,30 +166,22 @@ structEP.vecTrialStimOnSecs = structEP.vecTrialStartSecs + structEP.dblSecsBlank
 structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsStimDur;
 structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
 
-%% initialize DasCard & variables
-%set bits
-sDas.intDasCard = intDasCard;
-sDas.TrialBit = 0; %Marks start of the trial
-sDas.StimOnBit = 1; %Stimulus ON bit
-sDas.StimOffBit = 2; %Stimulus OFF bit
-sDas.ResponseBit = 3; %response bit (e.g., licking)
-sDas.WordDataSwitch = 4;
-sDas.WordBitShifter = 5;
-sDas.WordDataPorts = [6 7]; 
-
+%% initialize NI I/O box
 %initialize
-if intDasCard == 1
-	dasinit(sDas.dasno, 2);
-	for i = [0 1 2 3 4 5 6 7] %set all to 0
-		dasbit(i,0);
+fprintf('Connecting to National Instruments box...\n');
+strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
+boolDaqIn = true;
+try
+	objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);
+catch ME
+	if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
+		fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
+		boolDaqIn = false;
+	else
+		rethrow(ME);
 	end
-elseif intDasCard == 2
-	dasinit(sDas.dasno, 2);
-	for i = [0 1 2 3 4 5 6 7] %set all to 0
-		dasbit(i,0);
-	end
-	dasclearword;
 end
+objDAQOut = openDaqOutput(intUseDaqDevice);
 
 try
 	%% INITALIZE SCREEN
@@ -267,7 +267,6 @@ try
 		structEP.(strField) = nan(1,structEP.intStimNumber);
 	end
 	
-	
 	%show trial summary
 	fprintf('Finished preparation at [%s], will present %d repetitions of %d stimuli (est. dur: %.1fs)\n\n   Waiting for "ENTER"\n',...
 		getTime,structEP.intNumRepeats,structEP.intStimTypes,totalDurSecs);
@@ -302,18 +301,6 @@ try
 		%trial start
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
-		
-		%Send trial start
-		if intDasCard > 0
-			dasbit(sDas.TrialBit,1);
-		end
-		
-		%Send stimulus identification
-		if intDasCard == 1
-			doWord(intThisTrial);
-		elseif intDasCard == 2
-			dasword(intThisTrial);
-		end
 		
 		%retrieve stimulus info
 		intStimType = structEP.vecTrialStimTypes(intThisTrial);
@@ -374,8 +361,13 @@ try
 			
 			%send trigger for stim start
 			if ~boolStimBitSent
-				if intDasCard>0
-					dasbit(sDas.StimOnBit, 1);
+				if intUseDaqDevice>0
+					%% pulse on stim start
+					stop(objDAQOut);
+					outputData1 = cat(1,linspace(1.5, 1.5, 500)',linspace(0, 0, round(dblStimDurSecs*objDAQOut.Rate))');
+					outputData2 = linspace(3, 3, 500+round(dblStimDurSecs*objDAQOut.Rate))';
+					queueOutputData(objDAQOut,[outputData1 outputData2]);
+					startBackground(objDAQOut);
 				end
 				boolStimBitSent = 1;
 			end
@@ -395,29 +387,9 @@ try
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblStimOffFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 		
-		%send trigger for stimulus off
-		if intDasCard>0
-			dasbit(sDas.StimOffBit, 1);
-		end
-		
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);
 		clear vecTex;
-		
-		%% reset DAS card
-		if intDasCard==1
-			%reset all bits to null
-			for i = [0 1 2 3 4]
-				dasbit(i,0);
-			end
-			
-		elseif intDasCard==2
-			%reset all bits to null
-			for i = [0 1 2 3 4 5 6 7]
-				dasbit(i,0);
-			end
-			dasclearword;
-		end
 		
 		%% save stimulus object
 		try
@@ -468,7 +440,7 @@ try
 	structEP.sStimParams = sStimParams;
 	structEP.sStimObject = sStimObject;
 	structEP.sStimTypeList = sStimTypeList;
-	save([strLogDir filesep strFilename], 'structEP','sDas');
+	save([strOutputDir filesep strFilename], 'structEP','sParamsSGL');
 	
 	%show trial summary
 	fprintf('Finished experiment & data saving at [%s], waiting for end blank (dur=%.3fs)\n',getTime,structEP.dblSecsBlankAtEnd);
@@ -490,6 +462,17 @@ try
 	ShowCursor;
 	Priority(0);
 	Screen('Preference', 'Verbosity',intOldVerbosity);
+	
+	%end recording
+	CloseSGL(hSGL);
+	
+	%close Daq IO
+	if intUseDaqDevice > 0
+		if boolDaqIn
+			closeDaqInput(objDAQIn);
+		end
+		closeDaqOutput(objDAQOut);
+	end
 catch
 	%% catch me and throw me
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
@@ -498,7 +481,7 @@ catch
 	structEP.sStimParams = sStimParams;
 	structEP.sStimObject = sStimObject;
 	structEP.sStimTypeList = sStimTypeList;
-	save([strLogDir filesep strFilename], 'structEP','sDas');
+	save([strOutputDir filesep strFilename], 'structEP');
 	
 	%% catch me and throw me
 	Screen('Close');
@@ -507,19 +490,15 @@ catch
 	Priority(0);
 	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
-	%% close DAS
-	%Reset all bits
-	if intDasCard==1
-		%reset all bits to null
-		for i = [0 1 2 3 4 5 6 7]
-			dasbit(i,0);
+	%% end recording
+	CloseSGL(hSGL);
+	
+	%% close Daq IO
+	if intUseDaqDevice > 0
+		closeDaqOutput(objDAQOut);
+		if boolDaqIn
+			closeDaqInput(objDAQIn);
 		end
-	elseif intDasCard==2
-		%reset all bits to null
-		for i = [0 1 2 3 4 5 6 7]  %Error, Stim, Saccade, Trial, Correct,
-			dasbit(i,0);
-		end
-		dasclearword;
 	end
 	
 	%% show error

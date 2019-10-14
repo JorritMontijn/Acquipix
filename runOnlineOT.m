@@ -1,6 +1,6 @@
 %% starting function
 function varargout = runOnlineOT(varargin)
-	% runDetectCells Detect cells with GUI
+	% runOnlineOT Online Orientation Tuning
 	%
 	%	Version 1.0 [2019-04-02]
 	%		Created by Jorrit Montijn

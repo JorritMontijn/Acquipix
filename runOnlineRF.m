@@ -1,6 +1,6 @@
 %% starting function
 function varargout = runOnlineRF(varargin)
-	% runDetectCells Detect cells with GUI
+	% runOnlineRF Online receptive field mapping
 	%
 	%	Version 1.0 [2019-04-02]
 	%		Created by Jorrit Montijn
