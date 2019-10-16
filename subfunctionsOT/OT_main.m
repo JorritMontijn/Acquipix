@@ -45,7 +45,7 @@ function OT_main(varargin)
 		%use GPU?
 		boolUseGPU = sOT.UseGPU;
 		
-		%% TDT data
+		%% SGL data
 		%prep meta data
 		dblSubSampleTo = intSubSampleFactor/dblSampFreq;
 		

@@ -91,6 +91,18 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
 	set(sFig.ptrEditDownsample,'UserData','lock');
+	set(sFig.ptrButtonDataLFP,'UserData','lock')
+	set(sFig.ptrButtonDataAP,'UserData','lock')
+	set(sFig.ptrEditChannelMin,'UserData','lock');
+	set(sFig.ptrEditChannelMax,'UserData','lock');
+	set(sFig.ptrButtonScatterYes,'UserData','lock')
+	set(sFig.ptrButtonScatterNo,'UserData','lock')
+	set(sFig.ptrButtonNewFig,'UserData','lock')
+	set(sFig.ptrButtonOldFig,'UserData','lock')
+	set(sFig.ptrButtonClearAndRecompute,'UserData','lock')
+	set(sFig.ptrListSelectDataProcessing,'UserData','lock');
+	set(sFig.ptrListSelectMetric,'UserData','lock');
+	set(sFig.ptrListSelectChannel,'UserData','lock')
 	
 	% Update handles structure
 	guidata(hObject, handles);
@@ -139,6 +151,9 @@ function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<
 	%get global
 	global sFig;
 	global sOT;
+	if ~isfield(sOT,'hSGL') || ~isempty(sOT.hSGL)
+		return;
+	end
 	
 	%lock GUI
 	OT_lock(handles);

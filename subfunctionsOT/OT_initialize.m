@@ -18,7 +18,7 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	%channel list
 	cellChannels{1} = 'Best';
 	cellChannels{2} = 'Mean';
-	cellChannels{2} = 'Single';
+	cellChannels{3} = 'Single';
 	set(sFig.ptrListSelectChannel,'String',cellChannels);
 	
 	%default downsample
