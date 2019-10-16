@@ -1,5 +1,5 @@
 function OT_main(varargin)
-	%% OT_main Main RF mapper function called every second to check for updates
+	%% OT_main Main OT mapper function called every second to check for updates
 	%get globals
 	global sFig;
 	global sOT;
@@ -15,8 +15,9 @@ function OT_main(varargin)
 		
 		%get stream variables
 		boolNewData = false;
+		dblSampFreq = sOT.dblSampFreq;
 		dblEphysTime = sOT.dblEphysTime;
-		dblEphysStepSecs = 15;
+		dblEphysStepSecs = 5;
 		intEphysTrial = sOT.intEphysTrial; %not used, only updated
 		intStimTrial = sOT.intStimTrial;
 		sStimObject = sOT.sStimObject;
@@ -25,16 +26,14 @@ function OT_main(varargin)
 		matData = sOT.matData;
 		
 		%get data from figure
-		strTank = get(sFig.ptrTextRecording, 'string');
-		strBlock = get(sFig.ptrTextBlock, 'string');
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
 		%get data type from figure
-		intLoadEnv = get(sFig.ptrButtonDataENV,'Value');
-		if intLoadEnv == 1
-			strLoadDataType = 'dENV';
+		intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
+		if intLoadLFP == 1
+			strLoadDataType = 'LFP';
 		else
-			strLoadDataType = 'dRAW';
+			strLoadDataType = 'AP';
 		end
 		
 		%default downsample
@@ -48,15 +47,6 @@ function OT_main(varargin)
 		
 		%% TDT data
 		%prep meta data
-		sMetaData = struct;
-		sMetaData.Myevent = strLoadDataType;
-		sMetaData.Mytank = strTank;
-		sMetaData.Myblock = strBlock;
-		%read
-		sMetaData = getMetaDataTDT(sMetaData,false);
-		%assign
-		vecTimeRange = sMetaData.vecTimeRange;
-		dblSampFreq = sMetaData.strms(strcmpi(sMetaData.Myevent, {sMetaData.strms(:).name} )).sampf;
 		dblSubSampleTo = intSubSampleFactor/dblSampFreq;
 		
 		%get trigger times
@@ -122,7 +112,7 @@ function OT_main(varargin)
 			matNewData = matNewData(:,indUseNewData);
 			matNewData(1:2:end,:) = bsxfun(@minus,matNewData(1:2:end,:),cast(mean(matNewData(1:2:end,:),1),'like',matNewData)); %odd
 			matNewData(2:2:end,:) = bsxfun(@minus,matNewData(2:2:end,:),cast(mean(matNewData(2:2:end,:),1),'like',matNewData)); %even
-			if strcmpi(strLoadDataType,'dRAW')
+			if strcmpi(strLoadDataType,'AP')
 				
 				%get subsample vector
 				vecSubNewTimestamps = vecNewTimestamps(1:intSubSampleFactor:end);
@@ -167,13 +157,13 @@ function OT_main(varargin)
 						%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
 					end
 					%envelope
-					dblEnvLengthSecs = 3*dblSubSampleTo; %10*dblSubSampleTo;
-					intFilterSize = round(dblSampFreq*dblEnvLengthSecs);
-					[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
+					dblLFPLengthSecs = 3*dblSubSampleTo; %10*dblSubSampleTo;
+					intFilterSize = round(dblSampFreq*dblLFPLengthSecs);
+					[vecLFPHigh,vecLFPLow] = getLFPelope(gVecSignal,intFilterSize);
 					%downsample
-					vecSubEnv = accumarray(vecAssignTo(:),gather(abs(vecEnvHigh)+abs(vecEnvLow)))'/intSubSampleFactor;
+					vecSubLFP = accumarray(vecAssignTo(:),gather(abs(vecLFPHigh)+abs(vecLFPLow)))'/intSubSampleFactor;
 					%assign data
-					matSubNewData(intCh,:) = vecSubEnv(1:(end-1));
+					matSubNewData(intCh,:) = vecSubLFP(1:(end-1));
 				end
 				
 				%add to matrix
@@ -268,12 +258,12 @@ function OT_main(varargin)
 				if isempty(vecBaseBins) || isempty(vecStimBins)
 					break;
 				end
-				vecBaseENV = mean(matData(:,vecBaseBins),2)./numel(vecBaseBins);
-				vecStimENV = mean(matData(:,vecStimBins),2)./numel(vecStimBins);
+				vecBaseLFP = mean(matData(:,vecBaseBins),2)./numel(vecBaseBins);
+				vecStimLFP = mean(matData(:,vecStimBins),2)./numel(vecStimBins);
 				
 				%assign data
-				matRespBase(:,intTrial) = vecBaseENV;
-				matRespStim(:,intTrial) = vecStimENV;
+				matRespBase(:,intTrial) = vecBaseLFP;
+				matRespStim(:,intTrial) = vecStimLFP;
 				vecStimTypes(intTrial) = intStimType;
 				vecStimOriDeg(intTrial) = vecOriDegs(intTrial);
 			end

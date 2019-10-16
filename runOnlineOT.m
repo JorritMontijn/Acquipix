@@ -10,6 +10,8 @@ function varargout = runOnlineOT(varargin)
 	%		Stepwise data loading to reduce memory load
 	%	Version 1.0.3 [2019-05-10]
 	%		ENV-support and bug fixes
+	%	Version 2.0.0a [2019-10-15]
+	%		Neuropixels support with SpikeGLX
 	
 	%set tags
 	%#ok<*INUSL>
@@ -37,7 +39,6 @@ function varargout = runOnlineOT(varargin)
 end
 %% these are functions that don't do anything, but are required by matlab
 function ptrListSelectMetric_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
-function ptrEditMagnification_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditHighpassFreq_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrListSelectChannel_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditDownsample_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
@@ -45,6 +46,9 @@ function ptrButtonOldFig_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrButtonNewFig_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditHighpassFreq_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrListSelectDataProcessing_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrEditChannelMin_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrEditChannelMax_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrEditHostSGL_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 
 %% opening function; initializes output
 function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -90,6 +94,9 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	% Update handles structure
 	guidata(hObject, handles);
+	
+	%check if default host is online
+	ptrEditHostSGL_Callback([], [], handles);
 end
 %% defines output variables
 function varargout = runOnlineOT_OutputFcn(hObject, eventdata, handles)
@@ -131,21 +138,29 @@ function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<
 	
 	%get global
 	global sFig;
+	global sOT;
 	
 	%lock GUI
 	OT_lock(handles);
 	
-	%get selected button
-	intLoadEnv = get(handles.ptrButtonDataENV,'Value');
-	if intLoadEnv == 1
-		strLoadDataType = 'dENV';
-		set(sFig.ptrEditHighpassFreq,'UserData','lock');
-		set(sFig.ptrEditDownsample,'UserData','lock');
-	else
-		strLoadDataType = 'dRAW';
-		set(sFig.ptrEditHighpassFreq,'UserData','');
-		set(sFig.ptrEditDownsample,'UserData','');
+	%get number of channels per type
+	vecStreamIM = [0];
+	vecChPerType = GetAcqChanCounts(sOT.hSGL, vecStreamIM(1));
+	
+	%check whether to show AP or LFP
+	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
+	if intLoadLFP == 1 %LFP
+		strLoadDataType = 'LFP';
+		vecUseChans = sOT.vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
+	else %AP
+		strLoadDataType = 'AP';
+		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
 	end
+	sOT.vecUseChans = vecUseChans;
+	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
+
+	%fill recording/block data
+	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
 	
 	%update message
 	cellText = {['Switched data type to ' strLoadDataType]};
@@ -169,48 +184,138 @@ function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	OT_unlock(handles);
 end
 %% this function initializes everything
-function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEFNU>
-	%This function lets the user select a TDT data path
+function ptrEditHostSGL_Callback(hObject, eventdata, handles)
+	%This function lets the user select an SGL host
 	
-	%get globals
+	% get globals
 	global sFig;
 	global sOT;
 	
 	%lock GUI
 	OT_lock(handles);
 	
-	%switch path
+	%clear data
+	set(sFig.ptrTextChanNumIM, 'string', '...');
+	set(sFig.ptrTextRecording, 'string', '...');
+	set(sFig.ptrTextProbe, 'string', '...');
+	
+	%connect to host
+	sOT.strHostSGL = get(sFig.ptrEditHostSGL,'String');
+	
+	% try connection
 	try
-		oldPath = cd(sOT.metaData.strSourcePathTDT);
-	catch
-		oldPath = cd();
+		%suppress warnings
+		cellText = {};
+		cellText{1} = ['Attempting to connect to host at ' sOT.strHostSGL];
+		OT_updateTextInformation(cellText);
+		sWarn = warning('off');
+		sOT.hSGL = SpikeGL(sOT.strHostSGL);
+		warning(sWarn);
+		cellText{2} = 'Success!';
+		OT_updateTextInformation(cellText);
+	catch ME
+		%unlock GUI
+		OT_unlock(handles);
+		if strcmp(ME.identifier,'ChkConn:ConnectFail')
+			OT_updateTextInformation({['Cannot connect to host at ' sOT.strHostSGL]});
+			return;
+		else
+			%disp error message
+			cellText = {};
+			cellText{1} = '<< ERROR >>';
+			cellText{2} = ME.identifier;
+			cellText{3} = ME.message;
+			OT_updateTextInformation(cellText);
+			rethrow(ME);
+		end
 	end
 	
-	%get file
-	strSourcePathTDT = uigetdir('Select TDT data path');
-	%back to old path
-	cd(oldPath);
-	if isempty(strSourcePathTDT) || isscalar(strSourcePathTDT),OT_unlock(handles);return;end
-	if strcmpi(strSourcePathTDT(end),filesep)
-		strSourcePathTDT(end) = [];
+	%retrieve channels to save; if settings are unvalidated, this will give an error
+	try
+		warning('off','CalinsNetMex:connectionClosed');
+		vecSaveChans = GetSaveChans(sOT.hSGL, 0);
+		warning('on','CalinsNetMex:connectionClosed');
+	catch ME
+		%unlock GUI
+		OT_unlock(handles);
+		
+		%disp error message
+		cellText = {};
+		cellText{1} = '<< ERROR >>';
+		cellText{2} = ME.identifier;
+		cellText{3} = ME.message;
+		OT_updateTextInformation(cellText);
+		warning('on','CalinsNetMex:connectionClosed');
+		if contains(ME.message,'Run parameters never validated.')
+			%we know what this is; no need to panic
+			cellText{4} = '';
+			cellText{5} = 'Please verify your settings in SpikeGLX';
+			OT_updateTextInformation(cellText);
+			return;
+		else
+			rethrow(ME);
+		end
 	end
-	sOT.strSourcePathTDT = strSourcePathTDT;
-	[strBlock,intStop,intStart] = getFlankedBy(strSourcePathTDT,filesep,'','last');
-	strRecording = strSourcePathTDT(1:(intStart-1));
-	if strcmp(strRecording(end),filesep),strRecording(end) = [];end
-  
-	%back to old path
-	cd(oldPath);
 	
+	%start run if it's not already running
+	boolInitSGL = IsInitialized(sOT.hSGL);
+	boolIsRunningSGL = IsRunning(sOT.hSGL);
+	if boolInitSGL && ~boolIsRunningSGL
+		%start run
+		StartRun(sOT.hSGL);
+	end
+	%set global switch
+	sOT.boolInitSGL = true;
+	
+	% get data
+	%set stream IDs
+	vecStreamIM = [0];
+	intStreamNI = -1;
+	
+	%get name for this run
+	strRecording = GetRunName(sOT.hSGL);
+	
+	%get probe ID
+	[cellSN,vecType] = GetImProbeSN(sOT.hSGL, vecStreamIM(1));
+	
+	%get number of channels per type
+	vecSaveChans = GetSaveChans(sOT.hSGL, vecStreamIM(1));
+	vecChPerType = GetAcqChanCounts(sOT.hSGL, vecStreamIM(1));
+	if numel(vecSaveChans) ~= sum(vecChPerType)
+		%we're not saving all channels... is this correct?
+		cellText{end+1} = '';
+		cellText{end+1} = '<< WARNING >>';
+		cellText{end+1} = sprintf('Only %d/%d available channels are being saved!',numel(vecSaveChans),sum(vecChPerType));
+		OT_updateTextInformation(cellText);
+		sOT.vecAllChans = 0:(sum(vecChPerType)-1);
+	else
+		sOT.vecAllChans = vecSaveChans;
+	end
+	
+	%get samp freq
+	sOT.dblSampFreq = GetSampleRate(sOT.hSGL, vecStreamIM(1));
+	
+	%check whether to show AP or LFP
+	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
+	if intLoadLFP == 1 %LFP
+		vecUseChans = sOT.vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
+	else %AP
+		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
+	end
+	sOT.vecUseChans = vecUseChans;
+	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
+
 	%fill recording/block data
+	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
 	set(sFig.ptrTextRecording, 'string', strRecording);
-	set(sFig.ptrTextBlock, 'string', strBlock);
+	set(sFig.ptrTextProbe, 'string', cellSN{1});
 	
 	%unlock GUI
 	OT_unlock(handles);
 	
-	%check if both data path and stim path have been set
-	if isfield(sOT,'strSourcePathTDT') && ~isempty(sOT.strSourcePathTDT) && ...
+	
+	%check if both data path and stim path is set
+	if isfield(sOT,'boolInitSGL') && ~isempty(sOT.boolInitSGL) && sOT.boolInitSGL && ...
 			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
 		[sFig,sOT] = OT_initialize(sFig,sOT);
 	end
@@ -248,8 +353,8 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	%unlock GUI
 	OT_unlock(handles);
 	
-	%check if both data path and stim path have been set
-	if isfield(sOT,'strSourcePathTDT') && ~isempty(sOT.strSourcePathTDT) && ...
+	%check if connection is active and stim path is set
+	if isfield(sOT,'boolInitSGL') && ~isempty(sOT.boolInitSGL) && sOT.boolInitSGL && ...
 			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
 		[sFig,sOT] = OT_initialize(sFig,sOT);
 	end
@@ -361,3 +466,27 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 		OT_main();
 	end
 end
+
+
+
+function ptrEditChannelMin_Callback(hObject, eventdata, handles)
+% hObject    handle to ptrEditChannelMin (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ptrEditChannelMin as text
+%        str2double(get(hObject,'String')) returns contents of ptrEditChannelMin as a double
+end
+
+function ptrEditChannelMax_Callback(hObject, eventdata, handles)
+% hObject    handle to ptrEditChannelMax (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ptrEditChannelMax as text
+%        str2double(get(hObject,'String')) returns contents of ptrEditChannelMax as a double
+end
+
+
+
+

@@ -6,7 +6,7 @@ function sOT = OT_populateStructure(sOT)
 		sOT.metaData = struct;
 	end
 	%default path locations
-	sOT.metaData.strSourcePathTDT = 'E:\';
+	sOT.metaData.strHostAddressSGL = '127.0.0.1';
 	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
 	
 	%data processing types
@@ -15,8 +15,8 @@ function sOT = OT_populateStructure(sOT)
 	sOT.metaData.cellProcess{3} = 'Stimulus - Baseline';
 	
 	%metrics
-	sOT.metaData.cellMetric{1} = strcat('Information (',getGreek(4,'lower'),''')');
-	sOT.metaData.cellMetric{2} =  strcat('Curve smoothness (',getGreek(17,'lower'),')');
+	sOT.metaData.cellMetric{1} = strcat('Information (',getGreek('delta','lower'),''')');
+	sOT.metaData.cellMetric{2} = strcat('Curve smoothness (',getGreek('rho','lower'),')');
 	sOT.metaData.cellMetric{3} = 'OPI (1 - circ_var)';
 	sOT.metaData.cellMetric{4} = 'OSI (p - np / p + np)';
 	sOT.metaData.cellMetric{5} = 'Asym Left-Right';

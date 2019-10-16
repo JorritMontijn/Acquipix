@@ -10,6 +10,8 @@ function varargout = runOnlineRF(varargin)
 	%		Stepwise data loading to reduce memory load
 	%	Version 1.0.3 [2019-05-10]
 	%		ENV-support and bug fixes
+	%	Version 2.0.0a [2019-10-15]
+	%		Neuropixels support with SpikeGLX
 	
 	%set tags
 	%#ok<*INUSL>
