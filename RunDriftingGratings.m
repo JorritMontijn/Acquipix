@@ -310,6 +310,7 @@ try
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
 		
 		%fill DAQ with data
+		stop(objDAQOut);
 		outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
 		outputData2 = linspace(3, 3, 250)';
 		queueOutputData(objDAQOut,[outputData1 outputData2]);

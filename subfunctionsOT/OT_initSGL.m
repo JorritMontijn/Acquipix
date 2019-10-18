@@ -63,7 +63,7 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 	sOT.matDataBufferIM = zeros(intBufferT,numel(vecAllChans),'int16');
 	sOT.vecTimestampsIM = zeros(intBufferT,1);
 	sOT.intDataBufferPos = 1;
-	sOT.dblEnvLastUpdate = -1;
+	sOT.dblSubLastUpdate = -1;
 	
 	%set sync channel
 	sOT.intStimSyncChanNI = str2double(get(sFig.ptrEditStimSyncNI,'String'));

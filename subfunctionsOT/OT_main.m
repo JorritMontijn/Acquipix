@@ -40,8 +40,8 @@ function OT_main(varargin)
 	dblDataBufferSize = sOT.dblDataBufferSize;
 	vecTimestampsIM = sOT.vecTimestampsIM;
 	matDataBufferIM = sOT.matDataBufferIM;
-	vecOldEnvTimestamps = sOT.vecEnvTimestamps;
-	matOldEnvData = sOT.matEnvData;
+	vecOldSubTimestamps = sOT.vecSubTimestamps;
+	matOldSubData = sOT.matSubData;
 	vecAllChans = sOT.vecAllChans;
 	vecUseChans = sOT.vecUseChans;
 	
@@ -49,9 +49,14 @@ function OT_main(varargin)
 	vecOldStimOnT = sOT.vecStimOnT; %on times of all stimuli (NI time prior to stim on)
 	vecOldStimOffT = sOT.vecStimOffT; %off times of all stimuli (NI time after stim off)
 	vecDiodeOnT = sOT.vecDiodeOnT; %on times of all stimuli (diode on time)
-	vecDiodeOffT = sOT.vecDiodeOnT; %off times of all stimuli (diode off time)
-	vecOldImecOnT = sOT.vecDiodeOnT; %on times of all stimuli (IMEC on time)
-	vecOldImecOffT = sOT.vecDiodeOnT; %off times of all stimuli (IMEC off time)
+	vecDiodeOffT = sOT.vecDiodeOffT; %off times of all stimuli (diode off time)
+	
+	%get resp variables
+	intRespTrialN = sOT.intRespTrialN;
+	matRespBase = sOT.matRespBase;
+	matRespStim = sOT.matRespStim;
+	vecStimTypes = sOT.vecStimTypes;
+	vecStimOriDeg = sOT.vecStimOriDeg;
 	
 	%get data from figure
 	strStimPath = get(sFig.ptrTextStimPath, 'string');
@@ -140,15 +145,18 @@ function OT_main(varargin)
 	dblLowerTresholdV = -2;
 	vecStimPresent = vecSyncData < dblLowerTresholdV; %stimulus frames
 	vecOnsets = vecTimestampsNI(find(diff(vecStimPresent) == 1)+1);
+
 	%onsets
 	for intOnset=1:numel(vecOnsets)
 		%find closest onset
 		[dblMinT,intMinIdx]= min(abs(vecOldStimOnT - vecOnsets(intOnset)));
 		if dblMinT < dblMaxErrorT
 			vecDiodeOnT(intMinIdx) = vecOnsets(intOnset);
-			cellText(end+1) = {sprintf('PD onset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOnsets(intOnset),dblMinT)};
-		else
-			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('Photodiode onset at %.3fs does not match stim onsets!',vecOnsets(intOnset))};
+			if intMinIdx > sOT.intEphysTrialN
+				cellText(end+1) = {sprintf('PD onset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOnsets(intOnset),dblMinT)};
+			end
+		elseif intMinIdx > 1 && intMinIdx < sOT.intEphysTrialN
+			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('PD onset at %.3fs has mismatch %.3fs!',vecOnsets(intOnset),dblMinT)};
 		end
 	end
 	%offsets
@@ -157,10 +165,12 @@ function OT_main(varargin)
 		%find closest offset
 		[dblMinT,intMinIdx]= min(abs(vecOldStimOffT - vecOffsets(intOffset)));
 		if dblMinT < dblMaxErrorT
-			vecDiodeOffT(intMinIdx) = vecOffsets(intOnset);
-			cellText(end+1) = {sprintf('PD offset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOffsets(intOffset),dblMinT)};
-		else
-			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('Photodiode offset at %.3fs does not match stim offsets!',vecOffsets(intOffset))};
+			vecDiodeOffT(intMinIdx) = vecOffsets(intOffset);
+			if intMinIdx > sOT.intEphysTrialN
+				cellText(end+1) = {sprintf('PD offset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOffsets(intOffset),dblMinT)};
+			end
+		elseif intMinIdx > 1 && intMinIdx < sOT.intEphysTrialN
+			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('PD offset at %.3fs has mismatch %.3fs!',vecOffsets(intOffset),dblMinT)};
 		end
 	end
 	OT_updateTextInformation(cellText);
@@ -170,8 +180,12 @@ function OT_main(varargin)
 	sOT.vecSyncData = vecSyncData;
 	sOT.vecDiodeOnT = vecDiodeOnT; %on times of all stimuli (diode on time)
 	sOT.vecDiodeOffT = vecDiodeOffT; %off times of all stimuli (diode off time)
-	sOT.intEphysTrialT = min([numel(vecDiodeOnT) numel(vecDiodeOffT)]);
-	sOT.dblEphysTrialT = max([vecDiodeOnT(sOT.intEphysTrialT),vecDiodeOffT(sOT.intEphysTrialT)]);
+	sOT.intEphysTrialN = min([numel(vecDiodeOnT) numel(vecDiodeOffT)]);
+	if sOT.intEphysTrialN == 0
+		sOT.dblEphysTrialT = 0;
+	else
+		sOT.dblEphysTrialT = max([vecDiodeOnT(sOT.intEphysTrialN),vecDiodeOffT(sOT.intEphysTrialN)]);
+	end
 	
 	%update figure
 	set(sFig.ptrTextStimNI, 'string',sprintf('%.2f (%d)',sOT.dblEphysTrialT,sOT.intEphysTrialN));
@@ -212,18 +226,18 @@ function OT_main(varargin)
 	sOT.dblEphysTimeIM = dblEphysTimeIM;
 		
 	%put data in buffer
-	vecNewTimestampsIM = intStartFetch:intRetrieveSamplesIM;
+	vecNewTimestampsIM = intStartFetch:(intStartFetch+intRetrieveSamplesIM-1);
 	vecAssignBufferPos = modx(intDataBufferPos:(intDataBufferPos+numel(vecNewTimestampsIM)-1),intDataBufferSize);
 	%assign to global
 	sOT.intDataBufferPos = modx(vecAssignBufferPos(end)+1,intDataBufferSize);
 	sOT.vecTimestampsIM(vecAssignBufferPos) = vecNewTimestampsIM;
 	sOT.matDataBufferIM(vecAssignBufferPos,:) = matNewData;
-	sOT.dblEnvLastUpdate = sOT.dblEnvLastUpdate + range(vecNewTimestampsIM)/dblSampFreqIM;
+	sOT.dblSubLastUpdate = sOT.dblSubLastUpdate + range(vecNewTimestampsIM)/dblSampFreqIM;
 	
 	%% update env
-	if sOT.dblEnvLastUpdate > 1 %if last Env update is more than 1 second ago
+	if sOT.dblSubLastUpdate > 1 %if last subsample update is more than 1 second ago
 		%unroll buffer
-		[vecReorderData,vecLinBuffT] = sort(sOT.vecTimestampsIM,'ascend');
+		[vecLinBuffT,vecReorderData] = sort(sOT.vecTimestampsIM,'ascend');
 		vecLinBuffT = vecLinBuffT/dblSampFreqIM;
 		matLinBuffData = sOT.matDataBufferIM(vecReorderData,:);
 		vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);
@@ -231,11 +245,11 @@ function OT_main(varargin)
 		%message
 		cellText(end+1:end+2) = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
 		OT_updateTextInformation(cellText);
-		
+		%{
 		%design filter
 		if ~isempty(dblFiltFreq) && dblFiltFreq > 0
 			d = designfilt('highpassfir',...
-				'SampleRate',dblSampFreq, ...
+				'SampleRate',dblSampFreqIM, ...
 				'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
 				'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
 				'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
@@ -246,23 +260,27 @@ function OT_main(varargin)
 				gVecFilter = d.Coefficients;
 			end
 		end
-		
+		%}
 		%retrieve which data to use, subsample & assign to env
-		vecUseSubT = (sOT.vecEnvTimestamps(end)+dblSubSampleTo):dblSubSampleTo:(max(vecLinBuffT) - 1);
+		if isempty(sOT.vecSubTimestamps)
+			dblPrevEnv = max(vecLinBuffT) - 2;
+		else
+			dblPrevEnv = sOT.vecSubTimestamps(end);
+		end
+		vecUseSubT = (dblPrevEnv+dblSubSampleTo):dblSubSampleTo:(max(vecLinBuffT) - 1);
 		intStartT = find(vecLinBuffT>vecUseSubT(1),1);
 		intStopT = find(vecLinBuffT>vecUseSubT(end),1);
 		vecKeepIM = intStartT:intSubSampleFactorIM:intStopT;
-		size(vecUseSubT)
-		size(vecKeepIM)
-		matSubNewData = nan(size(matLinBuffData,2),numel(vecKeepIM));
-		
+		matSubNewData = matLinBuffData(vecKeepIM,:)';
+		%matSubNewData = nan(size(matLinBuffData,2),numel(vecKeepIM));
+		%{
 		% apply high-pass filter & calculate envelope
 		for intCh=1:size(matLinBuffData,2)
 			%get signal
 			if boolUseGPU
-				gVecSignal = gpuArray(double(matLinBuffData(:,intCh)'));
+				gVecSignal = gpuArray(double(matLinBuffData(vecKeepIM,intCh)'));
 			else
-				gVecSignal = double(matLinBuffData(:,intCh)');
+				gVecSignal = double(matLinBuffData(vecKeepIM,intCh)');
 			end
 			
 			%filter
@@ -278,12 +296,12 @@ function OT_main(varargin)
 			vecSubEnv = gather(abs(vecEnvHigh)+abs(vecEnvLow));
 			
 			%assign data
-			matSubNewData(intCh,:) = vecSubEnv(vecKeepIM);
+			matSubNewData(intCh,:) = vecSubEnv;
 		end
-		
+		%}
 		%assign data
-		sOT.vecEnvTimestamps = cat(2,sOT.vecEnvTimestamps,vecUseSubT);
-		sOT.matEnvData = cat(2,sOT.matEnvData,matSubNewData);
+		sOT.vecSubTimestamps = cat(2,sOT.vecSubTimestamps,vecUseSubT);
+		sOT.matSubData = cat(2,sOT.matSubData,matSubNewData);
 		
 		%msg
 		cellText{end} = strcat(cellText{end},'  Completed!');
@@ -318,8 +336,8 @@ function OT_main(varargin)
 		sOT.dblStimCoverage = dblStimCoverage;
 		sOT.intStimTrialN = intStimTrialN;
 		sOT.dblStimTrialT = dblStimTrialT;
-		sOT.vecStimOnT = cat(2,sOT.vecStimOnT,vecNewStimOnT);
-		sOT.vecStimOffT = cat(2,sOT.vecStimOffT,vecOldStimOffT);
+		sOT.vecStimOnT = vecNewStimOnT;
+		sOT.vecStimOffT = vecNewStimOffT;
 		
 		%update fig
 		set(sFig.ptrTextStimTrialT, 'string',sprintf('%.2f',dblStimTrialT));
@@ -335,8 +353,10 @@ function OT_main(varargin)
 	end
 	
 	%% update trial-average data matrix
+	finish from here onwards
+	
 	intTrials = min([intEphysTrialN intStimTrialN]);
-	if intTrials > 0 && boolNewData && sOT.NumChannels > 0
+	if intTrials > intRespTrialN
 		%% calc RF estimate
 		%update variables
 		vecOriDegs = cell2mat({sStimObject(:).Orientation});
@@ -373,6 +393,7 @@ function OT_main(varargin)
 		end
 
 		%% save data to globals
+		sOT.intRespTrialN = intTrials;
 		sOT.matRespBase = matRespBase; %[1 by S] cell with [chan x rep] matrix
 		sOT.matRespStim = matRespStim; %[1 by S] cell with [chan x rep] matrix
 		sOT.vecStimTypes = vecStimTypes; %[1 by S] cell with [chan x rep] matrix

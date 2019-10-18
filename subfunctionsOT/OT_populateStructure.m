@@ -35,6 +35,9 @@ function sOT = OT_populateStructure(sOT)
 	sOT.dblEphysTrialT = 0;
 	sOT.intLastFetchNI = 0;
 	sOT.intLastFetchIM = 0;
+	sOT.vecDiodeOnT = [];
+	sOT.vecDiodeOffT = [];
+	
 	%data
 	sOT.vecTimestampsNI = [];
 	sOT.vecSyncData = [];
@@ -43,9 +46,9 @@ function sOT = OT_populateStructure(sOT)
 	sOT.intDataBufferSize = [];
 	sOT.matDataBufferIM = [];
 	sOT.vecTimestampsIM = [];
-	sOT.dblEnvLastUpdate = [];
-	sOT.vecEnvTimestamps = [];
-	sOT.matEnvData = [];
+	sOT.dblSubLastUpdate = [];
+	sOT.vecSubTimestamps = [];
+	sOT.matSubData = [];
 
 	%stim
 	sOT.dblStimCoverage = 0;
@@ -55,4 +58,10 @@ function sOT = OT_populateStructure(sOT)
 	sOT.vecStimOnT = [];
 	sOT.vecStimOffT = [];
 	
+	%resp
+	sOT.intRespTrialN = 0;
+	sOT.matRespBase = [];
+	sOT.matRespStim = [];
+	sOT.vecStimTypes = [];
+	sOT.vecStimOriDeg = [];
 end
