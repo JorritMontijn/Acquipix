@@ -33,11 +33,12 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 		cellText{end+1} = '<< WARNING >>';
 		cellText{end+1} = sprintf('Only %d/%d available channels are being saved!',numel(vecSaveChans),sum(vecChPerType));
 		OT_updateTextInformation(cellText);
-		sOT.vecAllChans = 0:(sum(vecChPerType)-1);
+		vecAllChans = 0:(sum(vecChPerType)-1);
 	else
-		sOT.vecAllChans = vecSaveChans;
+		vecAllChans = vecSaveChans;
 	end
-	
+	sOT.vecAllChans = vecAllChans;
+
 	%get samp freq
 	sOT.dblSampFreqIM = GetSampleRate(sOT.hSGL, vecStreamIM(intUseStreamIMEC));
 	sOT.dblSampFreqNI = GetSampleRate(sOT.hSGL, intStreamNI);
@@ -49,13 +50,21 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 	%check whether to show AP or LFP
 	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
 	if intLoadLFP == 1 %LFP
-		vecUseChans = sOT.vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
+		vecUseChans = vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
 	else %AP
-		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
+		vecUseChans = vecAllChans(1:vecChPerType(1));
 	end
 	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
+	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(vecUseChans(end))];
 
+	%assign data buffer matrix
+	intBufferT = round(sOT.dblDataBufferSize * sOT.dblSampFreqIM);
+	sOT.intDataBufferSize = intBufferT;
+	sOT.matDataBufferIM = zeros(intBufferT,numel(vecAllChans),'int16');
+	sOT.vecTimestampsIM = zeros(intBufferT,1);
+	sOT.intDataBufferPos = 1;
+	sOT.dblEnvLastUpdate = -1;
+	
 	%set sync channel
 	sOT.intStimSyncChanNI = str2double(get(sFig.ptrEditStimSyncNI,'String'));
 	

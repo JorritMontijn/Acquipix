@@ -38,8 +38,14 @@ function sOT = OT_populateStructure(sOT)
 	%data
 	sOT.vecTimestampsNI = [];
 	sOT.vecSyncData = [];
+	sOT.dblDataBufferSize = 3;
+	sOT.intDataBufferPos = [];
+	sOT.intDataBufferSize = [];
+	sOT.matDataBufferIM = [];
 	sOT.vecTimestampsIM = [];
-	sOT.matData = [];
+	sOT.dblEnvLastUpdate = [];
+	sOT.vecEnvTimestamps = [];
+	sOT.matEnvData = [];
 
 	%stim
 	sOT.dblStimCoverage = 0;

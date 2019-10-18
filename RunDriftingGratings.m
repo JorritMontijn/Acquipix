@@ -345,15 +345,16 @@ try
 		dblPreBlankDur = 0;
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow);
-		dblDAQ_Dur = 0.3; %measured time to set NI DAQ switch
+		dblDAQ_Dur = 0; %measured time to set NI DAQ switch
 		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblDAQ_Dur)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 			dblPreBlankDur = dblLastFlip - dblTrialStartFlip;
 		end
-		%% 250ms pulse prior to stim start
-		startForeground(objDAQOut);
+		
+		%% 250ms pulse at stim start
+		startBackground(objDAQOut);
 		
 		%% show stimulus
 		dblStimStartFlip = dblLastFlip;
