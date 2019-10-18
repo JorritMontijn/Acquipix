@@ -2,6 +2,8 @@
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
+clear all;
+close all;
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -17,9 +19,14 @@ c = clock;
 strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
 
 %% initialize connection with SpikeGLX
+%start connection
 fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
 [hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
 fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+
+%retrieve some parameters
+intStreamNI = -1;
+dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
 
 %% check disk space available
 strDataDirSGL = GetDataDir(hSGL);
@@ -123,7 +130,7 @@ sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motio
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
 sStimParams.vecContrasts = 100; %contrast; [0-100]
-sStimParams.vecOrientations = 0;%[357 3 24 45 66 87 93 114 135 156 177 183 204 225 246 267 273 294 315 336]; %orientation (0 is drifting rightward)
+sStimParams.vecOrientations = 0:15:359; %orientation (0 is drifting rightward)
 sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 sStimParams.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 
@@ -296,11 +303,16 @@ try
 	for intThisTrial = 1:structEP.intTrialNum
 		%% check escape
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
-		
 		%% prep trial
+		
 		%trial start
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
+		
+		%fill DAQ with data
+		outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
+		outputData2 = linspace(3, 3, 250)';
+		queueOutputData(objDAQOut,[outputData1 outputData2]);
 		
 		%retrieve stimulus info
 		intStimType = structEP.vecTrialStimTypes(intThisTrial);
@@ -333,15 +345,17 @@ try
 		dblPreBlankDur = 0;
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow);
-		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblStimFrameDur)
+		dblDAQ_Dur = 0.3; %measured time to set NI DAQ switch
+		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblDAQ_Dur)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 			dblPreBlankDur = dblLastFlip - dblTrialStartFlip;
 		end
+		%% 250ms pulse prior to stim start
+		startForeground(objDAQOut);
 		
 		%% show stimulus
-		refTimeLocal = tic;
 		dblStimStartFlip = dblLastFlip;
 		dblCycleDur = 1/sThisStimObject.TemporalFrequency;
 		dblPhaseRand = dblCycleDur*rand(1);
@@ -350,27 +364,24 @@ try
 		intFlipCounter = 0;
 		vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
 		vecStimFrames = nan(size(vecStimFlips));
-		boolStimBitSent = false;
+		boolFirstFlip = false;
+		refTimeLocal = tic;
 		while toc(refTimeLocal) < (dblStimDurSecs - dblStimFrameDur)
+			%send trigger for stim start
+			if ~boolFirstFlip
+				%set switch
+				boolFirstFlip = 1;
+				
+				%log NI timestamp
+				dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+			end
+			
 			%draw stimulus
 			dblTime = dblLastFlip-dblStimStartFlip;
 			tStamp = mod(eps+dblPhaseRand+dblTime,dblCycleDur);
 			intFrame = ceil(tStamp * sThisStimObject.FrameRate);
 			Screen('DrawTexture',ptrWindow,vecTex(intFrame));
 			Screen('DrawingFinished', ptrWindow);
-			
-			%send trigger for stim start
-			if ~boolStimBitSent
-				if intUseDaqDevice>0
-					%% pulse on stim start
-					stop(objDAQOut);
-					outputData1 = cat(1,linspace(1.5, 1.5, 500)',linspace(0, 0, round(dblStimDurSecs*objDAQOut.Rate))');
-					outputData2 = linspace(3, 3, 500+round(dblStimDurSecs*objDAQOut.Rate))';
-					queueOutputData(objDAQOut,[outputData1 outputData2]);
-					startBackground(objDAQOut);
-				end
-				boolStimBitSent = 1;
-			end
 			
 			%flip
 			dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
@@ -387,12 +398,19 @@ try
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblStimOffFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 		
+		%log NI timestamp
+		dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+				
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);
 		clear vecTex;
 		
 		%% save stimulus object
 		try
+			%add timestamps
+			sThisStimObject.dblStimOnNI = dblStimOnNI;
+			sThisStimObject.dblStimOffNI = dblStimOffNI;
+			%save object
 			sObject = sThisStimObject;
 			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
 		catch
@@ -400,14 +418,14 @@ try
 		end
 		
 		%% wait post-blanking
-		dblPostBlankDur = 0;
+		dblTrialDur = 0;
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow);
-		while dblPostBlankDur < (dblEndSecs - dblStimOffSecs - dblStimFrameDur*2)
+		while dblTrialDur < (dblEndSecs - dblStartSecs - 2*dblStimFrameDur)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
-			dblPostBlankDur = dblLastFlip - dblStimOffFlip;
+			dblTrialDur = dblLastFlip - dblTrialStartFlip;
 		end
 		
 		%new stim-based output
@@ -473,7 +491,7 @@ try
 		end
 		closeDaqOutput(objDAQOut);
 	end
-catch
+catch ME
 	%% catch me and throw me
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
 	
@@ -491,17 +509,23 @@ catch
 	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
 	%% end recording
-	CloseSGL(hSGL);
+	try
+		CloseSGL(hSGL);
+	catch
+	end
 	
 	%% close Daq IO
 	if intUseDaqDevice > 0
-		closeDaqOutput(objDAQOut);
-		if boolDaqIn
-			closeDaqInput(objDAQIn);
+		try
+			closeDaqOutput(objDAQOut);
+			if boolDaqIn
+				closeDaqInput(objDAQIn);
+			end
+		catch
 		end
 	end
 	
 	%% show error
-	rethrow(lasterror); %#ok<LERR>
+	rethrow(ME);
 end
 %end

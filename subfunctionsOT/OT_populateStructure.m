@@ -23,19 +23,30 @@ function sOT = OT_populateStructure(sOT)
 	sOT.metaData.cellMetric{6} = 'Asym Up-Down';
 	sOT.metaData.cellMetric{7} = 'Asym Vert-Horz';
 	
-	%default values
-	sOT.metaData.dblSubSampleToReq = 0.011;
-	sOT.metaData.dblFiltFreq = 500;
-	
 	%initialize data stream variables
 	sOT.IsInitialized = false;
+	%ephys
 	sOT.NumChannels = 0;
-	sOT.dblSampFreq = 0;
-	sOT.dblEphysTime = 0;
-	sOT.intEphysTrial = 0;
-	sOT.dblStimCoverage = 0;
-	sOT.intStimTrial = 0;
-	sOT.sStimObject = [];
-	sOT.vecTimestamps = [];
+	sOT.dblSampFreqIM = 0;
+	sOT.dblSampFreqNI = 0;
+	sOT.dblEphysTimeIM = 0;
+	sOT.dblEphysTimeNI = 0;
+	sOT.intEphysTrialN = 0;
+	sOT.dblEphysTrialT = 0;
+	sOT.intLastFetchNI = 0;
+	sOT.intLastFetchIM = 0;
+	%data
+	sOT.vecTimestampsNI = [];
+	sOT.vecSyncData = [];
+	sOT.vecTimestampsIM = [];
 	sOT.matData = [];
+
+	%stim
+	sOT.dblStimCoverage = 0;
+	sOT.intStimTrialN = 0;
+	sOT.dblStimTrialT = 0;
+	sOT.sStimObject = [];
+	sOT.vecStimOnT = [];
+	sOT.vecStimOffT = [];
+	
 end

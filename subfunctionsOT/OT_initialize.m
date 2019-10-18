@@ -22,18 +22,20 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	set(sFig.ptrListSelectChannel,'String',cellChannels);
 	
 	%default downsample
-	dblSampFreq = sOT.dblSampFreq;
-	dblSubSampleToReq = sOT.metaData.dblSubSampleToReq;
-	intSubSampleFactor = round(dblSubSampleToReq*dblSampFreq);
-	dblSubSampleTo = intSubSampleFactor/dblSampFreq;
-	set(sFig.ptrEditDownsample,'String',sprintf('%.3f',dblSubSampleTo));
-	set(sFig.ptrTextDownsampleFactor,'String',num2str(intSubSampleFactor));
+	dblSampFreqIM = sOT.dblSampFreqIM;
+	dblSampFreqNI = sOT.dblSampFreqNI;
+	dblSubSampleToReq = str2double(get(sFig.ptrEditDownsample,'String'));
+	sOT.intSubSampleFactorIM = round(dblSubSampleToReq*dblSampFreqIM);
+	if isnan(sOT.intSubSampleFactorIM),sOT.intSubSampleFactorIM=0;end
+	sOT.dblSubSampleTo = sOT.intSubSampleFactorIM/dblSampFreqIM;
+	if isnan(sOT.dblSubSampleTo),sOT.dblSubSampleTo=0;end
+	sOT.dblSubSampleFactorNI = dblSampFreqNI*sOT.dblSubSampleTo;
+	set(sFig.ptrEditDownsample,'String',sprintf('%.3f',sOT.dblSubSampleTo));
+	set(sFig.ptrTextDownsampleFactor,'String',num2str(sOT.intSubSampleFactorIM));
 	
 	%sample frequency
-	set(sFig.ptrTextEphysFreq,'String',sprintf('%.2f',sOT.dblSampFreq));
-	
-	%default high-pass frequency
-	set(sFig.ptrEditHighpassFreq,'String',sprintf('%.1f',sOT.metaData.dblFiltFreq));
+	set(sFig.ptrTextFreqIM,'String',sprintf('%.2f',dblSampFreqIM));
+	set(sFig.ptrTextFreqNI,'String',sprintf('%.2f',dblSampFreqNI));
 	
 	%test GPU
 	cellText(end+1) = {'Testing GPU Compute Capability...'};
@@ -54,6 +56,9 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 		cellText(end+1) = {['GPU CC is bad (' strCompCap '); GPU processing disabled!']};
 		OT_updateTextInformation(cellText);
 	end
+	
+	%enable all fields
+	OT_enable(sFig);
 	
 	%set msg
 	sOT.IsInitialized = true;

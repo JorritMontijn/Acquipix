@@ -49,6 +49,7 @@ function ptrListSelectDataProcessing_CreateFcn(hObject, eventdata, handles),end 
 function ptrEditChannelMin_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditChannelMax_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditHostSGL_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrEditStimSyncNI_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 
 %% opening function; initializes output
 function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -212,7 +213,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	%clear data
 	set(sFig.ptrTextChanNumIM, 'string', '...');
 	set(sFig.ptrTextRecording, 'string', '...');
-	set(sFig.ptrTextProbe, 'string', '...');
+	set(sFig.ptrListSelectProbe, 'string', {''});
 	
 	%connect to host
 	sOT.strHostSGL = get(sFig.ptrEditHostSGL,'String');
@@ -272,58 +273,8 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		end
 	end
 	
-	%start run if it's not already running
-	boolInitSGL = IsInitialized(sOT.hSGL);
-	boolIsRunningSGL = IsRunning(sOT.hSGL);
-	if boolInitSGL && ~boolIsRunningSGL
-		%start run
-		StartRun(sOT.hSGL);
-	end
-	%set global switch
-	sOT.boolInitSGL = true;
-	
-	% get data
-	%set stream IDs
-	vecStreamIM = [0];
-	intStreamNI = -1;
-	
-	%get name for this run
-	strRecording = GetRunName(sOT.hSGL);
-	
-	%get probe ID
-	[cellSN,vecType] = GetImProbeSN(sOT.hSGL, vecStreamIM(1));
-	
-	%get number of channels per type
-	vecSaveChans = GetSaveChans(sOT.hSGL, vecStreamIM(1));
-	vecChPerType = GetAcqChanCounts(sOT.hSGL, vecStreamIM(1));
-	if numel(vecSaveChans) ~= sum(vecChPerType)
-		%we're not saving all channels... is this correct?
-		cellText{end+1} = '';
-		cellText{end+1} = '<< WARNING >>';
-		cellText{end+1} = sprintf('Only %d/%d available channels are being saved!',numel(vecSaveChans),sum(vecChPerType));
-		OT_updateTextInformation(cellText);
-		sOT.vecAllChans = 0:(sum(vecChPerType)-1);
-	else
-		sOT.vecAllChans = vecSaveChans;
-	end
-	
-	%get samp freq
-	sOT.dblSampFreq = GetSampleRate(sOT.hSGL, vecStreamIM(1));
-	
-	%check whether to show AP or LFP
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1 %LFP
-		vecUseChans = sOT.vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
-	else %AP
-		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
-	end
-	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
-
-	%fill recording/block data
-	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
-	set(sFig.ptrTextRecording, 'string', strRecording);
-	set(sFig.ptrTextProbe, 'string', cellSN{1});
+	%initialize connection with SGL
+	[sFig,sOT] = OT_initSGL(sFig,sOT);
 	
 	%unlock GUI
 	OT_unlock(handles);
@@ -374,6 +325,20 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 		[sFig,sOT] = OT_initialize(sFig,sOT);
 	end
 end
+function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+	%get globals
+	global sFig;
+	global sOT;
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	% update maps
+	[sFig,sOT] = OT_initSGL(sFig,sOT);
+	
+	%unlock GUI
+	OT_unlock(handles);
+end
 function ptrListSelectChannel_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
 	OT_lock(handles);
@@ -399,15 +364,17 @@ function ptrEditDownsample_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sFig;
 	global sOT;
 	
-	%default downsample
-	dblSampFreq = sOT.dblSampFreq;
+	%downsample
+	dblSampFreqIM = sOT.dblSampFreqIM;
+	dblSampFreqNI = sOT.dblSampFreqNI;
 	dblSubSampleToReq = str2double(get(sFig.ptrEditDownsample,'String'));
-	intSubSampleFactor = round(dblSubSampleToReq*dblSampFreq);
-	if isnan(intSubSampleFactor),intSubSampleFactor=0;end
-	dblSubSampleTo = intSubSampleFactor/dblSampFreq;
-	if isnan(dblSubSampleTo),dblSubSampleTo=0;end
+	sOT.intSubSampleFactorIM = round(dblSubSampleToReq*dblSampFreqIM);
+	if isnan(sOT.intSubSampleFactorIM),sOT.intSubSampleFactorIM=0;end
+	sOT.dblSubSampleTo = sOT.intSubSampleFactorIM/dblSampFreqIM;
+	if isnan(sOT.dblSubSampleTo),sOT.dblSubSampleTo=0;end
+	sOT.dblSubSampleFactorNI = dblSubSampleTo/dblSampFreqNI;
 	set(sFig.ptrEditDownsample,'String',sprintf('%.3f',dblSubSampleTo));
-	set(sFig.ptrTextDownsampleFactor,'String',num2str(intSubSampleFactor));
+	set(sFig.ptrTextDownsampleFactor,'String',num2str(intSubSampleFactorIM));
 end 
 function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
@@ -504,4 +471,29 @@ end
 
 
 
-
+function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+	%get globals
+	global sOT;
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	%get channel
+	intStimSyncChanNI = str2double(get(hObject,'String'));
+	
+	%check if channel lies within range of NI channels
+	vecSaveChans = GetSaveChans(sOT.hSGL, -1);
+	if ~ismember(intStimSyncChanNI,vecSaveChans)
+		cellText = {'<< WARNING >>','',sprintf('Sync channel %d is out of NI channel range',intStimSyncChanNI)};
+	else
+		cellText = {sprintf('Changing stim sync channel to %d',intStimSyncChanNI)};
+	end
+	OT_updateTextInformation(cellText);
+	
+	%assign new channel ID
+	sOT.intStimSyncChanNI = intStimSyncChanNI;
+	
+	%unlock GUI
+	OT_unlock(handles);
+	
+end
