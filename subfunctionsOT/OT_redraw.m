@@ -119,11 +119,12 @@ function OT_redraw(varargin)
 		vecRho_bc = zeros(size(vecDeltaPrime));%getTuningRho(matUseResp,deg2rad(vecStimOriDeg));
 		vecOPI = getOPI(matUseResp,deg2rad(vecStimOriDeg));
 		vecOSI = getOSI(matUseResp,deg2rad(vecStimOriDeg));
-	catch
+	catch ME
 		vecDeltaPrime = nan;
 		vecRho_bc = nan;
 		vecOPI = nan;
 		vecOSI = nan;
+		dispErr(ME);
 	end
 	
 	%% select metric

@@ -152,7 +152,9 @@ function OT_main(varargin)
 	for intOnset=1:numel(vecOnsets)
 		%find closest onset
 		[dblMinT,intMinIdx]= min(abs(vecOldStimOnT - vecOnsets(intOnset)));
-		if dblMinT < dblMaxErrorT
+		if isempty(dblMinT)
+			break;
+		elseif dblMinT < dblMaxErrorT
 			vecDiodeOnT(intMinIdx) = vecOnsets(intOnset);
 			if intMinIdx > sOT.intEphysTrialN
 				cellText(end+1) = {sprintf('PD onset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOnsets(intOnset),dblMinT)};
@@ -166,7 +168,9 @@ function OT_main(varargin)
 	for intOffset=1:numel(vecOffsets)
 		%find closest offset
 		[dblMinT,intMinIdx]= min(abs(vecOldStimOffT - vecOffsets(intOffset)));
-		if dblMinT < dblMaxErrorT
+		if isempty(dblMinT)
+			break;
+		elseif dblMinT < dblMaxErrorT
 			vecDiodeOffT(intMinIdx) = vecOffsets(intOffset);
 			if intMinIdx > sOT.intEphysTrialN
 				cellText(end+1) = {sprintf('PD offset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOffsets(intOffset),dblMinT)};
@@ -360,8 +364,6 @@ function OT_main(varargin)
 	end
 	
 	%% update trial-average data matrix
-	finish from here onwards
-	
 	intTrials = min([intEphysTrialN intStimTrialN]);
 	if intTrials > intRespTrialN
 		%% calc RF estimate
@@ -379,7 +381,7 @@ function OT_main(varargin)
 		vecUseChans = sOT.vecUseChans;
 		intMaxChan = sOT.intMaxChan;
 		intMinChan = sOT.intMinChan;
-		vecSelectChans = vecUseChans(intMinChan:intMaxChan);
+		vecSelectChans = vecUseChans(intMinChan:intMaxChan)+1;
 		
 		%base, stim
 		matRespBase = nan(numel(vecSelectChans),intTrials);

@@ -26,6 +26,7 @@ function sOT = OT_populateStructure(sOT)
 	%initialize data stream variables
 	sOT.IsInitialized = false;
 	%ephys
+	sOT.intStimSyncChanNI = 0;
 	sOT.NumChannels = 0;
 	sOT.dblSampFreqIM = 0;
 	sOT.dblSampFreqNI = 0;
@@ -49,7 +50,7 @@ function sOT = OT_populateStructure(sOT)
 	sOT.dblSubLastUpdate = [];
 	sOT.vecSubTimestamps = [];
 	sOT.matSubData = [];
-
+	
 	%stim
 	sOT.dblStimCoverage = 0;
 	sOT.intStimTrialN = 0;
@@ -61,6 +62,8 @@ function sOT = OT_populateStructure(sOT)
 	%resp
 	sOT.boolCalcEnv = false;
 	sOT.intRespTrialN = 0;
+	sOT.intMinChan = 1;
+	sOT.intMaxChan = 384;
 	sOT.matRespBase = [];
 	sOT.matRespStim = [];
 	sOT.vecStimTypes = [];

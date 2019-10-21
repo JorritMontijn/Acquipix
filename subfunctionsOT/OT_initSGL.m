@@ -56,7 +56,7 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 		vecUseChans = vecAllChans(1:vecChPerType(1));
 	end
 	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',numel(vecUseChans),')'];
+	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',num2str(numel(vecUseChans)),')'];
 
 	%assign data buffer matrix
 	intBufferT = round(sOT.dblDataBufferSize * sOT.dblSampFreqIM);
