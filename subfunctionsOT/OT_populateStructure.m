@@ -59,6 +59,7 @@ function sOT = OT_populateStructure(sOT)
 	sOT.vecStimOffT = [];
 	
 	%resp
+	sOT.boolCalcEnv = false;
 	sOT.intRespTrialN = 0;
 	sOT.matRespBase = [];
 	sOT.matRespStim = [];

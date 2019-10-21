@@ -38,7 +38,8 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 		vecAllChans = vecSaveChans;
 	end
 	sOT.vecAllChans = vecAllChans;
-
+	sOT.vecChPerType = vecChPerType;
+	
 	%get samp freq
 	sOT.dblSampFreqIM = GetSampleRate(sOT.hSGL, vecStreamIM(intUseStreamIMEC));
 	sOT.dblSampFreqNI = GetSampleRate(sOT.hSGL, intStreamNI);
@@ -55,7 +56,7 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 		vecUseChans = vecAllChans(1:vecChPerType(1));
 	end
 	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(vecUseChans(end))];
+	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',numel(vecUseChans),')'];
 
 	%assign data buffer matrix
 	intBufferT = round(sOT.dblDataBufferSize * sOT.dblSampFreqIM);

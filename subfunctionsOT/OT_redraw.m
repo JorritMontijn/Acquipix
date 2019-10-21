@@ -64,17 +64,15 @@ function OT_redraw(varargin)
 	strChannel = cellChannels{intChannel};
 	
 	%% prep data
-	intTrials = min([sOT.intEphysTrial sOT.intStimTrial]);
-	
-	%get stimulus parameters
-	vecOriDegs = cell2mat({sOT.sStimObject(1:intTrials).Orientation});
-	[vecStimTypes,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
+	intTrials = sOT.intRespTrialN;
 	
 	%get data from globals
+	vecSelectChans = sOT.vecSelectChans;
 	matRespBase = sOT.matRespBase; %[1 by S] cell with [chan x rep] matrix
 	matRespStim = sOT.matRespStim; %[1 by S] cell with [chan x rep] matrix
 	vecStimTypes = sOT.vecStimTypes; %[1 by S] cell with [chan x rep] matrix
 	vecStimOriDeg = sOT.vecStimOriDeg; %[1 by S] cell with [chan x rep] matrix
+	vecUnique = unique(vecStimOriDeg);
 	intNumStimTypes = numel(vecUnique);
 	
 	%% plot OT estimate
@@ -98,10 +96,10 @@ function OT_redraw(varargin)
 	%get quadrant inclusion lists
 	vecHorizontal = deg2rad([0 180]);
 	vecVertical = deg2rad([90 270]);
-	vecDistLeft = circ_dist(deg2rad(vecOriDegs),vecHorizontal(1));
-	vecDistRight = circ_dist(deg2rad(vecOriDegs),vecHorizontal(2));
-	vecDistUp = circ_dist(deg2rad(vecOriDegs),vecVertical(1));
-	vecDistDown = circ_dist(deg2rad(vecOriDegs),vecVertical(2));
+	vecDistLeft = circ_dist(deg2rad(vecStimOriDeg),vecHorizontal(1));
+	vecDistRight = circ_dist(deg2rad(vecStimOriDeg),vecHorizontal(2));
+	vecDistUp = circ_dist(deg2rad(vecStimOriDeg),vecVertical(1));
+	vecDistDown = circ_dist(deg2rad(vecStimOriDeg),vecVertical(2));
 	indIncludeLeft = abs(vecDistLeft) < deg2rad(10);
 	indIncludeRight= abs(vecDistRight) < deg2rad(10);
 	indIncludeUp= abs(vecDistUp) < deg2rad(10);
@@ -150,15 +148,16 @@ function OT_redraw(varargin)
 	if strcmp(strChannel,'Best')
 		[dummy,intChNr] = max(vecTuningValue);
 		vecUseResp = matUseResp(intChNr,:);
-		strChannel = strcat(strChannel,sprintf('=%d',intChNr));
+		strChannel = strcat(strChannel,sprintf('=%d (%d)',intChNr,vecSelectChans(intChNr)));
 	elseif strcmp(strChannel,'Mean')
 		intChNr = 0;
 		vecUseResp = mean(matUseResp,1);
-	elseif strcmp(strChannel(1:2),'Ch')
-		intChNr = str2double(getFlankedBy(strChannel,'Ch-',''));
+	elseif strcmp(strChannel,'Single')
+		intChNr = sOT.intMinChan;
+		strChannel = strcat(strChannel,sprintf(': %d (%d)',intChNr,vecSelectChans(intChNr)));
 		vecUseResp = matUseResp(intChNr,:);
 	else
-		OT_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
+		OT_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
 		return;
 	end
 	%add tuning metrics to title
@@ -180,7 +179,7 @@ function OT_redraw(varargin)
 	end
 	cla(sFig.ptrAxesHandle);
 	if intScatterPlot == 1
-		scatter(sFig.ptrAxesHandle,vecOriDegs,vecUseResp,'kx');
+		scatter(sFig.ptrAxesHandle,vecStimOriDeg,vecUseResp,'kx');
 	end
 	hold(sFig.ptrAxesHandle,'on');
 	errorbar(sFig.ptrAxesHandle,vecUnique,vecPlotRespMean,vecPlotRespErr);

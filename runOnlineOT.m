@@ -100,6 +100,8 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	set(sFig.ptrButtonScatterNo,'UserData','lock')
 	set(sFig.ptrButtonNewFig,'UserData','lock')
 	set(sFig.ptrButtonOldFig,'UserData','lock')
+	set(sFig.ptrButtonEnvYes,'UserData','lock');
+	set(sFig.ptrButtonEnvNo,'UserData','lock')
 	set(sFig.ptrButtonClearAndRecompute,'UserData','lock')
 	set(sFig.ptrListSelectDataProcessing,'UserData','lock');
 	set(sFig.ptrListSelectMetric,'UserData','lock');
@@ -161,7 +163,7 @@ function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<
 	
 	%get number of channels per type
 	vecStreamIM = [0];
-	vecChPerType = GetAcqChanCounts(sOT.hSGL, vecStreamIM(1));
+	vecChPerType = sOT.vecChPerType;
 	
 	%check whether to show AP or LFP
 	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
@@ -173,7 +175,7 @@ function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<
 		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
 	end
 	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
+	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',numel(vecUseChans),')'];
 
 	%fill recording/block data
 	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
@@ -448,29 +450,87 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 		OT_main();
 	end
 end
-
-
-
-function ptrEditChannelMin_Callback(hObject, eventdata, handles)
-% hObject    handle to ptrEditChannelMin (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of ptrEditChannelMin as text
-%        str2double(get(hObject,'String')) returns contents of ptrEditChannelMin as a double
+function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+	%define globals
+	global sOT
+	
+	%lock gui
+	OT_lock(handles);
+		
+	%get data
+	intMinChan = str2double(get(hObject,'String'));
+	strMsg = '';
+	
+	%check whether to show AP or LFP
+	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
+	if intLoadLFP == 1 %LFP
+		strLoadDataType = 'LFP';
+	else %AP
+		intLoadLFP = 0;
+		strLoadDataType = 'AP';
+	end
+	
+	%check range
+	if intMinChan < 1
+		strMsg = strcat(strMsg,sprintf('%d is out of range',intMinChan));
+		intMinChan = 1;
+	end
+	if intMinChan > numel(sOT.vecUseChans)
+		strMsg = strcat(strMsg,sprintf('%d is out of range',intMinChan));
+		intMinChan = numel(sOT.vecUseChans);
+	end
+	strMsg = strcat(strMsg,sprintf('; min chan set to %d (%s%d)',intMinChan,strLoadDataType,intMinChan-1+intLoadLFP*sOT.vecChPerType(1)));
+	
+	%assign to global
+	sOT.intMinChan = intMinChan;
+	
+	%check whether to show AP or LFP
+	OT_updateTextInformation({strMsg});
+		
+	%unlock gui
+	OT_unlock(handles);
 end
 
-function ptrEditChannelMax_Callback(hObject, eventdata, handles)
-% hObject    handle to ptrEditChannelMax (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of ptrEditChannelMax as text
-%        str2double(get(hObject,'String')) returns contents of ptrEditChannelMax as a double
+function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+%define globals
+	global sOT
+	
+	%lock gui
+	OT_lock(handles);
+		
+	%get data
+	intMaxChan = str2double(get(hObject,'String'));
+	strMsg = '';
+	
+	%check whether to show AP or LFP
+	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
+	if intLoadLFP == 1 %LFP
+		strLoadDataType = 'LFP';
+	else %AP
+		intLoadLFP = 0;
+		strLoadDataType = 'AP';
+	end
+	
+	%check range
+	if intMaxChan < 1
+		strMsg = strcat(strMsg,sprintf('%d is out of range',intMaxChan));
+		intMaxChan = 1;
+	end
+	if intMaxChan > numel(sOT.vecUseChans)
+		strMsg = strcat(strMsg,sprintf('%d is out of range',intMaxChan));
+		intMaxChan = numel(sOT.vecUseChans);
+	end
+	strMsg = strcat(strMsg,sprintf('; max chan set to %d (%s%d)',intMaxChan,strLoadDataType,intMaxChan-1+intLoadLFP*sOT.vecChPerType(1)));
+	
+	%assign to global
+	sOT.intMaxChan = intMaxChan;
+	
+	%check whether to show AP or LFP
+	OT_updateTextInformation({strMsg});
+		
+	%unlock gui
+	OT_unlock(handles);
 end
-
-
-
 function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
 	global sOT;
@@ -496,4 +556,42 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%unlock GUI
 	OT_unlock(handles);
 	
+end
+
+function ptrPanelCalcEnv_SelectionChangedFcn(hObject, eventdata, handles)%#ok<DEFNU>
+%% change in data type to calculate
+
+	%get global
+	global sFig;
+	global sOT;
+	if ~isfield(sOT,'hSGL') || ~isempty(sOT.hSGL)
+		return;
+	end
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	%get number of channels per type
+	vecStreamIM = [0];
+	vecChPerType = GetAcqChanCounts(sOT.hSGL, vecStreamIM(1));
+	
+	%check whether to show AP or LFP
+	intCalcEnv = get(sFig.ptrButtonEnvYes,'Value');
+	if intCalcEnv == 1 %LFP
+		strMsg = 'calculating envelope';
+	else %AP
+		strMsg = 'using raw values';
+	end
+	sOT.vecUseChans = vecUseChans;
+	strChanNum = [num2str(sOT.vecUseChans(1)),' - ',num2str(sOT.vecUseChans(end))];
+
+	%fill recording/block data
+	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
+	
+	%update message
+	cellText = {['Switched to ' strLoadDataType]};
+	OT_updateTextInformation(cellText);
+	
+	%unlock GUI
+	OT_unlock(handles);
 end

@@ -15,7 +15,6 @@ function OT_main(varargin)
 	sFig.boolIsBusy = true;
 
 	%get stream variables
-	boolNewData = false;
 	intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
 	intStimSyncChanNI = sOT.intStimSyncChanNI;
 	intLastFetchNI = sOT.intLastFetchNI;
@@ -57,6 +56,9 @@ function OT_main(varargin)
 	matRespStim = sOT.matRespStim;
 	vecStimTypes = sOT.vecStimTypes;
 	vecStimOriDeg = sOT.vecStimOriDeg;
+	
+	%get whether to calculate envelope
+	boolCalcEnv = sOT.boolCalcEnv;
 	
 	%get data from figure
 	strStimPath = get(sFig.ptrTextStimPath, 'string');
@@ -234,7 +236,7 @@ function OT_main(varargin)
 	sOT.matDataBufferIM(vecAssignBufferPos,:) = matNewData;
 	sOT.dblSubLastUpdate = sOT.dblSubLastUpdate + range(vecNewTimestampsIM)/dblSampFreqIM;
 	
-	%% update env
+	%% update data
 	if sOT.dblSubLastUpdate > 1 %if last subsample update is more than 1 second ago
 		%unroll buffer
 		[vecLinBuffT,vecReorderData] = sort(sOT.vecTimestampsIM,'ascend');
@@ -245,22 +247,7 @@ function OT_main(varargin)
 		%message
 		cellText(end+1:end+2) = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
 		OT_updateTextInformation(cellText);
-		%{
-		%design filter
-		if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-			d = designfilt('highpassfir',...
-				'SampleRate',dblSampFreqIM, ...
-				'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
-				'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
-				'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
-				'PassbandRipple',4);
-			if boolUseGPU
-				gVecFilter = gpuArray(d.Coefficients);
-			else
-				gVecFilter = d.Coefficients;
-			end
-		end
-		%}
+		
 		%retrieve which data to use, subsample & assign to env
 		if isempty(sOT.vecSubTimestamps)
 			dblPrevEnv = max(vecLinBuffT) - 2;
@@ -273,32 +260,54 @@ function OT_main(varargin)
 		vecKeepIM = intStartT:intSubSampleFactorIM:intStopT;
 		matSubNewData = matLinBuffData(vecKeepIM,:)';
 		%matSubNewData = nan(size(matLinBuffData,2),numel(vecKeepIM));
-		%{
+		
 		% apply high-pass filter & calculate envelope
-		for intCh=1:size(matLinBuffData,2)
-			%get signal
-			if boolUseGPU
-				gVecSignal = gpuArray(double(matLinBuffData(vecKeepIM,intCh)'));
-			else
-				gVecSignal = double(matLinBuffData(vecKeepIM,intCh)');
-			end
-			
-			%filter
+		if dblFiltFreq > 0 || boolCalcEnv
+			%design filter
 			if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-				gVecSignal = fftfilt(gVecFilter,gVecSignal);
-				
-				%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
+				d = designfilt('highpassfir',...
+					'SampleRate',dblSampFreqIM, ...
+					'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
+					'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
+					'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
+					'PassbandRipple',4);
+				if boolUseGPU
+					gVecFilter = gpuArray(d.Coefficients);
+				else
+					gVecFilter = d.Coefficients;
+				end
 			end
-			%envelope
-			intFilterSize = round(dblSampFreqIM);
-			[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
-			%downsample
-			vecSubEnv = gather(abs(vecEnvHigh)+abs(vecEnvLow));
-			
-			%assign data
-			matSubNewData(intCh,:) = vecSubEnv;
+			%apply to channels
+			for intCh=1:size(matLinBuffData,2)
+				%get signal
+				if boolUseGPU
+					gVecSignal = gpuArray(double(matLinBuffData(vecKeepIM,intCh)'));
+				else
+					gVecSignal = double(matLinBuffData(vecKeepIM,intCh)');
+				end
+				
+				%filter
+				if ~isempty(dblFiltFreq) && dblFiltFreq > 0
+					gVecSignal = fftfilt(gVecFilter,gVecSignal);
+					
+					%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
+				end
+				%envelope
+				if boolCalcEnv
+					intFilterSize = round(dblSampFreqIM);
+					[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
+					%downsample
+					vecSubEnv = gather(abs(vecEnvHigh)+abs(vecEnvLow));
+					
+					%assign data
+					matSubNewData(intCh,:) = vecSubEnv;
+				else
+					%assign data
+					matSubNewData(intCh,:) = gather(gVecSignal);
+				end
+			end
 		end
-		%}
+		
 		%assign data
 		sOT.vecSubTimestamps = cat(2,sOT.vecSubTimestamps,vecUseSubT);
 		sOT.matSubData = cat(2,sOT.matSubData,matSubNewData);
@@ -316,8 +325,6 @@ function OT_main(varargin)
 	vecNewObjectIDs = sort(vecObjectID(vecObjectID>intStimTrialN),'descend');
 	if ~isempty(vecNewObjectIDs)
 		%if there is new data, load it
-		boolNewData = true;
-
 		for intLoadObject=vecNewObjectIDs
 			sLoad = load([strStimPath filesep sprintf('Object%d.mat',intLoadObject)]);
 			sStimObject(intLoadObject) = sLoad.sObject;
@@ -361,10 +368,22 @@ function OT_main(varargin)
 		%update variables
 		vecOriDegs = cell2mat({sStimObject(:).Orientation});
 		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
-
+		
+		%get data
+		vecTimestamps = sOT.vecSubTimestamps;
+		matData = sOT.matSubData;
+		vecStimOnT = sOT.vecDiodeOnT; %on times of all stimuli (diode on time)
+		vecStimOffT = sOT.vecDiodeOffT; %off times of all stimuli (diode off time)
+	
+		%get selected channels
+		vecUseChans = sOT.vecUseChans;
+		intMaxChan = sOT.intMaxChan;
+		intMinChan = sOT.intMinChan;
+		vecSelectChans = vecUseChans(intMinChan:intMaxChan);
+		
 		%base, stim
-		matRespBase = nan(sOT.NumChannels,intTrials);
-		matRespStim = nan(sOT.NumChannels,intTrials);
+		matRespBase = nan(numel(vecSelectChans),intTrials);
+		matRespStim = nan(numel(vecSelectChans),intTrials);
 		vecStimTypes = nan(1,intTrials);
 		vecStimOriDeg = nan(1,intTrials);
 		%go through objects and assign to matrices
@@ -373,27 +392,32 @@ function OT_main(varargin)
 			intStimType = vecTrialIdx(intTrial);
 
 			%get data
-			dblStartTrial= vecTrialStartTime(intTrial);
-			dblStartStim = vecStimOnTime(intTrial);
-			dblStopStim = vecStimOffTime(intTrial);
-			vecBaseBins = find(vecTimestampsIM>dblStartTrial):find(vecTimestampsIM>dblStartStim);
-			vecStimBins = find(vecTimestampsIM>dblStartStim):find(vecTimestampsIM>dblStopStim);
+			if intTrial==1
+				dblStartTrial = vecStimOnT(intTrial)-median(vecStimOffT-vecStimOnT)+0.1;
+			else
+				dblStartTrial = vecStimOffT(intTrial-1)+0.1;
+			end
+			dblStartStim = vecStimOnT(intTrial);
+			dblStopStim = vecStimOffT(intTrial);
+			vecBaseBins = find(vecTimestamps>dblStartTrial):find(vecTimestamps>dblStartStim);
+			vecStimBins = find(vecTimestamps>dblStartStim):find(vecTimestamps>dblStopStim);
 			%if ePhys data is not available yet, break
 			if isempty(vecBaseBins) || isempty(vecStimBins)
 				break;
 			end
-			vecBaseLFP = mean(matDataBufferIM(:,vecBaseBins),2)./numel(vecBaseBins);
-			vecStimLFP = mean(matDataBufferIM(:,vecStimBins),2)./numel(vecStimBins);
+			vecBaseResp = mean(matData(vecSelectChans,vecBaseBins),2)./numel(vecBaseBins);
+			vecStimResp = mean(matData(vecSelectChans,vecStimBins),2)./numel(vecStimBins);
 
 			%assign data
-			matRespBase(:,intTrial) = vecBaseLFP;
-			matRespStim(:,intTrial) = vecStimLFP;
+			matRespBase(:,intTrial) = vecBaseResp;
+			matRespStim(:,intTrial) = vecStimResp;
 			vecStimTypes(intTrial) = intStimType;
 			vecStimOriDeg(intTrial) = vecOriDegs(intTrial);
 		end
 
 		%% save data to globals
 		sOT.intRespTrialN = intTrials;
+		sOT.vecSelectChans = vecSelectChans;
 		sOT.matRespBase = matRespBase; %[1 by S] cell with [chan x rep] matrix
 		sOT.matRespStim = matRespStim; %[1 by S] cell with [chan x rep] matrix
 		sOT.vecStimTypes = vecStimTypes; %[1 by S] cell with [chan x rep] matrix
