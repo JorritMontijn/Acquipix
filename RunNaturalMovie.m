@@ -1,4 +1,4 @@
-%function structEP = RunDriftingGratings
+%function structEP = RunNaturalMovie
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
@@ -12,7 +12,7 @@ strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
-
+if ~exist(strTexDir,'dir'),mkdir(strTexDir);end
 
 %% query user input for recording name
 strRecording = input('Recording name (e.g., MouseX): ', 's');
@@ -63,8 +63,11 @@ try
 			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
 		end
 	end
-catch
-	if boolUseSGL,CloseSGL(hSGL);end
+catch ME
+	dispErr(ME);
+	if boolUseSGL
+		CloseSGL(hSGL);
+	end
 end
 
 %% check if temporary directory exists, clean or make
@@ -95,7 +98,7 @@ fprintf('Preparing variables...\n');
 structEP = struct; %structureElectroPhysiology
 
 %get default settings in Set
-intUseDaqDevice = boolUseSGL; %set to 0 to skip I/O
+intUseDaqDevice = 1; %set to 0 to skip I/O
 
 %assign filename
 structEP.strFile = mfilename;
@@ -106,16 +109,17 @@ structEP.debug = 1;
 %% stimulus params
 %visual space parameters
 sStimParams = struct;
-sStimParams.strStimType = 'SquareGrating';
+sStimParams.strStimType = 'NaturalMovie';
 sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParams.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
-sStimParams.dblScreenDistance_cm = 14; % cm; measured
-sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
+sStimParams.dblSubjectPosY_cm = 0; %-3.5 cm; relative to center of screen
+sStimParams.dblScreenDistance_cm = 30;%14; % cm; measured
+sStimParams.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParams.vecStimPosX_deg = 20; % deg; relative to subject
+sStimParams.vecStimPosX_deg = 0; % deg; relative to subject
 sStimParams.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParams.vecStimulusSize_deg = 90;%circular window in degrees [35]
+sStimParams.vecSceneSize_deg = 40;%stimulus will be assumed to be this size
+sStimParams.vecStimulusSize_deg = 0;%circular window in degrees [35]
 sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
@@ -131,31 +135,30 @@ sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 
 sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
 sStimParams.intUseGPU = 1;
 sStimParams.intAntiAlias = 0;
-sStimParams.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
-sStimParams.vecContrasts = 100; %contrast; [0-100]
-sStimParams.vecOrientations = 0:15:359; %orientation (0 is drifting rightward)
-sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
-sStimParams.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
-
+sStimParams.vecContrasts = [100];
+sStimParams.vecLuminances = [100];
+sStimParams.vecScenes = [1]; %1: condor flight school
+sStimParams.strScene = 'CondorFlightSchool'; %description
+		
 %build single-repetition list
-[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
+[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParams);
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
 	parpool(sStimParams.intUseParPool * [1 1]);
 end
 if sStimParams.intUseGPU > 0
-   objGPU = gpuDevice(sStimParams.intUseGPU);
+	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
 
 %% trial timing variables
 structEP.intNumRepeats = 10;
 structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.5;
-structEP.dblSecsStimDur = 2;
-structEP.dblSecsBlankPost = 0.5;
+structEP.dblSecsBlankPre = 0;
+structEP.dblSecsStimDur = 20;
+structEP.dblSecsBlankPost = 0;
 structEP.dblSecsBlankAtEnd = 3;
 
 %% create presentation vectors
@@ -179,23 +182,21 @@ structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsSti
 structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
 
 %% initialize NI I/O box
-if boolUseSGL
-	%initialize
-	fprintf('Connecting to National Instruments box...\n');
-	strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
-	boolDaqIn = true;
-	try
-		objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);
-	catch ME
-		if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
-			fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
-			boolDaqIn = false;
-		else
-			rethrow(ME);
-		end
+%initialize
+fprintf('Connecting to National Instruments box...\n');
+strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
+boolDaqIn = boolUseSGL;
+try
+	if boolDaqIn,objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);end
+catch ME
+	if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
+		fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
+		boolDaqIn = false;
+	else
+		rethrow(ME);
 	end
-	objDAQOut = openDaqOutput(intUseDaqDevice);
 end
+if boolUseSGL,objDAQOut = openDaqOutput(intUseDaqDevice);end
 
 try
 	%% INITALIZE SCREEN
@@ -205,6 +206,7 @@ try
 	KbName('UnifyKeyNames');
 	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
+	if ~boolUseSGL,Screen('Preference', 'SkipSyncTests', 1);end
 	[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
@@ -234,24 +236,31 @@ try
 	boolPreLoadTextures = true;
 	for intStimType = 1:structEP.intStimTypes
 		sStimObject(intStimType).FrameRate = intStimFrameRate;
-		matGrating = loadStimulusTexture(sStimObject(intStimType),strTexDir,sStimParams);
+		[matSceneFrames,vecSceneFrameIDs] = loadStimulusTexture(sStimObject(intStimType),strTexDir,sStimParams);
 	end
 	fprintf('   Done\n');
 	
 	%% attempt to pre-load textures
-	fprintf('\nAttempting texture pre-loading...');
 	if boolPreLoadTextures
+		fprintf('\nAttempting texture pre-loading...');
 		try
 			%draw textures
-			matGrating = loadStimulusTexture(sStimObject(1),strTexDir,sStimParams);
-			intTotFrames = size(matGrating,3);
+			[matSceneFrames,vecSceneFrameIDs] = loadStimulusTexture(sStimObject(1),strTexDir,sStimParams);
+			intTexD = ndims(matSceneFrames);
+			intTotFrames = size(matSceneFrames,intTexD);
 			intOptimizeForDrawAngle = 0; %optimize for upright
 			intSpecialFlags = 0; %1 to put into square opengl texture
 			vecTex = nan(1,intTotFrames);
-			for intFrame=1:intTotFrames
-				vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matGrating(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
+			if intTexD == 3 %grey
+				for intFrame=1:intTotFrames
+					vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matSceneFrames(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
+				end
+			elseif intTexD == 4 %color
+				for intFrame=1:intTotFrames
+					vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matSceneFrames(:,:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
+				end
 			end
-			clear matGrating;
+			clear matSceneFrames;
 			
 			%pre-load
 			[boolResident,vecTexResident] = Screen('PreloadTextures', ptrWindow, vecTex);
@@ -310,27 +319,23 @@ try
 		dblLastFlipFlip = Screen('Flip', ptrWindow,dblLastFlip + dblStimFrameDur/2);
 		dblInitialBlankDur = dblLastFlipFlip - dblInitialFlip;
 	end
-	
+	intLastType = 1;
+	sThisStimObject = sStimObject(1);
 	for intThisTrial = 1:structEP.intTrialNum
 		%% check escape
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		%% prep trial
 		
 		%trial start
-		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
 		
 		%fill DAQ with data
 		if boolUseSGL
-		stop(objDAQOut);
-		outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
-		outputData2 = linspace(3, 3, 250)';
-		queueOutputData(objDAQOut,[outputData1 outputData2]);
+			stop(objDAQOut);
+			outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
+			outputData2 = linspace(3, 3, 250)';
+			queueOutputData(objDAQOut,[outputData1 outputData2]);
 		end
-		
-		%retrieve stimulus info
-		intStimType = structEP.vecTrialStimTypes(intThisTrial);
-		sThisStimObject = sStimObject(intStimType);
 		
 		%get timing
 		dblStartSecs = structEP.vecTrialStartSecs(intThisTrial);
@@ -339,27 +344,44 @@ try
 		dblStimDurSecs = dblStimOffSecs - dblStimOnSecs;
 		dblEndSecs = structEP.vecTrialEndSecs(intThisTrial);
 		
-		%load textures
-		matGrating = loadStimulusTexture(sThisStimObject,strTexDir,sStimParams);
-		intTotFrames = size(matGrating,3);
-		intOptimizeForDrawAngle = 0; %optimize for upright
-		intSpecialFlags = 0; %1 to put into square opengl texture
-		vecTex = nan(1,intTotFrames);
-		for intFrame=1:intTotFrames
-			vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matGrating(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
-		end
-		clear matGrating;
-		
-		%% pre-load textures
-		if boolPreLoadTextures
-			[boolResident,vecTexResident] = Screen('PreloadTextures', ptrWindow, vecTex);
+		%retrieve stimulus info
+		intStimType = structEP.vecTrialStimTypes(intThisTrial);
+		if intLastType ~= intStimType
+			%if stimulus type has changed, close textures
+			Screen('Close',vecTex);
+			clear vecTex;
+			
+			%load new data
+			intLastType = intStimType;
+			sThisStimObject = sStimObject(intStimType);
+			
+			%load textures
+			matSceneFrames = loadStimulusTexture(sThisStimObject,strTexDir,sStimParams);
+			intTexD = ndims(matSceneFrames);
+			intTotFrames = size(matSceneFrames,intTexD);
+			intOptimizeForDrawAngle = 0; %optimize for upright
+			intSpecialFlags = 0; %1 to put into square opengl texture
+			vecTex = nan(1,intTotFrames);
+			if intTexD == 3 %grey
+				for intFrame=1:intTotFrames
+					vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matSceneFrames(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
+				end
+			elseif intTexD == 4 %color
+				for intFrame=1:intTotFrames
+					vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matSceneFrames(:,:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
+				end
+			end
+			clear matSceneFrames;
+			
+			%% pre-load textures
+			if boolPreLoadTextures
+				[boolResident,vecTexResident] = Screen('PreloadTextures', ptrWindow, vecTex);
+			end
 		end
 		
 		%% wait pre-blanking
 		dblPreBlankDur = 0;
-		Screen('FillRect',ptrWindow, sStimParams.intBackground);
-		dblLastFlip = Screen('Flip', ptrWindow);
-		dblDAQ_Dur = 0; %measured time to set NI DAQ switch
+		dblDAQ_Dur = 0.1; %measured time to set NI DAQ switch
 		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblDAQ_Dur)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
@@ -372,9 +394,6 @@ try
 		
 		%% show stimulus
 		dblStimStartFlip = dblLastFlip;
-		dblCycleDur = 1/sThisStimObject.TemporalFrequency;
-		dblPhaseRand = dblCycleDur*rand(1);
-		sThisStimObject.Phase = dblPhaseRand;
 		dblNextFlip = 0;
 		intFlipCounter = 0;
 		vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
@@ -392,9 +411,9 @@ try
 			end
 			
 			%draw stimulus
-			dblTime = dblLastFlip-dblStimStartFlip;
-			tStamp = mod(eps+dblPhaseRand+dblTime,dblCycleDur);
-			intFrame = ceil(tStamp * sThisStimObject.FrameRate);
+			dblTime = toc(refTimeLocal);
+			tStamp = mod(eps+dblTime,dblStimDurSecs);
+			intFrame = vecSceneFrameIDs(ceil(tStamp * sThisStimObject.FrameRate));
 			Screen('DrawTexture',ptrWindow,vecTex(intFrame));
 			Screen('DrawingFinished', ptrWindow);
 			
@@ -410,22 +429,17 @@ try
 		dblStimOnFlip = vecStimFlips(1);
 		
 		%back to background
-		Screen('FillRect',ptrWindow, sStimParams.intBackground);
-		dblStimOffFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
+		dblStimOffFlip = dblNextFlip;
 		
 		%log NI timestamp
 		if boolUseSGL,dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
-				
-		%close textures and wait for post trial seconds
-		Screen('Close',vecTex);
-		clear vecTex;
 		
 		%% save stimulus object
 		try
 			%add timestamps
-			if boolUseSGL,
-			sThisStimObject.dblStimOnNI = dblStimOnNI;
-			sThisStimObject.dblStimOffNI = dblStimOffNI;
+			if boolUseSGL
+				sThisStimObject.dblStimOnNI = dblStimOnNI;
+				sThisStimObject.dblStimOffNI = dblStimOffNI;
 			end
 			%save object
 			sObject = sThisStimObject;
@@ -435,9 +449,7 @@ try
 		end
 		
 		%% wait post-blanking
-		dblTrialDur = 0;
-		Screen('FillRect',ptrWindow, sStimParams.intBackground);
-		dblLastFlip = Screen('Flip', ptrWindow);
+		dblTrialDur = dblLastFlip - dblTrialStartFlip;
 		while dblTrialDur < (dblEndSecs - dblStartSecs - 2*dblStimFrameDur)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
@@ -454,7 +466,7 @@ try
 		structEP.ActOffSecs(intStimNumber) = dblStimOffFlip;
 		structEP.ActEndSecs(intStimNumber) = dblLastFlip;
 		
-		%add grating-specific properties as vectors
+		%add stimulus-specific properties as vectors
 		strProps = '';
 		for intField=1:numel(cellStimPropNames)
 			strField = cellStimPropNames{intField};
@@ -467,7 +479,7 @@ try
 		end
 		
 		%show trial summary
-		fprintf('Completed trial %d of %d at time=%.3fs (stim dur=%.3fs); stimulus was %.1f degrees; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,sThisStimObject.Orientation,strProps);
+		fprintf('Completed trial %d of %d at time=%.3fs (stim dur=%.3fs); stimulus was %.1f degrees; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,sThisStimObject.Scene,strProps);
 	end
 	
 	%% save data
@@ -499,7 +511,7 @@ try
 	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
 	%end recording
-	if boolUseSGL,CloseSGL(hSGL);end
+	CloseSGL(hSGL);
 	
 	%close Daq IO
 	if intUseDaqDevice > 0

@@ -1,6 +1,6 @@
-function matTexture = loadStimulusTexture(sStimObject,strTexDir,sStimParams)
+function [matTexture,vecSceneFrames] = loadStimulusTexture(sStimObject,strTexDir,sStimParams)
 	%loadStimulusTexture Loads stimulus texture
-	%	matTexture = loadStimulusTexture(sStimObject)
+	%	[vecSceneFrames,matTexture] = loadStimulusTexture(sStimObject)
 	
 	%% check if master file is present
 	strOldPath = cd(strTexDir);
@@ -25,7 +25,7 @@ function matTexture = loadStimulusTexture(sStimObject,strTexDir,sStimParams)
 	if isempty(strFile)
 		%stimulus not found; create now
 		fprintf('Texture not found in database; creating now...\n');
-		matTexture = buildStimulusTexture(sStimObject,sStimParams);
+		[vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimParams);
 		
 		%add to database
 		cellTexDB{intMaxFile+1,1} = getStimTexNewName(sStimObject,cellTexDB);
@@ -36,7 +36,7 @@ function matTexture = loadStimulusTexture(sStimObject,strTexDir,sStimParams)
 		if ~strcmpi(strFile((end-3):end),'.mat')
 			strFile = strcat(strFile,'.mat');
 		end
-		save(strFile,'matTexture','sStimObject');
+		save(strFile,'vecSceneFrames','matTexture','sStimObject');
 		
 		%save database
 		save(strTexDB,'cellTexDB');
@@ -48,6 +48,11 @@ function matTexture = loadStimulusTexture(sStimObject,strTexDir,sStimParams)
 		end
 		sLoad = load(strFile);
 		matTexture=sLoad.matTexture;
+		if isfield(sLoad,'vecSceneFrames')
+			vecSceneFrames=sLoad.vecSceneFrames;
+		else
+			vecSceneFrames = 1:size(matTexture,ndims(matTexture));
+		end
 	end
 	cd(strOldPath);
 end

@@ -6,6 +6,7 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 	%
 	%	Version History:
 	%	2019-01-25	Created by Jorrit Montijn
+	%	2019-10-23	Added flat approximation
 	
 	%check whether gpu computing is requested
 	if sStimParams.intUseGPU > 0
@@ -37,7 +38,7 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 		intSizeMap = 2*min(intScreenHeight_pix,intScreenWidth_pix); %larger size to enable rotations
 		
 		%get locations in pixels
-		vecX_pix = ((1:intSizeMap)-intSizeMap/2);
+		vecX_pix = ((intSizeMap:-1:1)-intSizeMap/2);
 		vecY_pix = ((intSizeMap:-1:1)-intSizeMap/2); %invert y to make high values be up
 		
 		%transfer to GPU
@@ -47,7 +48,7 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 		end
 		
 		%get locations in cm
-		vecX_cm = (vecX_pix/intScreenWidth_pix)*dblScreenWidth_cm - dblSubjectPosX_cm;
+		vecX_cm = (vecX_pix/intScreenWidth_pix)*dblScreenWidth_cm + dblSubjectPosX_cm;
 		vecY_cm = (vecY_pix/intScreenHeight_pix)*dblScreenHeight_cm - dblSubjectPosY_cm;
 		[matMapX_cm,matMapY_cm]=meshgrid(vecX_cm,vecY_cm);
 		
@@ -64,17 +65,39 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 		%extract required variables
 		intScreenWidth_pix = sStimParams.intScreenWidth_pix;
 		intScreenHeight_pix = sStimParams.intScreenHeight_pix;
-		dblScreenWidth_deg = sStimParams.dblScreenWidth_deg;
-		dblScreenHeight_deg = sStimParams.dblScreenHeight_deg;
+		dblScreenWidth_cm = sStimParams.dblScreenWidth_cm;
+		dblScreenHeight_cm = sStimParams.dblScreenHeight_cm;
+		dblSubjectPosX_cm = sStimParams.dblSubjectPosX_cm;
+		dblSubjectPosY_cm = sStimParams.dblSubjectPosY_cm;
+		dblScreenDistance_cm = sStimParams.dblScreenDistance_cm;
 		
-		%get linear maps
-		vecDegX = linspace(dblScreenWidth_deg/intScreenWidth_pix,dblScreenWidth_deg,intScreenWidth_pix);
-		vecDegX = vecDegX-mean(vecDegX);
-		vecDegY = linspace(dblScreenHeight_deg/intScreenHeight_pix,dblScreenHeight_deg,intScreenHeight_pix);
-		vecDegY = vecDegY-mean(vecDegY);
+		%get size of map
+		intSizeMap = 2*min(intScreenHeight_pix,intScreenWidth_pix); %larger size to enable rotations
+		
+		%get locations in pixels
+		vecX_pix = ((1:intSizeMap)-intSizeMap/2);
+		vecY_pix = ((intSizeMap:-1:1)-intSizeMap/2); %invert y to make high values be up
+		
+		%transfer to GPU
+		if sStimParams.intUseGPU > 0
+			vecX_pix = gpuArray(vecX_pix);
+			vecY_pix = gpuArray(vecY_pix);
+		end
+		
+		%get locations in cm
+		vecX_cm = (vecX_pix/intScreenWidth_pix)*dblScreenWidth_cm - dblSubjectPosX_cm;
+		vecY_cm = (vecY_pix/intScreenHeight_pix)*dblScreenHeight_cm - dblSubjectPosY_cm;
+		[matMapX_cm,matMapY_cm]=meshgrid(vecX_cm,vecY_cm);
+		
+		%get approximate flattened cm to deg
+		dblScreenHeight_deg = atand((dblScreenHeight_cm/2)/dblScreenDistance_cm)*2;
+		dblDegPerCm = dblScreenHeight_deg/dblScreenHeight_cm;
+		
+		%transform to approximate degrees
+		matMapX_deg = matMapX_cm*dblDegPerCm;
+		matMapY_deg = matMapY_cm*dblDegPerCm;
 		
 		%get grids
-		[matMapX_deg,matMapY_deg] = meshgrid(vecDegX,vecDegY);
 		matDistance_cm = ones(size(matMapX_deg)); %placeholder
 		
 		%build grid

@@ -1,4 +1,4 @@
-function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams)
+function [sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParams)
 	%getDriftingGratingCombos Builds drifting grating combinations from input parameters
 	%	[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams)
 	
@@ -9,8 +9,8 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 	cellFieldDefaults = ...
 	{...
 		%stimulus type
-		'strStimType','SquareGrating';...
-		'str90Deg','0 degrees is leftward motion; 90 degrees is upward motion';...
+		'strStimType','NaturalMovie';...
+		'strScene','default';...
 		
 		%subject parameters
 		'dblSubjectPosX_cm',0;... % cm; relative to center of screen
@@ -31,15 +31,13 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		'vecStimPosX_deg',0;... % deg; relative to center of screen
 		'vecStimPosY_deg',0;... % deg; relative to center of screen
 		'vecStimulusSize_deg',[16];...%circular window in degrees
+		'vecSceneSize_deg',20;...%size of natural scene
 		'vecSoftEdge_deg',[2];... %width of cosine ramp, [0] hard edge
 		'vecBackgrounds',[0.5];... %background intensity (dbl, [0 1])
-		'vecUseMask',[1];... %[1] if mask to emulate retinal-space, [0] use screen-space
+		'vecUseMask',[0];... %[1] if mask to emulate retinal-space, [0] use screen-space
 		'vecContrasts',[100];... %contrast [0-100]
-		'vecLuminances',[100];...%luminance [0-100]
-		'vecOrientations',[357 3 87 93 177 183 267 273];... %orientation (0 is vertical)
-		'vecSpatialFrequencies',[0.08];... %Spat Frequency in cyc/deg 0.08
-		'vecTemporalFrequencies',[0.5];... %Temporal frequency in cycles per second (0 = static gratings only)
-		'vecPhases',[nan];... %initial phase
+		'vecLuminances',[100];... %luminance [0-100]
+		'vecScenes',[1];...%scene [1]
 	};
 	
 	%% assign supplied or default values
@@ -97,7 +95,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 	
 	%% check stimulus type
 	strStimType = sStimParams.strStimType;
-	cellStimTypes = {'SquareGrating','SineGrating','Line','NatMov'};
+	cellStimTypes = {'NaturalMovie','NaturalScene'};
 	intStimType = find(ismember(cellStimTypes,strStimType), 1);
 	if isempty(intStimType),error([mfilename ':StimTypeError'],sprintf('Stimulus type "%s" is not recognized [%s]',strStimType,getTime));end
 	
