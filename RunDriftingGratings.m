@@ -6,7 +6,7 @@ clear all;
 close all;
 
 %% define paths
-boolUseSGL = false;
+boolUseSGL = true;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
@@ -86,7 +86,13 @@ if exist(strTempDir,'dir')
 		end
 	end
 else
-	mkdir(strTempDir);
+	if exist('X:\JorritMontijn\','dir')
+		mkdir(strTempDir);
+	else
+		sME.identifier = [mfilename ':NetworkDirMissing'];
+		sME.message = ['Cannot connect to ' strTempDir];
+		error(sME);
+	end
 end
 
 %% general parameters
@@ -381,16 +387,7 @@ try
 		vecStimFrames = nan(size(vecStimFlips));
 		boolFirstFlip = false;
 		refTimeLocal = tic;
-		while toc(refTimeLocal) < (dblStimDurSecs - dblStimFrameDur)
-			%send trigger for stim start
-			if ~boolFirstFlip
-				%set switch
-				boolFirstFlip = 1;
-				
-				%log NI timestamp
-				if boolUseSGL,dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
-			end
-			
+		while toc(refTimeLocal) < (dblStimDurSecs - 2*dblStimFrameDur)
 			%draw stimulus
 			dblTime = dblLastFlip-dblStimStartFlip;
 			tStamp = mod(eps+dblPhaseRand+dblTime,dblCycleDur);
@@ -404,6 +401,18 @@ try
 			intFlipCounter = intFlipCounter + 1;
 			vecStimFlips(intFlipCounter) = dblLastFlip;
 			vecStimFrames(intFlipCounter) = intFrame;
+			
+			%send trigger for stim start
+			if ~boolFirstFlip
+				%set switch
+				boolFirstFlip = 1;
+				
+				%log NI timestamp
+				if boolUseSGL,dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
+				
+				%log flip
+				dblStimStartFlip = dblLastFlip;
+			end
 		end
 		vecStimFlips(isnan(vecStimFlips)) = [];
 		vecStimFrames(isnan(vecStimFrames)) = [];
