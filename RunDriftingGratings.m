@@ -10,6 +10,7 @@ intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 800 with noise
 boolUseSGL = true;
 intDebug = 0;
 intUseMask = 0;
+dblStimSizeDegs = 120;
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -124,9 +125,9 @@ sStimParamsSettings.dblScreenDistance_cm = 14; % cm; measured
 sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
+sStimParamsSettings.vecStimPosX_deg = -20; % deg; relative to subject
 sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimulusSize_deg = 90;%circular window in degrees [35]
+sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in degrees [35]
 sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
@@ -146,17 +147,17 @@ sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upw
 sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
 sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
-sStimParamsSettings.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
+sStimParamsSettings.vecSpatialFrequencies = 0.05; %Spat Frequency in cyc/deg 0.08
 sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 %orientations&noise
 if intStimSet == 1
 	intNumRepeats = 20;
 	sStimParamsSettings.vecOrientations = [0:15:359]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0]; %noise in degrees
+	sStimParamsSettings.vecOrientationNoise = zeros(size(sStimParamsSettings.vecOrientations)); %noise in degrees
 elseif intStimSet == 2
 	intNumRepeats = 800;
 	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0 2.5 0 2.5]; %noise in degrees
+	sStimParamsSettings.vecOrientationNoise = [0 2 0 2]; %noise in degrees
 end
 
 %get stimuli
