@@ -5,13 +5,8 @@
 clear all;
 close all;
 
-%% define variables
-intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 800 with noise
-boolUseSGL = true;
-intDebug = 0;
-intUseMask = 0;
-
 %% define paths
+boolUseSGL = false;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
@@ -112,7 +107,7 @@ intUseDaqDevice = boolUseSGL; %set to 0 to skip I/O
 structEP.strFile = mfilename;
 
 %screen params
-structEP.debug = intDebug;
+structEP.debug = 1;
 
 %% stimulus params
 %visual space parameters
@@ -121,7 +116,7 @@ sStimParamsSettings.strStimType = 'SquareGrating';
 sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
 sStimParamsSettings.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
 sStimParamsSettings.dblScreenDistance_cm = 14; % cm; measured
-sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
+sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
 sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
@@ -146,18 +141,10 @@ sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upw
 sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
 sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
+sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
+sStimParamsSettings.vecOrientationNoise = [0 2.5 0 2.5]; %noise in degrees
 sStimParamsSettings.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
-%orientations&noise
-if intStimSet == 1
-	intNumRepeats = 20;
-	sStimParamsSettings.vecOrientations = [0:15:359]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0]; %noise in degrees
-elseif intStimSet == 2
-	intNumRepeats = 800;
-	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0 2.5 0 2.5]; %noise in degrees
-end
 
 %get stimuli
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
@@ -190,8 +177,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
-structEP.intNumRepeats = intNumRepeats;
+structEP.intNumRepeats = 10;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.4;
 structEP.dblSecsStimDur = 1;

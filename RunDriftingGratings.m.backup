@@ -5,13 +5,8 @@
 clear all;
 close all;
 
-%% define variables
-intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 800 with noise
-boolUseSGL = true;
-intDebug = 0;
-intUseMask = 0;
-
 %% define paths
+boolUseSGL = true;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
@@ -112,74 +107,46 @@ intUseDaqDevice = boolUseSGL; %set to 0 to skip I/O
 structEP.strFile = mfilename;
 
 %screen params
-structEP.debug = intDebug;
+structEP.debug = 1;
 
 %% stimulus params
 %visual space parameters
-sStimParamsSettings = struct;
-sStimParamsSettings.strStimType = 'SquareGrating';
-sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParamsSettings.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
-sStimParamsSettings.dblScreenDistance_cm = 14; % cm; measured
-sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
+sStimParams = struct;
+sStimParams.strStimType = 'SquareGrating';
+sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
+sStimParams.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
+sStimParams.dblScreenDistance_cm = 14; % cm; measured
+sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimulusSize_deg = 90;%circular window in degrees [35]
-sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
+sStimParams.vecStimPosX_deg = 20; % deg; relative to subject
+sStimParams.vecStimPosY_deg = 0; % deg; relative to subject
+sStimParams.vecStimulusSize_deg = 90;%circular window in degrees [35]
+sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
-sStimParamsSettings.intUseScreen = 2; %which screen to use
-sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
-sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
-sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
-sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
-sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
-sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+sStimParams.intUseScreen = 2; %which screen to use
+sStimParams.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+sStimParams.dblCornerSize = 1/30; % fraction of screen width
+sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
+sStimParams.dblScreenHeight_cm = 29; % cm; measured [29]
+sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
+sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 
 %stimulus control variables
-sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParamsSettings.intUseGPU = 1;
-sStimParamsSettings.intAntiAlias = 0;
-sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
-sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
-sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
-sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
-sStimParamsSettings.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
-sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
-%orientations&noise
-if intStimSet == 1
-	intNumRepeats = 20;
-	sStimParamsSettings.vecOrientations = [0:15:359]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0]; %noise in degrees
-elseif intStimSet == 2
-	intNumRepeats = 800;
-	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0 2.5 0 2.5]; %noise in degrees
-end
+sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
+sStimParams.intUseGPU = 1;
+sStimParams.intAntiAlias = 0;
+sStimParams.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
+sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
+sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
+sStimParams.vecContrasts = 100; %contrast; [0-100]
+sStimParams.vecOrientations = 0:15:359; %orientation (0 is drifting rightward)
+sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
+sStimParams.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 
-%get stimuli
-[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
-for intObject=1:numel(sStimObject)
-	sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
-end
-
-%get noise stimuli
-cellStimObjectNoise = cell(1,numel(sStimObject));
-vecStimsWithNoise = find(sStimParamsSettings.vecOrientationNoise > 0);
-for intNoiseStim=1:numel(vecStimsWithNoise)
-	intStim = vecStimsWithNoise(intNoiseStim);
-	dblOri = sStimParamsSettings.vecOrientations(intStim);
-	dblNoise = sStimParamsSettings.vecOrientationNoise(intStim);
-	vecNoiseStims = [dblOri-dblNoise*3:0.1:dblOri+dblNoise*3];
-	intNoiseStims = numel(vecNoiseStims);
-	fprintf('Loading %d noise stimuli for stim %d [%s]\n',intNoiseStims,numel(vecStimsWithNoise),getTime);
-	sStimParamsNoiseStim = rmfield(sStimParamsSettings,'vecOrientationNoise');
-	sStimParamsNoiseStim.vecOrientations = vecNoiseStims;
-	[dummy,sThisStimObjectNoise,dummy2] = getDriftingGratingCombos(sStimParamsNoiseStim);
-	cellStimObjectNoise{intStim} = sThisStimObjectNoise;
-end
+%build single-repetition list
+[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
@@ -190,8 +157,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
-structEP.intNumRepeats = intNumRepeats;
+structEP.intNumRepeats = 10;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.4;
 structEP.dblSecsStimDur = 1;
@@ -245,14 +211,7 @@ try
 	KbName('UnifyKeyNames');
 	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
-	try
-		Screen('Preference', 'SkipSyncTests', 0);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
-	catch ME
-		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
-		Screen('Preference', 'SkipSyncTests', 1);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
-	end
+	[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
 	sStimParams.vecRect = vecRect;
@@ -277,35 +236,13 @@ try
 	
 	%% CHECK TEXTURES
 	%create base texture
-	fprintf('\nChecking base textures... ');
-	hTic = tic;
+	fprintf('\nChecking textures...');
 	boolPreLoadTextures = true;
 	for intStimType = 1:structEP.intStimTypes
 		sStimObject(intStimType).FrameRate = intStimFrameRate;
 		matGrating = loadStimulusTexture(sStimObject(intStimType),strTexDir,sStimParams);
-		if toc(hTic) > 5
-			hTic = tic;
-			fprintf('[%d/%d]',intStimType,structEP.intStimTypes);
-		end
 	end
-	fprintf('\nChecking noise textures... ');
-	hTic = tic;
-	for intNoiseStimType=1:numel(cellStimObjectNoise)
-		if isempty(cellStimObjectNoise{intNoiseStimType}),continue;end
-		fprintf('\nChecking noise stimuli for base stim %d/%d... ',intNoiseStimType,numel(cellStimObjectNoise));
-		hTic = tic;
-		sStimObjectNoise = cellStimObjectNoise{intNoiseStimType};
-		for intNoiseStim = 1:numel(sStimObjectNoise)
-			sStimObjectNoise(intNoiseStim).FrameRate = intStimFrameRate;
-			matGrating = loadStimulusTexture(sStimObjectNoise(intNoiseStim),strTexDir,sStimParams);
-			if toc(hTic) > 5
-				hTic = tic;
-				fprintf('[%d/%d]',intNoiseStim,numel(sStimObjectNoise));
-			end
-		end
-		cellStimObjectNoise{intNoiseStimType} = sStimObjectNoise;
-	end
-	fprintf('\n   Done\n');
+	fprintf('   Done\n');
 	
 	%% attempt to pre-load textures
 	fprintf('\nAttempting texture pre-loading...');
@@ -401,15 +338,6 @@ try
 		%retrieve stimulus info
 		intStimType = structEP.vecTrialStimTypes(intThisTrial);
 		sThisStimObject = sStimObject(intStimType);
-		if sThisStimObject.OrientationNoise > 0
-			%get random orientation
-			dblRandOri = normrnd(sThisStimObject.Orientation,sThisStimObject.OrientationNoise);
-			
-			%select nearest object
-			sStimObjectNoise = cellStimObjectNoise{intStimType};
-			[dblOri,intUseObject] = min(abs(cellfun(@minus,cellfill(dblRandOri,size(sStimObjectNoise)),{sStimObjectNoise.Orientation})));
-			sThisStimObject = sStimObjectNoise(intUseObject);
-		end
 		
 		%get timing
 		dblStartSecs = structEP.vecTrialStartSecs(intThisTrial);
@@ -551,7 +479,7 @@ try
 		end
 		
 		%show trial summary
-		fprintf('Completed %d/%d at %.3fs (pre=%.3fs,stim=%.3fs,post=%.3fs;tot=%.3fs); %.1f degs; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblPreBlankDur,dblStimDur,dblPostBlankDur,dblTrialDur,sThisStimObject.Orientation,strProps);
+		fprintf('Completed %d/%d at %.3fs (pre-%.3fs,stim=%.3fs,post=%.3fs); stimulus was %.1f degrees; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblPreBlankDur,dblStimDur,dblPostBlankDur,sThisStimObject.Orientation,strProps);
 	end
 	
 	%% save data

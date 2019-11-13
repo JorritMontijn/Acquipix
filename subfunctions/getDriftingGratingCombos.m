@@ -7,7 +7,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 	
 	%% assign defaults
 	cellFieldDefaults = ...
-	{...
+		{...
 		%stimulus type
 		'strStimType','SquareGrating';...
 		'str90Deg','0 degrees is leftward motion; 90 degrees is upward motion';...
@@ -37,10 +37,11 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		'vecContrasts',[100];... %contrast [0-100]
 		'vecLuminances',[100];...%luminance [0-100]
 		'vecOrientations',[357 3 87 93 177 183 267 273];... %orientation (0 is vertical)
+		'vecOrientationNoise',[0];... %orientation (0 is vertical)
 		'vecSpatialFrequencies',[0.08];... %Spat Frequency in cyc/deg 0.08
 		'vecTemporalFrequencies',[0.5];... %Temporal frequency in cycles per second (0 = static gratings only)
 		'vecPhases',[nan];... %initial phase
-	};
+		};
 	
 	%% assign supplied or default values
 	sStimParamsChecked = struct;
@@ -79,7 +80,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 			elseif strcmp(strField,'vecStimPosY_cm')
 				cellParamValue(end+1) = {sStimParamsChecked.(strField) + sStimParamsChecked.dblSubjectPosY_cm};
 			else
-			cellParamValue(end+1) = {sStimParamsChecked.(strField)};
+				cellParamValue(end+1) = {sStimParamsChecked.(strField)};
 			end
 			cellParamNames(end+1) = {strField};
 		end

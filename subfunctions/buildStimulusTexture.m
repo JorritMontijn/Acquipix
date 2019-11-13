@@ -37,11 +37,15 @@ function [vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimPar
 		sGratingObject.UseGPU = sStimParams.intUseGPU;
 		
 		%% run
+		hTic = tic;
 		vecSceneFrames = 1:intFramesPerCycle;
 		matTexture = zeros(intScreenHeight_pix,intScreenWidth_pix,intFramesPerCycle,'uint8');
 		for intFrame=1:intFramesPerCycle
-			fprintf('Building frame %d/%d\n',intFrame,intFramesPerCycle);
-			pause(0.001);
+			if toc(hTic) > 5
+				hTic = tic;
+				fprintf('Building frame %d/%d\n',intFrame,intFramesPerCycle);
+				pause(0.001);
+			end
 			sGratingObject.Phase01 = mod(intFrame/intFramesPerCycle,1);
 			matSingleFrame = buildGratingTexture(sGratingObject,matMapDegsXYD);
 			matTexture(:,:,intFrame)=gather(matSingleFrame(:,:,1));
