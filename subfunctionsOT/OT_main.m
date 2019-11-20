@@ -144,10 +144,10 @@ function OT_main(varargin)
 	
 	%find onset and offset of most recent stimulus
 	dblMaxErrorT = 0.1; %discard onsets/offsets if temporal mismatch is more than x seconds
-	dblLowerTresholdV = -2;
+	dblLowerTresholdV = -0.75;
 	vecStimPresent = vecSyncData < dblLowerTresholdV; %stimulus frames
 	vecOnsets = vecTimestampsNI(find(diff(vecStimPresent) == 1)+1);
-
+	
 	%onsets
 	for intOnset=1:numel(vecOnsets)
 		%find closest onset
@@ -310,6 +310,8 @@ function OT_main(varargin)
 					matSubNewData(intCh,:) = gather(gVecSignal);
 				end
 			end
+		else
+			matSubNewData = abs(zscore(single(matSubNewData),[],2))>2;
 		end
 		
 		%assign data
@@ -409,7 +411,9 @@ function OT_main(varargin)
 			end
 			vecBaseResp = mean(matData(vecSelectChans,vecBaseBins),2)./numel(vecBaseBins);
 			vecStimResp = mean(matData(vecSelectChans,vecStimBins),2)./numel(vecStimBins);
-
+			%size(matData)
+			%min(vecBaseBins)
+			%max(vecBaseBins)
 			%assign data
 			matRespBase(:,intTrial) = vecBaseResp;
 			matRespStim(:,intTrial) = vecStimResp;
