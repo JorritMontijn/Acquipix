@@ -311,7 +311,9 @@ function OT_main(varargin)
 				end
 			end
 		else
-			matSubNewData = abs(zscore(single(matSubNewData),[],2))>2;
+			matSubNewData = double(matSubNewData);
+			matSubNewData = bsxfun(@minus,matSubNewData,median(matSubNewData,2));
+			matSubNewData = (matSubNewData.*(abs(zscore(matSubNewData,[],2))>1)).^2;
 		end
 		
 		%assign data
