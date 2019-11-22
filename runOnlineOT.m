@@ -12,6 +12,9 @@ function varargout = runOnlineOT(varargin)
 	%		ENV-support and bug fixes
 	%	Version 2.0.0a [2019-10-15]
 	%		Neuropixels support with SpikeGLX
+	%	Version 2.0.0b [2019-10-15]
+	%		Fixed fallback stimulus time assignment
+	%		To do: proper signal transformation to envelope
 	
 	%set tags
 	%#ok<*INUSL>

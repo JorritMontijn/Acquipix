@@ -144,41 +144,18 @@ function OT_main(varargin)
 	
 	%find onset and offset of most recent stimulus
 	dblMaxErrorT = 0.1; %discard onsets/offsets if temporal mismatch is more than x seconds
-	dblLowerTresholdV = -0.75;
+	dblLowerTresholdV = -0.35;
 	vecStimPresent = vecSyncData < dblLowerTresholdV; %stimulus frames
-	vecOnsets = vecTimestampsNI(find(diff(vecStimPresent) == 1)+1);
 	
-	%onsets
-	for intOnset=1:numel(vecOnsets)
-		%find closest onset
-		[dblMinT,intMinIdx]= min(abs(vecOldStimOnT - vecOnsets(intOnset)));
-		if isempty(dblMinT)
-			break;
-		elseif dblMinT < dblMaxErrorT
-			vecDiodeOnT(intMinIdx) = vecOnsets(intOnset);
-			if intMinIdx > sOT.intEphysTrialN
-				cellText(end+1) = {sprintf('PD onset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOnsets(intOnset),dblMinT)};
-			end
-		elseif intMinIdx > 1 && intMinIdx < sOT.intEphysTrialN
-			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('PD onset at %.3fs has mismatch %.3fs!',vecOnsets(intOnset),dblMinT)};
-		end
-	end
-	%offsets
+	%get onsets
+	vecOnsets = vecTimestampsNI(find(diff(vecStimPresent) == 1)+1);
+	[vecDiodeOnT,cellText] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,cellText,sOT,dblMaxErrorT);
+	
+	%get offsets
 	vecOffsets = vecTimestampsNI(find(diff(vecStimPresent) == -1)+1);
-	for intOffset=1:numel(vecOffsets)
-		%find closest offset
-		[dblMinT,intMinIdx]= min(abs(vecOldStimOffT - vecOffsets(intOffset)));
-		if isempty(dblMinT)
-			break;
-		elseif dblMinT < dblMaxErrorT
-			vecDiodeOffT(intMinIdx) = vecOffsets(intOffset);
-			if intMinIdx > sOT.intEphysTrialN
-				cellText(end+1) = {sprintf('PD offset for stim %d: %.3fs (mismatch: %.3fs)',intMinIdx,vecOffsets(intOffset),dblMinT)};
-			end
-		elseif intMinIdx > 1 && intMinIdx < sOT.intEphysTrialN
-			cellText(end+1:end+2) = {'<< WARNING >>',sprintf('PD offset at %.3fs has mismatch %.3fs!',vecOffsets(intOffset),dblMinT)};
-		end
-	end
+	[vecDiodeOffT,cellText] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,cellText,sOT,dblMaxErrorT);
+	
+	%msg
 	OT_updateTextInformation(cellText);
 	
 	%save data to globals
@@ -313,7 +290,7 @@ function OT_main(varargin)
 		else
 			matSubNewData = double(matSubNewData);
 			matSubNewData = bsxfun(@minus,matSubNewData,median(matSubNewData,2));
-			matSubNewData = (matSubNewData.*(abs(zscore(matSubNewData,[],2))>1)).^2;
+			matSubNewData = abs((matSubNewData.*(abs(zscore(matSubNewData,[],2))>2)));
 		end
 		
 		%assign data

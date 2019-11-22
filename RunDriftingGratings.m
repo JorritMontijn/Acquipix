@@ -10,7 +10,7 @@ intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 800 with noise
 boolUseSGL = true;
 intDebug = 0;
 intUseMask = 0;
-dblStimSizeDegs = 120;
+dblStimSizeDegs = 140;%was 120
 
 %% define paths
 strThisPath = mfilename('fullpath');
