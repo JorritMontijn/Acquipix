@@ -9,7 +9,7 @@
 %
 
 % Ask user for binary file
-%[binName,path] = uigetfile('*.bin', 'Select Binary File');
+[binName,path] = uigetfile('*.bin', 'Select Binary File');
 
 % Parse the corresponding metafile
 meta = DP_ReadMeta(binName, path);

@@ -4,8 +4,12 @@
 % dimensions [nChan,nSamp]. Note that nSamp returned
 % is the lesser of: {nSamp, timepoints available}.
 %
-function dataArray = DP_ReadBin(samp0, nSamp, meta, binName, path)
+function dataArray = DP_ReadBin(samp0, nSamp, meta, binName, path, strClass)
 
+	if ~exist('strClass','var') || isempty(strClass)
+		strClass = 'int16';
+	end
+	
     nChan = str2double(meta.nSavedChans);
 
     nFileSamp = str2double(meta.fileSizeBytes) / (2 * nChan);
@@ -16,6 +20,6 @@ function dataArray = DP_ReadBin(samp0, nSamp, meta, binName, path)
 
     fid = fopen(fullfile(path, binName), 'rb');
     fseek(fid, samp0 * 2 * nChan, 'bof');
-    dataArray = fread(fid, sizeA, 'int16=>double');
+    dataArray = fread(fid, sizeA, sprintf('int16=>%s',strClass));
     fclose(fid);
 end % ReadBin

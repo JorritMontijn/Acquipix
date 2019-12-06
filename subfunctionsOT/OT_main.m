@@ -141,19 +141,25 @@ function OT_main(varargin)
 	vecTimestampsNI = cat(2,vecOldTimestampsNI,vecNewTimestampsNI);
 	vecSyncData = cat(2,vecOldSyncData,vecNewSyncData);
 	
+	%keep last 6 seconds
+	indKeepSync = vecSyncData > (vecSyncData(end) - 6);
+	vecUseSyncData = vecSyncData(indKeepSync);
+	vecUseTimestampsNI = vecTimestampsNI(indKeepSync);
 	
 	%find onset and offset of most recent stimulus
 	dblMaxErrorT = 0.1; %discard onsets/offsets if temporal mismatch is more than x seconds
-	dblLowerTresholdV = -0.35;
-	vecStimPresent = vecSyncData < dblLowerTresholdV; %stimulus frames
+	[boolVecPhotoDiode,dblCritValPD] = DP_GetUpDown(-vecUseSyncData);
+	vecSignChange = diff(boolVecPhotoDiode);
 	
 	%get onsets
-	vecOnsets = vecTimestampsNI(find(diff(vecStimPresent) == 1)+1);
-	[vecDiodeOnT,cellText] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,cellText,sOT,dblMaxErrorT);
+	cellText(end+1) = {'ON'};
+	vecOnsets = vecUseTimestampsNI(vecSignChange == 1); 
+	[vecDiodeOnT,cellText] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,cellText,dblMaxErrorT);
 	
 	%get offsets
-	vecOffsets = vecTimestampsNI(find(diff(vecStimPresent) == -1)+1);
-	[vecDiodeOffT,cellText] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,cellText,sOT,dblMaxErrorT);
+	cellText(end+1) = {'OFF'};
+	vecOffsets = vecUseTimestampsNI(vecSignChange == -1); 
+	[vecDiodeOffT,cellText] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,cellText,dblMaxErrorT);
 	
 	%msg
 	OT_updateTextInformation(cellText);
@@ -242,58 +248,28 @@ function OT_main(varargin)
 		matSubNewData = matLinBuffData(vecKeepIM,:)';
 		%matSubNewData = nan(size(matLinBuffData,2),numel(vecKeepIM));
 		
-		% apply high-pass filter & calculate envelope
+		%% detect spikes
+		INSERT NEW DETECTIONS HERE, AND REWRITE matSubData/vecSubTimestamps TO BE IN vecSpikeCh/vecSpikeT FORMAT
+		%detect spikes on all channels until complete
+		[vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMap);
+		
+		%when initial run is complete, calc channel cull
+		[vecUseChannelsFilt,vecUseChannelsOrig] = DP_CullChannels(vecSpikeCh,vecSpikeT,dblTotT,sP,sChanMap);
+		
+		%when initial phase is not active, detect non-culled channels
+		[vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecUseChannelsFilt);
+		
+		
+		%% OLD
 		if dblFiltFreq > 0 || boolCalcEnv
-			%design filter
-			if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-				d = designfilt('highpassfir',...
-					'SampleRate',dblSampFreqIM, ...
-					'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
-					'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
-					'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
-					'PassbandRipple',4);
-				if boolUseGPU
-					gVecFilter = gpuArray(d.Coefficients);
-				else
-					gVecFilter = d.Coefficients;
-				end
-			end
-			%apply to channels
-			for intCh=1:size(matLinBuffData,2)
-				%get signal
-				if boolUseGPU
-					gVecSignal = gpuArray(double(matLinBuffData(vecKeepIM,intCh)'));
-				else
-					gVecSignal = double(matLinBuffData(vecKeepIM,intCh)');
-				end
-				
-				%filter
-				if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-					gVecSignal = fftfilt(gVecFilter,gVecSignal);
-					
-					%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
-				end
-				%envelope
-				if boolCalcEnv
-					intFilterSize = round(dblSampFreqIM);
-					[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
-					%downsample
-					vecSubEnv = gather(abs(vecEnvHigh)+abs(vecEnvLow));
-					
-					%assign data
-					matSubNewData(intCh,:) = vecSubEnv;
-				else
-					%assign data
-					matSubNewData(intCh,:) = gather(gVecSignal);
-				end
-			end
 		else
+			
 			matSubNewData = double(matSubNewData);
 			matSubNewData = bsxfun(@minus,matSubNewData,median(matSubNewData,2));
 			matSubNewData = abs((matSubNewData.*(abs(zscore(matSubNewData,[],2))>2)));
 		end
 		
-		%assign data
+		%% assign data
 		sOT.vecSubTimestamps = cat(2,sOT.vecSubTimestamps,vecUseSubT);
 		sOT.matSubData = cat(2,sOT.matSubData,matSubNewData);
 		

@@ -341,8 +341,14 @@ try
 	%stim-based logs
 	structEP.intStimNumber = structEP.intTrialNum;
 	structEP.TrialNumber = nan(1,structEP.intStimNumber);
+	structEP.ActStimType = nan(1,structEP.intStimNumber);
 	structEP.ActOnSecs = nan(1,structEP.intStimNumber);
 	structEP.ActOffSecs = nan(1,structEP.intStimNumber);
+	structEP.ActStartSecs = nan(1,structEP.intStimNumber);
+	structEP.ActStopSecs = nan(1,structEP.intStimNumber);
+	structEP.ActOnNI = nan(1,structEP.intStimNumber);
+	structEP.ActOffNI = nan(1,structEP.intStimNumber);
+	
 	structEP.dblStimFrameDur = dblStimFrameDur;
 	cellStimPropNames = fieldnames(sStimObject(1));
 	cellStimPropNames = cellStimPropNames(structfun(@isscalar,sStimObject(1)));
@@ -538,6 +544,8 @@ try
 		structEP.ActOnSecs(intStimNumber) = dblStimOnFlip;
 		structEP.ActOffSecs(intStimNumber) = dblStimOffFlip;
 		structEP.ActEndSecs(intStimNumber) = dblLastFlip;
+		structEP.ActOnNI(intStimNumber) = dblStimOnNI;
+		structEP.ActOffNI(intStimNumber) = dblStimOffNI;
 		
 		%add grating-specific properties as vectors
 		strProps = '';
