@@ -13,7 +13,8 @@ function OT_main(varargin)
 	%check if busy
 	if sFig.boolIsBusy,return;end
 	sFig.boolIsBusy = true;
-
+	boolDidSomething = false;
+	
 	%get stream variables
 	intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
 	intStimSyncChanNI = sOT.intStimSyncChanNI;
@@ -29,6 +30,10 @@ function OT_main(varargin)
 	intStimTrialN = sOT.intStimTrialN;
 	dblStimTrialT = sOT.dblStimTrialT;
 	
+	%get probe variables
+	sChanMap = sOT.sChanMap;
+	sP = DP_GetParamStruct;
+	
 	%get data variables
 	sStimObject = sOT.sStimObject;
 	if isempty(sStimObject),clear sStimObject;end
@@ -37,12 +42,10 @@ function OT_main(varargin)
 	intDataBufferPos = sOT.intDataBufferPos;
 	intDataBufferSize = sOT.intDataBufferSize;
 	dblDataBufferSize = sOT.dblDataBufferSize;
-	vecTimestampsIM = sOT.vecTimestampsIM;
-	matDataBufferIM = sOT.matDataBufferIM;
-	vecOldSubTimestamps = sOT.vecSubTimestamps;
-	matOldSubData = sOT.matSubData;
 	vecAllChans = sOT.vecAllChans;
 	vecUseChans = sOT.vecUseChans;
+	vecSpkChans = sOT.vecSpkChans;
+	boolChannelsCulled = sOT.boolChannelsCulled;
 	
 	%get stimulus variables
 	vecOldStimOnT = sOT.vecStimOnT; %on times of all stimuli (NI time prior to stim on)
@@ -57,20 +60,9 @@ function OT_main(varargin)
 	vecStimTypes = sOT.vecStimTypes;
 	vecStimOriDeg = sOT.vecStimOriDeg;
 	
-	%get whether to calculate envelope
-	boolCalcEnv = sOT.boolCalcEnv;
-	
 	%get data from figure
 	strStimPath = get(sFig.ptrTextStimPath, 'string');
-
-	%get data type from figure
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1
-		strLoadDataType = 'LFP';
-	else
-		strLoadDataType = 'AP';
-	end
-
+	
 	%default high-pass frequency
 	dblFiltFreq = str2double(get(sFig.ptrEditHighpassFreq,'String'));
 
@@ -86,7 +78,6 @@ function OT_main(varargin)
 	strStreamNI = sprintf( 'GETSCANCOUNT %d', intStreamNI);
 
 	%prep meta data
-	intSubSampleFactorIM = sOT.intSubSampleFactorIM;
 	dblSubSampleFactorNI = sOT.dblSubSampleFactorNI;
 	dblSubSampleTo = sOT.dblSubSampleTo;
 	intDownsampleNI = 1;
@@ -153,13 +144,21 @@ function OT_main(varargin)
 	
 	%get onsets
 	cellText(end+1) = {'ON'};
+	intOldOn = numel(vecDiodeOnT);
 	vecOnsets = vecUseTimestampsNI(vecSignChange == 1); 
 	[vecDiodeOnT,cellText] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,cellText,dblMaxErrorT);
+	if numel(vecDiodeOnT) == intOldOn
+		cellText(end) = []; %remove 'ON'
+	end
 	
 	%get offsets
 	cellText(end+1) = {'OFF'};
+	intOldOff = numel(vecDiodeOnT);
 	vecOffsets = vecUseTimestampsNI(vecSignChange == -1); 
 	[vecDiodeOffT,cellText] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,cellText,dblMaxErrorT);
+	if numel(vecDiodeOffT) == intOldOff
+		cellText(end) = []; %remove 'OFF'
+	end
 	
 	%msg
 	OT_updateTextInformation(cellText);
@@ -199,7 +198,7 @@ function OT_main(varargin)
 		%fetch in try-catch block
 		try
 			%fetch "intRetrieveSamplesIM" samples starting at "intFetchStartCountIM"
-			[matNewData,intStartCountIM] = Fetch(sOT.hSGL, intStreamIM, intStartFetch, intRetrieveSamplesIM, vecAllChans,intDownsampleIM);
+			[matNewData,intStartCountIM] = Fetch(sOT.hSGL, intStreamIM, intStartFetch, intRetrieveSamplesIM, vecSpkChans,intDownsampleIM);
 		catch ME
 			%buffer has likely already been cleared; unable to fetch data
 			cellText = {'<< ERROR >>',ME.identifier,ME.message};
@@ -228,54 +227,73 @@ function OT_main(varargin)
 		%unroll buffer
 		[vecLinBuffT,vecReorderData] = sort(sOT.vecTimestampsIM,'ascend');
 		vecLinBuffT = vecLinBuffT/dblSampFreqIM;
-		matLinBuffData = sOT.matDataBufferIM(vecReorderData,:);
+		matLinBuffData = sOT.matDataBufferIM(vecReorderData,:); %time by channel
 		vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);
 		
 		%message
 		cellText(end+1:end+2) = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
+		if numel(cellText) == 2,cellText(1) = [];end
 		OT_updateTextInformation(cellText);
 		
-		%retrieve which data to use, subsample & assign to env
-		if isempty(sOT.vecSubTimestamps)
-			dblPrevEnv = max(vecLinBuffT) - 2;
+		%retrieve which data to use, subsample & assign
+		if isempty(sOT.dblCurrT)
+			dblCurrT = max(vecLinBuffT) - 2;
 		else
-			dblPrevEnv = sOT.vecSubTimestamps(end);
+			dblCurrT = sOT.dblCurrT;
 		end
-		vecUseSubT = (dblPrevEnv+dblSubSampleTo):dblSubSampleTo:(max(vecLinBuffT) - 1);
-		intStartT = find(vecLinBuffT>vecUseSubT(1),1);
-		intStopT = find(vecLinBuffT>vecUseSubT(end),1);
-		vecKeepIM = intStartT:intSubSampleFactorIM:intStopT;
-		matSubNewData = matLinBuffData(vecKeepIM,:)';
-		%matSubNewData = nan(size(matLinBuffData,2),numel(vecKeepIM));
+		indKeepIM = vecLinBuffT>dblCurrT & vecLinBuffT<(max(vecLinBuffT) - 1);
+		matSubNewData = matLinBuffData(indKeepIM,:)';
+		vecSubNewTime = vecLinBuffT(indKeepIM);
 		
 		%% detect spikes
-		INSERT NEW DETECTIONS HERE, AND REWRITE matSubData/vecSubTimestamps TO BE IN vecSpikeCh/vecSpikeT FORMAT
-		%detect spikes on all channels until complete
-		[vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMap);
+		%detect spikes on all channels
+		[gVecSubNewSpikeCh,gVecSubNewSpikeT,dblSubNewTotT] = DP_DetectSpikes(matSubNewData, sP);
+		sOT.dblCurrT = sOT.dblCurrT + dblSubNewTotT;
+		vecSubNewSpikeCh = gather(gVecSubNewSpikeCh);
+		vecSubNewSpikeT = gather(gVecSubNewSpikeT);
+		%clear gpuArrays
+		gVecSubNewSpikeT = [];
+		gVecSubNewSpikeCh = [];
 		
-		%when initial run is complete, calc channel cull
-		[vecUseChannelsFilt,vecUseChannelsOrig] = DP_CullChannels(vecSpikeCh,vecSpikeT,dblTotT,sP,sChanMap);
-		
-		%when initial phase is not active, detect non-culled channels
-		[vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecUseChannelsFilt);
-		
-		
-		%% OLD
-		if dblFiltFreq > 0 || boolCalcEnv
-		else
-			
-			matSubNewData = double(matSubNewData);
-			matSubNewData = bsxfun(@minus,matSubNewData,median(matSubNewData,2));
-			matSubNewData = abs((matSubNewData.*(abs(zscore(matSubNewData,[],2))>2)));
-		end
-		
-		%% assign data
-		sOT.vecSubTimestamps = cat(2,sOT.vecSubTimestamps,vecUseSubT);
-		sOT.matSubData = cat(2,sOT.matSubData,matSubNewData);
+		% assign data
+		intStartT = uint32(vecSubNewTime(1)*1000);
+		sOT.vecSubSpikeCh = cat(2,sOT.vecSubSpikeCh,vecSubNewSpikeCh);
+		sOT.vecSubSpikeT = cat(2,sOT.vecSubSpikeT,vecSubNewSpikeT + intStartT);
 		
 		%msg
-		cellText{end} = strcat(cellText{end},'  Completed!');
+		cellText{end} = strcat(cellText{end},sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
 		OT_updateTextInformation(cellText);
+		boolDidSomething = true;
+		
+		%% check if channels are culled yet & if first repetition is finished
+		if ~boolChannelsCulled && sOT.dblStimCoverage > 100 && numel(sOT.vecSubSpikeCh) > 10000
+			%msg
+			cellText{end+1} = sprintf('Time for channel cull! Using %d spikes...',numel(sOT.vecSubSpikeCh));
+			OT_updateTextInformation(cellText);
+			
+			%when initial run is complete, calc channel cull
+			vecUseChannelsFilt = DP_CullChannels(sOT.vecSubSpikeCh,sOT.vecSubSpikeT,dblSubNewTotT,sP,sChanMap);
+			
+			%update vecSpkChans & boolChannelsCulled
+			sOT.vecSpkChans = vecUseChans(vecUseChannelsFilt);
+			sOT.boolChannelsCulled = true;
+			
+			%remove channels from sOT.matDataBufferIM
+			vecRemovedChans = ~ismember(1:size(matSubNewData,2),vecUseChannelsFilt);
+			sOT.matDataBufferIM(:,vecRemovedChans) = [];
+			
+			%remove channels from vecSpikeCh and vecSpikeT
+			vecRemovedSpikes = ~ismember(sOT.vecSubSpikeCh,vecUseChannelsFilt);
+			sOT.vecSubSpikeCh(vecRemovedSpikes) = [];
+			sOT.vecSubSpikeT(vecRemovedSpikes) = [];
+			%update channel ID of remaining channels
+			[vecNewCh,dummy]=find(sOT.vecSubSpikeCh==vecUseChannelsFilt');
+			sOT.vecSubSpikeCh = vecNewCh(:)';
+			
+			%msg
+			cellText{end} = strcat(cellText{end},sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
+			OT_updateTextInformation(cellText);
+		end
 	end
 	
 	%% retrieve & update stim log data
@@ -318,6 +336,7 @@ function OT_main(varargin)
 		cellText{end+1} = sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs));
 		cellText{end+1} = '';
 		OT_updateTextInformation(cellText);
+		boolDidSomething = true;
 	end
 	
 	%% update trial-average data matrix
@@ -329,20 +348,20 @@ function OT_main(varargin)
 		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
 		
 		%get data
-		vecTimestamps = sOT.vecSubTimestamps;
-		matData = sOT.matSubData;
+		vecSpikeT = sOT.vecSubSpikeT; %time in ms (uint32)
+		vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16)
 		vecStimOnT = sOT.vecDiodeOnT; %on times of all stimuli (diode on time)
 		vecStimOffT = sOT.vecDiodeOffT; %off times of all stimuli (diode off time)
 	
 		%get selected channels
-		vecUseChans = sOT.vecUseChans;
-		intMaxChan = sOT.intMaxChan;
-		intMinChan = sOT.intMinChan;
-		vecSelectChans = vecUseChans(intMinChan:intMaxChan)+1;
-		
+		vecUseSpkChans = sOT.vecSpkChans;
+		intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
+		intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
+		vecSelectChans = vecUseSpkChans(intMinChan:intMaxChan)+1;
+		intUseCh = numel(vecSelectChans);
 		%base, stim
-		matRespBase = nan(numel(vecSelectChans),intTrials);
-		matRespStim = nan(numel(vecSelectChans),intTrials);
+		matRespBase = nan(intUseCh,intTrials);
+		matRespStim = nan(intUseCh,intTrials);
 		vecStimTypes = nan(1,intTrials);
 		vecStimOriDeg = nan(1,intTrials);
 		%go through objects and assign to matrices
@@ -358,14 +377,20 @@ function OT_main(varargin)
 			end
 			dblStartStim = vecStimOnT(intTrial);
 			dblStopStim = vecStimOffT(intTrial);
-			vecBaseBins = find(vecTimestamps>dblStartTrial):find(vecTimestamps>dblStartStim);
-			vecStimBins = find(vecTimestamps>dblStartStim):find(vecTimestamps>dblStopStim);
+			vecBaseSpikes = find(vecSpikeT>uint32(dblStartTrial*1000) & vecSpikeT<uint32(dblStartStim*1000));
+			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
 			%if ePhys data is not available yet, break
-			if isempty(vecBaseBins) || isempty(vecStimBins)
+			if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
 				break;
 			end
-			vecBaseResp = mean(matData(vecSelectChans,vecBaseBins),2)./numel(vecBaseBins);
-			vecStimResp = mean(matData(vecSelectChans,vecStimBins),2)./numel(vecStimBins);
+			
+			%base resp
+			vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
+			vecBaseResp(end+1:intUseCh) = 0;
+			%stim resp
+			vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
+			vecBaseResp(end+1:intUseCh) = 0;
+			
 			%size(matData)
 			%min(vecBaseBins)
 			%max(vecBaseBins)
@@ -386,7 +411,8 @@ function OT_main(varargin)
 
 		%% update maps
 		OT_redraw(0);
-	else
+		boolDidSomething = true;
+	elseif ~boolDidSomething
 		%% show waiting bar
 		cellOldText = get(sFig.ptrTextInformation, 'string');
 		strBaseString = 'No new data';

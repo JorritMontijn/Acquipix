@@ -3,7 +3,7 @@ function varargout = runOnlineOT(varargin)
 	% runOnlineOT Online Orientation Tuning
 	%
 	%	Version 1.0 [2019-04-02]
-	%		Created by Jorrit Montijn
+	%		Created for TDT NeuroNexus recordings by Jorrit Montijn
 	%	Version 1.0.1 [2019-04-11]
 	%		Improved high-pass filtering and rewrote for GPU processing
 	%	Version 1.0.2 [2019-05-01]
@@ -15,6 +15,8 @@ function varargout = runOnlineOT(varargin)
 	%	Version 2.0.0b [2019-10-15]
 	%		Fixed fallback stimulus time assignment
 	%		To do: proper signal transformation to envelope
+	%	Version 2.0.0c [2019-12-06]
+	%		Online spike detection, removed LFP/envelope support
 	
 	%set tags
 	%#ok<*INUSL>
@@ -95,16 +97,12 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
 	set(sFig.ptrEditDownsample,'UserData','lock');
-	set(sFig.ptrButtonDataLFP,'UserData','lock')
-	set(sFig.ptrButtonDataAP,'UserData','lock')
 	set(sFig.ptrEditChannelMin,'UserData','lock');
 	set(sFig.ptrEditChannelMax,'UserData','lock');
 	set(sFig.ptrButtonScatterYes,'UserData','lock')
 	set(sFig.ptrButtonScatterNo,'UserData','lock')
 	set(sFig.ptrButtonNewFig,'UserData','lock')
 	set(sFig.ptrButtonOldFig,'UserData','lock')
-	set(sFig.ptrButtonEnvYes,'UserData','lock');
-	set(sFig.ptrButtonEnvNo,'UserData','lock')
 	%set(sFig.ptrButtonClearAndRecompute,'UserData','lock')
 	set(sFig.ptrListSelectDataProcessing,'UserData','lock');
 	set(sFig.ptrListSelectMetric,'UserData','lock');
@@ -145,47 +143,6 @@ function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DE
 	
 	%redraw
 	OT_redraw(1);
-	
-	%unlock GUI
-	OT_unlock(handles);
-end
-%% change in data type to load
-function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
-	%selection is automatically queried by main function, so no other
-	%action is required except sending a confirmation message
-	
-	%get global
-	global sFig;
-	global sOT;
-	if ~isfield(sOT,'hSGL') || isempty(sOT.hSGL)
-		return;
-	end
-	
-	%lock GUI
-	OT_lock(handles);
-	
-	%get number of channels per type
-	vecStreamIM = [0];
-	vecChPerType = sOT.vecChPerType;
-	
-	%check whether to show AP or LFP
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1 %LFP
-		strLoadDataType = 'LFP';
-		vecUseChans = sOT.vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
-	else %AP
-		strLoadDataType = 'AP';
-		vecUseChans = sOT.vecAllChans(1:vecChPerType(1));
-	end
-	sOT.vecUseChans = vecUseChans;
-	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',num2str(numel(vecUseChans)),')'];
-
-	%fill recording/block data
-	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
-	
-	%update message
-	cellText = {['Switched data type to ' strLoadDataType]};
-	OT_updateTextInformation(cellText);
 	
 	%unlock GUI
 	OT_unlock(handles);
@@ -476,15 +433,6 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	intMinChan = str2double(get(hObject,'String'));
 	strMsg = '';
 	
-	%check whether to show AP or LFP
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1 %LFP
-		strLoadDataType = 'LFP';
-	else %AP
-		intLoadLFP = 0;
-		strLoadDataType = 'AP';
-	end
-	
 	%check range
 	if intMinChan < 1
 		strMsg = strcat(strMsg,sprintf('%d is out of range; ',intMinChan));
@@ -494,13 +442,13 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 		strMsg = strcat(strMsg,sprintf('%d is out of range; ',intMinChan));
 		intMinChan = numel(sOT.vecUseChans);
 	end
-	strMsg = strcat(strMsg,sprintf('Min chan set to %d (%s%d)',intMinChan,strLoadDataType,intMinChan-1+intLoadLFP*sOT.vecChPerType(1)));
+	strMsg = strcat(strMsg,sprintf('Min chan set to %d',intMinChan));
 	
 	%assign to global
 	sOT.intMinChan = intMinChan;
 	set(hObject,'String',num2str(intMinChan));
 	
-	%check whether to show AP or LFP
+	%update msg
 	OT_updateTextInformation({strMsg});
 		
 	%unlock gui
@@ -519,15 +467,6 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	intMaxChan = str2double(get(hObject,'String'));
 	strMsg = '';
 	
-	%check whether to show AP or LFP
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1 %LFP
-		strLoadDataType = 'LFP';
-	else %AP
-		intLoadLFP = 0;
-		strLoadDataType = 'AP';
-	end
-	
 	%check range
 	if intMaxChan < 1
 		strMsg = strcat(strMsg,sprintf('%d is out of range; ',intMaxChan));
@@ -537,13 +476,13 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 		strMsg = strcat(strMsg,sprintf('%d is out of range; ',intMaxChan));
 		intMaxChan = numel(sOT.vecUseChans);
 	end
-	strMsg = strcat(strMsg,sprintf('Max chan set to %d (%s%d)',intMaxChan,strLoadDataType,intMaxChan-1+intLoadLFP*sOT.vecChPerType(1)));
+	strMsg = strcat(strMsg,sprintf('Max chan set to %d',intMaxChan));
 	
 	%assign to global
 	sOT.intMaxChan = intMaxChan;
 	set(hObject,'String',num2str(intMaxChan));
 	
-	%check whether to show AP or LFP
+	%update msg
 	OT_updateTextInformation({strMsg});
 		
 	%unlock gui
@@ -570,46 +509,6 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%assign new channel ID
 	sOT.intStimSyncChanNI = intStimSyncChanNI;
-	
-	%unlock GUI
-	OT_unlock(handles);
-	
-end
-
-function ptrPanelCalcEnv_SelectionChangedFcn(hObject, eventdata, handles)%#ok<DEFNU>
-%% change in data type to calculate
-
-	%get global
-	global sFig;
-	global sOT;
-	if ~isfield(sOT,'hSGL') || isempty(sOT.hSGL)
-		return;
-	end
-	
-	%lock GUI
-	OT_lock(handles);
-	
-	%get number of channels per type
-	vecStreamIM = [0];
-	
-	%check whether to show AP or LFP
-	intCalcEnv = get(sFig.ptrButtonEnvYes,'Value');
-	if intCalcEnv == 1 %LFP
-		strMsg = 'calculating envelope';
-		sOT.boolCalcEnv = true;
-	else %AP
-		strMsg = 'using raw values';
-		sOT.boolCalcEnv = false;
-	end
-	vecUseChans = sOT.vecUseChans;
-	strChanNum = [num2str(vecUseChans(1)),' - ',num2str(vecUseChans(end))];
-
-	%fill recording/block data
-	set(sFig.ptrTextChanNumIM, 'string', strChanNum);
-	
-	%update message
-	cellText = {['Switched to ' strMsg]};
-	OT_updateTextInformation(cellText);
 	
 	%unlock GUI
 	OT_unlock(handles);

@@ -18,8 +18,8 @@ function [vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMa
 	% - vecChanMap [Ch x 1]: vector with which channels to use
 	%
 	%output:
-	% - vecSpikeCh; channel origin of spike
-	% - vecSpikeT; time of spike in ms after data start
+	% - vecSpikeCh; uint16 gpuArray, channel origin of spike
+	% - vecSpikeT; uint32 gpuArray, time of spike in ms after data start
 	% - dblTotT; total processed time in seconds
 	%
 	%Based on Kilosort2's get_good_channels.m
@@ -49,6 +49,11 @@ function [vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMa
 		[b, a] = butter(3, [dblHighPassFreq/dblSampFreq,dblLowPassFreq/dblSampFreq]*2, 'bandpass');
 	else
 		[b, a] = butter(3, dblHighPassFreq/dblSampFreq*2, 'high');
+	end
+	
+	%get chan map
+	if ~exist('vecChanMap','var') || isempty(vecChanMap)
+		vecChanMap = 1:size(matData,1);
 	end
 	
 	%define variables

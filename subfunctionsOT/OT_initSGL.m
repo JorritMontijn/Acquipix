@@ -37,8 +37,6 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 	else
 		vecAllChans = vecSaveChans;
 	end
-	sOT.vecAllChans = vecAllChans;
-	sOT.vecChPerType = vecChPerType;
 	
 	%get samp freq
 	sOT.dblSampFreqIM = GetSampleRate(sOT.hSGL, vecStreamIM(intUseStreamIMEC));
@@ -48,20 +46,20 @@ function [sFig,sOT] = OT_initSGL(sFig,sOT)
 	intTimeNI = GetScanCount(sOT.hSGL, intStreamNI);
 	intTimeIM = GetScanCount(sOT.hSGL, vecStreamIM(intUseStreamIMEC));
 	
-	%check whether to show AP or LFP
-	intLoadLFP = get(sFig.ptrButtonDataLFP,'Value');
-	if intLoadLFP == 1 %LFP
-		vecUseChans = vecAllChans((vecChPerType(1)+1):(vecChPerType(1)+vecChPerType(2)));
-	else %AP
-		vecUseChans = vecAllChans(1:vecChPerType(1));
-	end
+	%remove LFP channels
+	vecUseChans = vecAllChans(1:vecChPerType(1));
+	
+	%assign
+	sOT.vecAllChans = vecAllChans;
 	sOT.vecUseChans = vecUseChans;
+	sOT.vecSpkChans = vecUseChans;
+	sOT.vecChPerType = vecChPerType;
 	strChanNum = [num2str(sOT.vecUseChans(1)),' (1) - ',num2str(vecUseChans(end)),' (',num2str(numel(vecUseChans)),')'];
 
 	%assign data buffer matrix
 	intBufferT = round(sOT.dblDataBufferSize * sOT.dblSampFreqIM);
 	sOT.intDataBufferSize = intBufferT;
-	sOT.matDataBufferIM = zeros(intBufferT,numel(vecAllChans),'int16');
+	sOT.matDataBufferIM = zeros(intBufferT,numel(vecUseChans),'int16');
 	sOT.vecTimestampsIM = zeros(intBufferT,1);
 	sOT.intDataBufferPos = 1;
 	sOT.dblSubLastUpdate = -1;

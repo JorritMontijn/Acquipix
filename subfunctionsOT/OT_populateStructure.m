@@ -8,6 +8,8 @@ function sOT = OT_populateStructure(sOT)
 	%default path locations
 	sOT.metaData.strHostAddressSGL = '127.0.0.1';
 	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
+	sOT.metaData.strChanMapPath = 'C:\Code\GitRepos\Acquipix\subfunctionsPP\';
+	sOT.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
 	
 	%data processing types
 	sOT.metaData.cellProcess{1} = 'Stimulus';
@@ -40,6 +42,7 @@ function sOT = OT_populateStructure(sOT)
 	sOT.vecDiodeOffT = [];
 	
 	%data
+	sOT.boolChannelsCulled = false;
 	sOT.vecTimestampsNI = [];
 	sOT.vecSyncData = [];
 	sOT.dblDataBufferSize = 3;
@@ -48,9 +51,10 @@ function sOT = OT_populateStructure(sOT)
 	sOT.matDataBufferIM = [];
 	sOT.vecTimestampsIM = [];
 	sOT.dblSubLastUpdate = [];
-	sOT.vecSubTimestamps = [];
-	sOT.matSubData = [];
-	
+	sOT.dblCurrT = [];
+	sOT.vecSubSpikeCh = [];
+	sOT.vecSubSpikeT = [];
+		
 	%stim
 	sOT.dblStimCoverage = 0;
 	sOT.intStimTrialN = 0;
@@ -60,7 +64,6 @@ function sOT = OT_populateStructure(sOT)
 	sOT.vecStimOffT = [];
 	
 	%resp
-	sOT.boolCalcEnv = false;
 	sOT.intRespTrialN = 0;
 	sOT.intMinChan = 1;
 	sOT.intMaxChan = 384;

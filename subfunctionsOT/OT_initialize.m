@@ -57,6 +57,9 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 		OT_updateTextInformation(cellText);
 	end
 	
+	%load channel map
+	sOT.sChanMap = load([sOT.metaData.strChanMapPath sOT.metaData.strChanMapFile]);
+	
 	%enable all fields
 	OT_enable(sFig);
 	
