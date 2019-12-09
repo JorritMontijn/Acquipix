@@ -120,12 +120,12 @@ structEP.debug = intDebug;
 sStimParamsSettings = struct;
 sStimParamsSettings.strStimType = 'SquareGrating';
 sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParamsSettings.dblSubjectPosY_cm = -3.5; % cm; relative to center of screen
-sStimParamsSettings.dblScreenDistance_cm = 14; % cm; measured
+sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
+sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
 sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParamsSettings.vecStimPosX_deg = -20; % deg; relative to subject
+sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
 sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
 sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in degrees [35]
 sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
@@ -488,7 +488,11 @@ try
 				boolFirstFlip = 1;
 				
 				%log NI timestamp
-				if boolUseSGL,dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
+				if boolUseSGL
+					dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+				else
+					dblStimOnNI = nan;
+				end
 				
 				%log flip
 				dblStimStartFlip = dblLastFlip;
@@ -504,7 +508,11 @@ try
 		dblStimDur = dblStimOffFlip-dblStimOnFlip;
 		
 		%log NI timestamp
-		if boolUseSGL,dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
+		if boolUseSGL
+			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+		else
+			dblStimOffNI = nan;
+		end
 				
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);
@@ -513,10 +521,9 @@ try
 		%% save stimulus object
 		try
 			%add timestamps
-			if boolUseSGL,
 			sThisStimObject.dblStimOnNI = dblStimOnNI;
 			sThisStimObject.dblStimOffNI = dblStimOffNI;
-			end
+			
 			%save object
 			sObject = sThisStimObject;
 			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
