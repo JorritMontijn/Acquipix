@@ -62,5 +62,5 @@ function [vecUseChannelsFilt,vecUseChannelsOrig] = DP_CullChannels(vecSpikeCh,ve
 	end
 	
 	%define which channels to use
-	vecUseChannelsFilt = find(vecFiltAct > ops.minfr_goodchannels);
-	vecUseChannelsOrig = find(vecSpikeRatePerChannel > ops.minfr_goodchannels);
+	vecUseChannelsFilt = find(vecFiltAct > sP.minfr_goodchannels);
+	vecUseChannelsOrig = find(vecSpikeRatePerChannel > sP.minfr_goodchannels);

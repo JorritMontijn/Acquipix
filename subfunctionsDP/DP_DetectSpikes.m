@@ -36,6 +36,7 @@ function [vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMa
 	dblSpkTh = getOr(sP,'spkTh',-6);
 	intWinEdge = getOr(sP,'winEdge',ceil((dblSampFreq*2e-3)/2)*2+1);
 	intBuffT = getOr(sP,'NT',65600);
+	intBuffT = min([intBuffT (size(matData,2)-2*intWinEdge)]);
 	intCAR = getOr(sP,'CAR',1);
 	intType = getOr(sP,'minType',1);
 	if isfield(sP,'fslow') && ~isempty(sP.fslow) && sP.fslow<sP.fs/2
@@ -97,6 +98,7 @@ function [vecSpikeCh,vecSpikeT,dblTotT] = DP_DetectSpikes(matData, sP, vecChanMa
 	
 	%calculate outputs
 	dblTotT = (intBuffT*intBatch)/dblSampFreq;
+	if isempty(dblTotT),dblTotT=0;end
 	vecSpikeCh = vecSpikeCh(1:intSpikeCounter);
 	vecSpikeT = vecSpikeT(1:intSpikeCounter);
 	%vecSpikeRatePerChannel = accumarray(vecSpikeCh,1) ./ dblTotT;

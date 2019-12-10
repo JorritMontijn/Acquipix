@@ -5,13 +5,14 @@ function OT_main(varargin)
 	global sOT;
 	
 	try
-	%% retrieve variables
+	%% check if busy
 	cellText = {};
 	
 	%check initialization
 	if ~sOT.IsInitialized,return;end
 	%check if busy
 	if sFig.boolIsBusy,return;end
+	%% retrieve variables
 	sFig.boolIsBusy = true;
 	boolDidSomething = false;
 	
@@ -143,21 +144,19 @@ function OT_main(varargin)
 	vecSignChange = diff(boolVecPhotoDiode);
 	
 	%get onsets
-	cellText(end+1) = {'ON'};
 	intOldOn = numel(vecDiodeOnT);
 	vecOnsets = vecUseTimestampsNI(vecSignChange == 1); 
-	[vecDiodeOnT,cellText] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,cellText,dblMaxErrorT);
-	if numel(vecDiodeOnT) == intOldOn
-		cellText(end) = []; %remove 'ON'
+	[vecDiodeOnT,cellTextOn] = OT_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,[],dblMaxErrorT);
+	if numel(vecDiodeOnT) > intOldOn
+		cellText(end+1) = {['ON, ' cellTextOn{end}]}; %remove 'ON'
 	end
 	
 	%get offsets
-	cellText(end+1) = {'OFF'};
-	intOldOff = numel(vecDiodeOnT);
+	intOldOff = numel(vecDiodeOffT);
 	vecOffsets = vecUseTimestampsNI(vecSignChange == -1); 
-	[vecDiodeOffT,cellText] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,cellText,dblMaxErrorT);
-	if numel(vecDiodeOffT) == intOldOff
-		cellText(end) = []; %remove 'OFF'
+	[vecDiodeOffT,cellTextOff] = OT_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,[],dblMaxErrorT);
+	if numel(vecDiodeOffT) > intOldOff
+		cellText(end+1) = {['OFF, ' cellTextOff{end}]}; %remove 'ON'
 	end
 	
 	%msg
@@ -237,7 +236,7 @@ function OT_main(varargin)
 		
 		%retrieve which data to use, subsample & assign
 		if isempty(sOT.dblCurrT)
-			dblCurrT = max(vecLinBuffT) - 2;
+			dblCurrT = max(vecLinBuffT) - 5;
 		else
 			dblCurrT = sOT.dblCurrT;
 		end
@@ -257,8 +256,10 @@ function OT_main(varargin)
 		
 		% assign data
 		intStartT = uint32(vecSubNewTime(1)*1000);
-		sOT.vecSubSpikeCh = cat(2,sOT.vecSubSpikeCh,vecSubNewSpikeCh);
-		sOT.vecSubSpikeT = cat(2,sOT.vecSubSpikeT,vecSubNewSpikeT + intStartT);
+		if numel(vecSubNewSpikeCh) > 0
+			sOT.vecSubSpikeCh = cat(1,sOT.vecSubSpikeCh,vecSubNewSpikeCh(:));
+			sOT.vecSubSpikeT = cat(1,sOT.vecSubSpikeT,vecSubNewSpikeT(:) + intStartT);
+		end
 		
 		%msg
 		cellText{end} = strcat(cellText{end},sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
@@ -279,7 +280,7 @@ function OT_main(varargin)
 			sOT.boolChannelsCulled = true;
 			
 			%remove channels from sOT.matDataBufferIM
-			vecRemovedChans = ~ismember(1:size(matSubNewData,2),vecUseChannelsFilt);
+			vecRemovedChans = ~ismember(1:size(matSubNewData,1),vecUseChannelsFilt);
 			sOT.matDataBufferIM(:,vecRemovedChans) = [];
 			
 			%remove channels from vecSpikeCh and vecSpikeT
@@ -287,8 +288,8 @@ function OT_main(varargin)
 			sOT.vecSubSpikeCh(vecRemovedSpikes) = [];
 			sOT.vecSubSpikeT(vecRemovedSpikes) = [];
 			%update channel ID of remaining channels
-			[vecNewCh,dummy]=find(sOT.vecSubSpikeCh==vecUseChannelsFilt');
-			sOT.vecSubSpikeCh = vecNewCh(:)';
+			[dummy,vecNewCh]=find(sOT.vecSubSpikeCh==vecUseChannelsFilt');
+			sOT.vecSubSpikeCh = vecNewCh(:);
 			
 			%msg
 			cellText{end} = strcat(cellText{end},sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
@@ -381,7 +382,7 @@ function OT_main(varargin)
 			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
 			%if ePhys data is not available yet, break
 			if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
-				break;
+				continue;
 			end
 			
 			%base resp
@@ -389,7 +390,7 @@ function OT_main(varargin)
 			vecBaseResp(end+1:intUseCh) = 0;
 			%stim resp
 			vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
-			vecBaseResp(end+1:intUseCh) = 0;
+			vecStimResp(end+1:intUseCh) = 0;
 			
 			%size(matData)
 			%min(vecBaseBins)
