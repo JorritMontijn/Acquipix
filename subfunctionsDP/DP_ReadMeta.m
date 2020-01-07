@@ -2,6 +2,9 @@ function [meta] = DP_ReadMeta(binName, path)
 
     % Create the matching metafile name
     [dumPath,name,dumExt] = fileparts(binName);
+	if ~exist('path','var') || isempty(path)
+		path = dumPath;
+	end
     metaName = strcat(name, '.meta');
 
     % Parse ini file into cell entries C{1}{i} = C{2}{i}
