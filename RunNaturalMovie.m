@@ -6,7 +6,7 @@ clear all;
 close all;
 
 %% define paths
-boolUseSGL = false;
+boolUseSGL = true;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
@@ -154,7 +154,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 10;
+structEP.intNumRepeats = 100;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0;
 structEP.dblSecsStimDur = 20;

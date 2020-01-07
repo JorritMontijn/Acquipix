@@ -21,7 +21,7 @@ function [matTexture,vecSceneFrames] = loadStimulusTexture(sStimObject,strTexDir
 	
 	%% check if stimulus is already present
 	intMaxFile = size(cellTexDB,1);
-	strFile = getStimTexDB(cellTexDB,sStimObject);
+	[strFile,intFile] = getStimTexDB(cellTexDB,sStimObject);
 	if isempty(strFile)
 		%stimulus not found; create now
 		fprintf('Texture not found in database; creating now...\n');
@@ -36,7 +36,7 @@ function [matTexture,vecSceneFrames] = loadStimulusTexture(sStimObject,strTexDir
 		if ~strcmpi(strFile((end-3):end),'.mat')
 			strFile = strcat(strFile,'.mat');
 		end
-		save(strFile,'vecSceneFrames','matTexture','sStimObject');
+		save(strFile,'vecSceneFrames','matTexture','sStimObject','-v7.3');
 		
 		%save database
 		save(strTexDB,'cellTexDB');
@@ -46,12 +46,19 @@ function [matTexture,vecSceneFrames] = loadStimulusTexture(sStimObject,strTexDir
 		if ~strcmpi(strFile((end-3):end),'.mat')
 			strFile = strcat(strFile,'.mat');
 		end
-		sLoad = load(strFile);
-		matTexture=sLoad.matTexture;
-		if isfield(sLoad,'vecSceneFrames')
-			vecSceneFrames=sLoad.vecSceneFrames;
-		else
-			vecSceneFrames = 1:size(matTexture,ndims(matTexture));
+		try
+			sLoad = load(strFile);
+			matTexture=sLoad.matTexture;
+			if isfield(sLoad,'vecSceneFrames')
+				vecSceneFrames=sLoad.vecSceneFrames;
+			else
+				vecSceneFrames = 1:size(matTexture,ndims(matTexture));
+			end
+		catch ME
+			cellTexDB(intFile,:) = [];
+			save(strTexDB,'cellTexDB');
+			warning([mfilename ':RemovedEntry'],'Removed entry %d [%s] from texture database %s in %s\n',intFile,strFile,strTexDB,strTexDir);
+			rethrow(ME);
 		end
 	end
 	cd(strOldPath);

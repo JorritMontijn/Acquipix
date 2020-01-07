@@ -1,4 +1,4 @@
-function strFile = getStimTexDB(cellTexDB,sStimObject)
+function [strFile,intFile] = getStimTexDB(cellTexDB,sStimObject)
 	%getStimTexDB Finds stimulus texture file from database
 	%	 strFile = getStimTexDB(cellTexDB,sStimObject);
 	

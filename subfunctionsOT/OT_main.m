@@ -358,8 +358,8 @@ function OT_main(varargin)
 		vecUseSpkChans = sOT.vecSpkChans;
 		intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
 		intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
-		vecSelectChans = vecUseSpkChans(intMinChan:intMaxChan)+1;
-		intUseCh = numel(vecSelectChans);
+		vecSelectChans = intMinChan:intMaxChan;
+		intUseCh = numel(vecUseSpkChans);
 		%base, stim
 		matRespBase = nan(intUseCh,intTrials);
 		matRespStim = nan(intUseCh,intTrials);
@@ -405,8 +405,8 @@ function OT_main(varargin)
 		%% save data to globals
 		sOT.intRespTrialN = intTrials;
 		sOT.vecSelectChans = vecSelectChans;
-		sOT.matRespBase = matRespBase; %[1 by S] cell with [chan x rep] matrix
-		sOT.matRespStim = matRespStim; %[1 by S] cell with [chan x rep] matrix
+		sOT.matRespBase = matRespBase(vecSelectChans,:); %[1 by S] cell with [chan x rep] matrix
+		sOT.matRespStim = matRespStim(vecSelectChans,:); %[1 by S] cell with [chan x rep] matrix
 		sOT.vecStimTypes = vecStimTypes; %[1 by S] cell with [chan x rep] matrix
 		sOT.vecStimOriDeg = vecStimOriDeg; %[1 by S] cell with [chan x rep] matrix
 

@@ -6,7 +6,7 @@ clear all;
 close all;
 
 %% define variables
-intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 800 with noise
+intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
 boolUseSGL = true;
 intDebug = 0;
 intUseMask = 0;
@@ -155,7 +155,7 @@ if intStimSet == 1
 	sStimParamsSettings.vecOrientations = [0:15:359]; %orientation (0 is drifting rightward)
 	sStimParamsSettings.vecOrientationNoise = zeros(size(sStimParamsSettings.vecOrientations)); %noise in degrees
 elseif intStimSet == 2
-	intNumRepeats = 800;
+	intNumRepeats = 400;
 	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
 	sStimParamsSettings.vecOrientationNoise = [0 2 0 2]; %noise in degrees
 end
