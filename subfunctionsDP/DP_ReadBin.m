@@ -19,7 +19,13 @@ function dataArray = DP_ReadBin(samp0, nSamp, meta, binName, path, strClass)
     sizeA = [nChan, nSamp];
 
     fid = fopen(fullfile(path, binName), 'rb');
-    fseek(fid, samp0 * 2 * nChan, 'bof');
+    status = fseek(fid, samp0 * 2 * nChan, 'bof');
+	if status == -1 %try again once
+		status = fseek(fid, samp0 * 2 * nChan, 'bof');
+		if status  == -1
+			error([mfilename 'E:ReadError'],sprintf('Cannot read file "%s"',binName));
+		end
+	end
     dataArray = fread(fid, sizeA, sprintf('int16=>%s',strClass));
     fclose(fid);
 end % ReadBin

@@ -34,7 +34,7 @@ hTic = tic;
 sDG = struct;
 % get cluster quality
 boolMakePlotsCQ = false;
-intNeurons = numel(sAP.SU_st);
+intNeurons = numel(sAP.sCluster);
 vecNonStatIdx = nan(1,intNeurons);
 vecViolIdx = nan(1,intNeurons);
 for intNeuron = 1:intNeurons
@@ -42,7 +42,7 @@ for intNeuron = 1:intNeurons
 		fprintf('   Neuron %d/%d [%s]\n',intNeuron,intNeurons,getTime);
 		hTic = tic;
 	end
-	vecSpikeTimes = sAP.SU_st{intNeuron};
+	vecSpikeTimes = sAP.sCluster(intNeuron).SpikeTimes;
 	sClustQual = getClusterQuality(vecSpikeTimes,boolMakePlotsCQ);
 	vecNonStatIdx(intNeuron) = sClustQual.dblNonstationarityIndex;
 	vecViolIdx(intNeuron) = sClustQual.dblViolIdx1ms;

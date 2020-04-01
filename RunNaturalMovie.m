@@ -335,6 +335,7 @@ try
 			outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
 			outputData2 = linspace(3, 3, 250)';
 			queueOutputData(objDAQOut,[outputData1 outputData2]);
+			prepare(objDAQOut);
 		end
 		
 		%get timing
@@ -407,7 +408,11 @@ try
 				boolFirstFlip = 1;
 				
 				%log NI timestamp
-				if boolUseSGL,dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
+				if boolUseSGL
+					dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+				else
+					dblStimOnNI = nan;
+				end
 			end
 			
 			%draw stimulus
@@ -432,8 +437,12 @@ try
 		dblStimOffFlip = dblNextFlip;
 		
 		%log NI timestamp
-		if boolUseSGL,dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;end
-		
+		if boolUseSGL
+			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+		else
+			dblStimOffNI = nan;
+		end
+			
 		%% save stimulus object
 		try
 			%add timestamps
@@ -465,6 +474,8 @@ try
 		structEP.ActOnSecs(intStimNumber) = dblStimOnFlip;
 		structEP.ActOffSecs(intStimNumber) = dblStimOffFlip;
 		structEP.ActEndSecs(intStimNumber) = dblLastFlip;
+		structEP.ActOnNI(intStimNumber) = dblStimOnNI;
+		structEP.ActOffNI(intStimNumber) = dblStimOffNI;
 		
 		%add stimulus-specific properties as vectors
 		strProps = '';

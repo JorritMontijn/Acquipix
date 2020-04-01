@@ -15,6 +15,21 @@ cellRec{3}{1} = 'P:\Montijn\DataNeuropixels\Exp2020-01-15\20200115_MP4_RunDrifti
 cellRec{3}{2} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0';
 cellRec{3}{3} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0';
 
+
+cellDepthCorrection{1}{1} = 100;%01
+cellDepthCorrection{1}{2} = 10;%02, V1
+cellDepthCorrection{1}{3} = 10;%03
+cellDepthCorrection{1}{4} = 0;%04, NOT DONE
+cellDepthCorrection{2}{1} = -600;%05
+cellDepthCorrection{2}{2} = -350;%06, V1
+cellDepthCorrection{2}{3} = -200;%07
+cellDepthCorrection{2}{4} = -50;%08
+cellDepthCorrection{2}{5} = -250;%09
+cellDepthCorrection{2}{6} = -50;%10
+cellDepthCorrection{3}{1} = 200;%11
+cellDepthCorrection{3}{2} = 10;%12
+cellDepthCorrection{3}{3} = 10;%13
+
 cellDepths{1}{1} = 2650;
 cellDepths{1}{2} = 3000;
 cellDepths{1}{3} = 3000;
@@ -28,6 +43,8 @@ cellDepths{2}{6} = 3500;
 cellDepths{3}{1} = 3250;
 cellDepths{3}{2} = 3400;
 cellDepths{3}{3} = 3300;
+
+cellDepths = cellfun(@plus,cellDepths,cellDepthCorrection);
 
 cellMouseType{1}{1} = 'BL6';
 cellMouseType{1}{2} = 'BL6';
@@ -58,12 +75,14 @@ matRunPrePro = [...
 	3 2;...12
 	3 3];%13
 
-for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
+boolOnlyJson = false;
+
+for intRunPrePro=[10]
 	%% prepare
 	% clear variables and select session to preprocess
-	clearvars -except cellRec cellDepths cellMouseType matRunPrePro intRunPrePro
+	clearvars -except cellRec cellDepths cellMouseType matRunPrePro intRunPrePro boolOnlyJson
 	vecRunPreProGLX = matRunPrePro(intRunPrePro,:);
-	fprintf('Starting pre-processing of "%s" [%s]\n',cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)},getTime);
+	fprintf('\nStarting pre-processing of "%s" [%s]\n',cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)},getTime);
 	
 	%% set recording
 	cellPath = strsplit(cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)},filesep);
@@ -79,12 +98,18 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 	% search for file
 	strThisMouseIdx = getFlankedBy(strRecording,'_M','_','last');
 	strThisRecIdx = getFlankedBy(strRecording,'R','_','last');
+	if intRunPrePro == 4
+		strThisRecIdx = getFlankedBy(strRecording,'_R','_','first');
+		intLastPupilStop = 5;
+	else
+		intLastPupilStop = 1;
+	end
 	if vecRunPreProGLX(1) < 2
 		strRec = ['*' strThisMouseIdx '*R' strThisRecIdx '*'];
 	else
 		strRec = ['*R' strThisRecIdx '*' strThisMouseIdx '*'];
 	end
-	
+
 	%% set & generate paths
 	strThisPath = mfilename('fullpath');
 	strThisPath = strThisPath(1:(end-numel(mfilename)));
@@ -183,6 +208,23 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 		error([mfilename 'E:SampRateFault'],sprintf('Sampling rate fault is high: %e. Please check!',dblSampRateFault));
 	end
 	
+	%% prepare pupil synchronization
+	fprintf('Filtering pupil synchronization data [%s]\n',getTime);
+	vecPupilSyncLum = sPupil.vecPupilSyncLum;
+	vecPupilTime = sPupil.vecPupilTime;
+	dblSampRatePupil = 1/median(diff(vecPupilTime));
+	
+	%filter to 0.1-30Hz
+	vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
+	[fb,fa] = butter(2,vecWindow2,'bandpass');
+	vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
+	boolPupilSync = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
+	
+	%get on/off
+	vecChangePupilSync = diff(boolPupilSync);
+	vecPupilSyncOn = (find(vecChangePupilSync == 1)+1);
+	vecPupilSyncOff = (find(vecChangePupilSync == -1)+1);
+	
 	%% load stimulus info
 	%load logging file
 	fprintf('Synchronizing multi-stream data...\n');
@@ -210,11 +252,12 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 		%% calculate stimulus times
 		fprintf('>Log file "%s" [%s]\n',sFiles(vecReorderStimFiles(intLogFile)).name,getTime)
 		cellStim{intLogFile} = load(fullfile(strPathStimLogs,sFiles(vecReorderStimFiles(intLogFile)).name));
+		strStimType = cellStim{intLogFile}.structEP.strFile;
+		
 		intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
 		if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI - intFirstSample/dblSampRateNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI - intFirstSample/dblSampRateNI;
-			dblLastStop = vecStimActOffNI(end) + 0.01;
 		else
 			%approximate timings
 			vecStimOn = vecStimOnScreenPD/dblSampRateNI;
@@ -233,44 +276,64 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 			vecStimDur(vecRemStims) = [];
 			vecStimOn(vecRemStims) = [];
 			vecStimOff(vecRemStims) = [];
-			%check first stimulus that falls within 2sd of median
-			dblMedDur = median(vecStimDur);
-			dblSdDur = std(vecStimDur);
-			vecPossibleStims = (vecStimDur > (dblMedDur - 2*dblSdDur)) & (vecStimDur < (dblMedDur + 2*dblSdDur));
-			%select onset/offset
-			intStartStim = find(vecPossibleStims,1);
-			intEndStim = intStartStim + intThisNumTrials - 1;
-			dblStartOnT = vecStimOn(intStartStim);
-			dblStartOffT = vecStimOff(intStartStim);
-			dblLastStop = vecStimOff(intEndStim) + 0.01;
 			
 			%get real but inaccurate timings
-			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnSecs;
-			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffSecs;
+			vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs - cellStim{intLogFile}.structEP.ActOnSecs(1);
+			vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs - cellStim{intLogFile}.structEP.ActOnSecs(1);
+			
+			%go through onsets to check which one aligns with timings
+			vecSignalOnT = vecStimOnScreenPD/dblSampRateNI;
+			intStims = numel(vecSignalOnT);
+			vecError = nan(1,intStims);
+			for intStartStim=1:intStims
+				%select onsets
+				vecUseSignalOnT = vecSignalOnT(intStartStim:end);
+				
+				%get ON times
+				[vecStimOnTime,vecDiffOnT] = OT_refineT(vecStimActOnSecs,vecUseSignalOnT - vecUseSignalOnT(1),inf);
+				vecError(intStartStim) = nansum(vecDiffOnT.^2);
+			end
+			[dblMin,intStartStim] = min(vecError);
+			dblStartT = vecSignalOnT(intStartStim);
+			
+			%get probability
+			vecSoftmin = softmax(-vecError);
+			[vecP,vecI]=findmax(vecSoftmin,10);
+			dblAlignmentCertainty = vecP(1)/sum(vecP);
+			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
+			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~(intLogFile == 1 && intRunPrePro == 7) && ~(intLogFile == 2 && intRunPrePro == 10)
+				error([mfilename 'E:CheckAlignment'],'Alignment certainty is under 90%%, please check manually');
+			end
 			%ensure same starting time
-			vecStimActOnNI = vecStimActOnNI - vecStimActOnNI(1) + dblStartOnT;
-			vecStimActOffNI = vecStimActOffNI - vecStimActOffNI(1) + dblStartOffT;
+			vecStimActOnNI = vecStimActOnSecs + dblStartT;
+			vecStimActOffNI = vecStimActOffSecs + dblStartT;
+			
 		end
 		%remove missing stimuli
 		vecRem = isnan(vecStimActOnNI) | isnan(vecStimActOffNI);
+		dblLastStop = max(vecStimActOffNI);
 		cellStim{intLogFile}.structEP = remStimAP(cellStim{intLogFile}.structEP,vecRem);
 			
 		%get ON times
 		dblMaxErr = 0.1;
 		vecPresStimOnT = vecStimActOnNI(~vecRem);
 		vecSignalOnT = vecStimOnScreenPD/dblSampRateNI;
-		[vecStimOnTime,cellTextOnS,vecDiffOnT] = OT_getStimT(vecPresStimOnT,vecPresStimOnT,vecSignalOnT,{'ON'},inf);
-		indReplace = abs(zscore(vecDiffOnT)) > 5;
+		[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
+		indReplace = abs(nanzscore(vecDiffOnT)) > 5;
 		vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - median(vecDiffOnT);
 		fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		
 		%get OFF times
-		vecPresStimOffT = vecStimActOffNI(~vecRem);
+		if contains(strStimType,'NaturalMovie') %set offsets to movie midpoint
+			vecPresStimOffT = vecStimActOffNI(~vecRem) - median(diff(vecStimActOffNI(~vecRem)))/2;
+		else
+			vecPresStimOffT = vecStimActOffNI(~vecRem);
+		end
 		vecSignalOffT = vecStimOffScreenPD/dblSampRateNI;
-		[vecStimOffTime,cellTextOffS,vecDiffOffT] = OT_getStimT(vecPresStimOffT,vecPresStimOffT,vecSignalOffT,{'OFF'},inf);
-		indReplace = abs(zscore(vecDiffOffT)) > 5;
+		[vecStimOffTime,vecDiffOffT] = OT_refineT(vecPresStimOffT,vecSignalOffT,inf);
+		indReplace = abs(nanzscore(vecDiffOffT)) > 5;
 		vecStimOffTime(indReplace) = vecStimActOffNI(indReplace) - median(vecDiffOffT);
-		fprintf('Average timing error is %.3fs for stimulus offsets; %d violations, %d corrected\n',mean(abs(vecDiffOffT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
+		fprintf('Average timing error is %.3fs for stimulus offsets; %d violations, %d corrected\n',mean(abs(vecDiffOffT)),sum(abs(vecDiffOffT) > dblMaxErr),sum(indReplace));
 		
 		% save to cell array
 		cellStim{intLogFile}.structEP.vecStimOnTime = vecStimOnTime;
@@ -280,137 +343,72 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 		cellStim{intLogFile}.structEP.SampRateNI = dblSampRateNI;
 		
 		%% align eye-tracking data
-		%if intRunPrePro == 9 && intLogFile == 1,continue;end
-		vecPupilSyncLum = sPupil.vecPupilSyncLum;
-		vecPupilTime = sPupil.vecPupilTime;
-		dblSampRatePupil = 1/median(diff(vecPupilTime));
-		
-		%filter to 0.1-30Hz
-		vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
-		[fb,fa] = butter(2,vecWindow2,'bandpass');
-		vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
-		boolPupilSync = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
-		
-		close;
-		figure
-		subplot(2,1,1)
-		hold on
-		plot(vecPupilTime,vecPupilSyncLum - mean(vecPupilSyncLum));
-		plot(vecPupilTime,boolPupilSync);
-		hold off
-		xlabel('Time (s)');
-		ylabel('Screen signal');
-		hold off;
-		fixfig(gca,[],1);
-		
-		subplot(2,1,2)
-		hold on
-		plot(vecPupilTime,vecFiltSyncLum);
-		plot(vecPupilTime,boolPupilSync);
-		hold off
-		xlabel('Time (s)');
-		ylabel('Screen signal');
-		fixfig(gca,[],1);
-		
-		%ask when the stimuli start
-		dblStartT = [];
-		while isempty(dblStartT)
-			dblStartT = input(sprintf('\nPlease enter a time point during the final blanking prior to start of stim1 for stimulation block %d (s):\n',intLogFile));
-			intStartT = round(dblStartT*dblSampRatePupil);
-			if ~isempty(intStartT) && (boolPupilSync(intStartT) == 1)
-				dblStartT = [];
-				
-				%print message
-				ptrDialog = dialog('Name','Wrong selection','Position',[400 500 300 100]);
-				ptrMsg = uicontrol('Parent',ptrDialog,...
-					'Style','text',...
-					'FontSize',10,...
-					'Position',[10 0 280 90],...
-					'String',sprintf('The selected timepoint is not during a blank!\n        (You selected t=%f)',dblStartT));
-				ptrButton = uicontrol('Parent',ptrDialog,...
-					'Position',[75 10 150 25],...
-					'FontSize',10,...
-					'String','Sorry... I''ll try again',...
-					'Callback','delete(gcf)');
-			end
-		end
-		
-		%find first onset
-		boolPupilSync(1:intStartT) = 0;
-		intStartHiDef = find(boolPupilSync==1,1);
-		dblStartHiDefT = intStartHiDef/dblSampRatePupil;
-		if ~exist('dblCorrectionFactor','var') || isempty(dblCorrectionFactor) || isnan(dblCorrectionFactor)
-			%ask when the stimuli start
-			dblStopT = [];
-			while isempty(dblStopT)
-				dblStopT = input(sprintf('\nPlease enter a time point during the final stimulus presentation for stimulation block %d (s):\n',intLogFile));
-				intStopT = round(dblStopT*dblSampRatePupil);
-				if ~isempty(intStopT) && (boolPupilSync(intStopT) == 0)
-					dblStopT = [];
-					
-					%print message
-					ptrDialog = dialog('Name','Wrong selection','Position',[400 500 300 100]);
-					ptrMsg = uicontrol('Parent',ptrDialog,...
-						'Style','text',...
-						'FontSize',10,...
-						'Position',[10 0 280 90],...
-						'String',sprintf('The selected timepoint is not during a stimulus!\n        (You selected t=%f)',dblStopT));
-					ptrButton = uicontrol('Parent',ptrDialog,...
-						'Position',[75 10 150 25],...
-						'FontSize',10,...
-						'String','Sorry... I''ll try again',...
-						'Callback','delete(gcf)');
-				end
-			end
-			intStopT = round(dblStopT*dblSampRatePupil);
-			fprintf('Processing block %d... [%s]\n',intLogFile,getTime);
-			
-			%find last offset
-			boolPupilSyncOff = boolPupilSync;
-			boolPupilSyncOff(1:intStopT) = 1;
-			intStopHiDef = find(boolPupilSyncOff==0,1);
-			dblStopHiDefT = intStopHiDef/dblSampRatePupil;
-			
-			%calculate real framerate
-			dblRealDur = vecStimOffTime(end) - vecStimOnTime(1);
-			dblVidDur = dblStopHiDefT - dblStartHiDefT;
-			intVidFr = intStopHiDef - intStartHiDef;
-			dblReportedFrameRate = intVidFr/dblVidDur;
-			dblRealFrameRate = intVidFr/dblRealDur;
-			dblCorrectionFactor = dblReportedFrameRate/dblRealFrameRate;
-			dblSampRatePupil = dblRealFrameRate;
-		end
-		
-		%check realistic correction factor
-		if dblCorrectionFactor < 0.99 || dblCorrectionFactor > 1.01
-			error([mfilename ':CorrFacOutOfBounds'],sprintf('Correction factor is out of bounds (%f)',dblCorrectionFactor));
-		else
-			fprintf('Correction factor is %f\n',dblCorrectionFactor);
-		end
-		
-		%assign new timepoints
-		if ~isfield(sPupil,'vecPupilRawTime'),sPupil.vecPupilRawTime = vecPupilTime;end
-		vecPupilTime = vecPupilTime*dblCorrectionFactor;
-		sPupil.vecPupilTime = vecPupilTime;
+		if boolOnlyJson || intRunPrePro == 9 && intLogFile == 1,continue;end
+		%get pupil on/offsets
+		vecSignalOnT = vecPupilSyncOn(intLastPupilStop:end)/dblSampRatePupil;
+		vecSignalOffT = vecPupilSyncOff(intLastPupilStop:end)/dblSampRatePupil;
 		
 		%build approximate onsets
-		vecEyeStimOnT = vecStimOnTime - vecStimOnTime(1) + dblStartHiDefT*dblCorrectionFactor;
-		vecEyeStimOffT = vecStimOffTime - vecStimOnTime(1) + dblStartHiDefT*dblCorrectionFactor;
+		vecEyeStimOnT = vecStimOnTime - vecStimOnTime(1);
+		vecEyeStimOffT = vecStimOffTime - vecStimOnTime(1);
+		
+		%first onset has 0.3s delay
+		if contains(strStimType,'NaturalMovie')
+			vecEyeStimOnT(2:end) = vecEyeStimOnT(2:end) - 0.3;
+			vecEyeStimOffT = vecStimOffTime - 0.3;
+		end
+		
+		%go through onsets to check which one aligns with timings
+		intStims = numel(vecSignalOnT);
+		vecError = nan(1,intStims);
+		for intStartStim=1:intStims
+			%select onsets
+			vecUseSignalOnT = vecSignalOnT(intStartStim:end);
+			
+			%get ON times
+			[vecPupilOnT,vecDiffPupilOnT] = OT_refineT(vecEyeStimOnT,vecUseSignalOnT - vecUseSignalOnT(1),inf);
+			vecError(intStartStim) = nansum(vecDiffPupilOnT.^2);
+		end
+		[dblMin,intStartStim] = min(vecError);
+		dblStartT = vecSignalOnT(intStartStim);
+		
+		%get probability
+		vecSoftmin = softmax(-vecError);
+		[vecP,vecI]=findmax(vecSoftmin,10);
+		dblAlignmentCertainty = vecP(1)/sum(vecP);
+		fprintf('Aligned pupil onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
+		if dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)
+			fprintf('\n << Alignment certainty is under 90%%, please check manually >>\n');
+			[dblStartHiDefT,dblUserStartT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intLogFile);
+		
+			%re-align
+			[dblMin,intUserStartStim] = min(abs(vecSignalOnT-dblStartHiDefT));
+			fprintf('My guess (%.3f%% confidence): %.3fs; your guess: %.3fs (I gave it %.3f%% probability)\n',dblAlignmentCertainty*100,dblStartT,dblStartHiDefT,(vecP(vecI==intUserStartStim)/sum(vecP))*100);
+			dblStartT = dblStartHiDefT;
+		end
+		
+		%ensure same starting time
+		vecEyeStimActOn = vecEyeStimOnT(~vecRem) + dblStartT;
+		vecEyeStimActOff = vecEyeStimOffT(~vecRem) + dblStartT;
 		
 		%get ON times
 		dblMaxErr = 0.1;
-		vecLumOnT = (find(diff(boolPupilSync) == 1)+1)/dblSampRatePupil;
-		[vecPupilStimOnTime,cellTextOnE,vecDiffOnT] = OT_getStimT(vecEyeStimOnT,vecEyeStimOnT,vecLumOnT,{'ON'},inf);
-		indReplace = abs(zscore(vecDiffOnT)) > 4;
-		vecPupilStimOnTime(indReplace) = vecEyeStimOnT(indReplace) - median(vecDiffOnT);
-		fprintf('Average pupil timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr));
+		[vecPupilStimOnTime,vecDiffOnT] = OT_refineT(vecEyeStimActOn,vecSignalOnT,inf);
+		indReplace = abs(nanzscore(vecDiffOnT)) > 5;
+		vecPupilStimOnTime(indReplace) = vecEyeStimActOn(indReplace) - median(vecDiffOnT);
+		fprintf('Average timing error is %.3fs for pupil stim onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		
 		%get OFF times
-		vecLumOffT = (find(diff(boolPupilSync) == -1)+1)/dblSampRatePupil;
-		[vecPupilStimOffTime,cellTextOffE,vecDiffOffT] = OT_getStimT(vecEyeStimOffT,vecEyeStimOffT,vecLumOffT,{'OFF'},inf);
-		indReplace = abs(zscore(vecDiffOffT)) > 4;
-		vecPupilStimOffTime(indReplace) = vecEyeStimOffT(indReplace) - median(vecDiffOffT);
-		fprintf('Average pupil timing error is %.3fs for stimulus offsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr));
+		if contains(strStimType,'NaturalMovie') %set offsets to movie midpoint
+			vecPupilStimOffTime = vecEyeStimActOn + median(diff(vecEyeStimActOn))/2;
+		else
+			dblMaxErr = 0.1;
+			[vecPupilStimOffTime,vecDiffOffT] = OT_refineT(vecEyeStimActOff,vecSignalOffT,inf);
+			indReplace = abs(nanzscore(vecDiffOffT)) > 5;
+			vecPupilStimOffTime(indReplace) = vecEyeStimActOff(indReplace) - median(vecDiffOffT);
+			fprintf('Average timing error is %.3fs for pupil stim offsets; %d violations, %d corrected\n',mean(abs(vecDiffOffT)),sum(abs(vecDiffOffT) > dblMaxErr),sum(indReplace));
+		end
+		intLastPupilStop = find((vecPupilSyncOn/dblSampRatePupil)>vecPupilStimOffTime(end),1);
 		
 		%assign stim on/off times
 		vecPupilStimOnFrame = round(vecPupilStimOnTime * dblSampRatePupil);
@@ -465,7 +463,7 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 		cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx);
 		vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
 	end
-	
+	if ~boolOnlyJson
 	%% go through clusters
 	sCluster = struct;
 	parfor intCluster=1:intClustNum
@@ -542,7 +540,7 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 		%loglog(vecFreq(5:end-4),conv(vecPower,normpdf(-4:4,0,2),'valid'));
 	end
 	%}
-	
+	end
 	%% combine all data and save to post-processing data file
 	%build Acquipix post-processing structure
 	fprintf('Combining data and saving to disk... [%s]\n',getTime);
@@ -567,7 +565,7 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 	
 	%probe data
 	sAP.vecChannelDepth = vecChannelDepth;
-	
+	if ~boolOnlyJson
 	%clusters & spikes
 	sAP.sCluster = sCluster;
 	
@@ -585,7 +583,58 @@ for intRunPrePro=9%4%[12 13]%[5 7 8 10][1 2]
 	%fprintf('Saving LFP data to %s [%s]\n',strFileLFP,getTime);
 	%save(strFileLFP,'sAP_LFP','-v7.3');
 	%fprintf('Done\n');!
+	end
 	
 	%% generate json file for library
+	%split recording name & define data
+	cellData = strsplit(strRecording,'_');
+	strRecDate = cellData{1};
+	if ~exist('strFileLFP','var'),strFileLFP='';end
 	
+	%required fields
+	sJson = struct;
+	sJson.date = strRecDate;
+	sJson.version = '1.0';
+	sJson.project = 'MontijnNPX2020';
+	sJson.dataset = 'Neuropixels data';
+	sJson.subject = strMouse;
+	sJson.investigator = 'Jorrit_Montijn';
+	sJson.setup = 'Neuropixels';
+	sJson.stimulus = 'VisStimAcquipix';
+	sJson.condition = 'none';
+	sJson.id = strjoin({strRecIdx,strMouse,strExperiment,strThisRecIdx},'_');
+	
+	%additional fields
+	sJson.experiment = strExperiment;
+	sJson.recording = strRecording;
+	sJson.recidx = strRecIdx;
+	sJson.mousetype = strMouseType;
+	sJson.nstims = num2str(numel(cellStim));
+	sJson.stims = strjoin(cellfun(@(x) x.structEP.strFile,cellStim,'uniformoutput',false),';');
+	sJson.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.vecStimOnTime)),cellStim,'uniformoutput',false),';');
+	sJson.nclust = numel(vecKilosortGood);
+	sJson.ngood = sum(vecKilosortGood);
+	
+	%check meta data
+	cellFields = fieldnames(sMetaNI);
+	intMetaField = find(contains(cellFields,'recording'));
+	if numel(intMetaField) == 1
+		sJson.recording = strjoin({sMetaNI.(cellFields{intMetaField}),cellFields{intMetaField}},'_');
+	else
+		sJson.recording = '';
+		warning([mfilename 'W:NoMetaField'],'Meta field not found in NI header file');
+	end
+	
+	%file locations
+	sJson.file_ap = strFileAP;
+	sJson.file_ap2 = strFileAP2;
+	sJson.file_lfp = strFileLFP;
+	sJson.file_ni = sMetaNI.fileName;
+	
+	%save json file
+	strJsonData = jsonencode(sJson);
+	strJsonFileOut = strcat(strExperiment,'_',strMouse,'_',strRecIdx,'.json');
+	strJsonTarget = fullfile(strPathDataTarget,strJsonFileOut);
+	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
+	save(strJsonTarget,'strJsonData');
 end

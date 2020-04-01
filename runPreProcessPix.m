@@ -1,23 +1,3 @@
-%% to run phy for clustering after finishing this script:
-% 1) open anaconda
-% 2) go to your output directory (i.e., [ops.root ops.rec]) (e.g., P:\Montijn\DataNeuropixels\Exp2019-11-20\20191120_MP2_RunDriftingGratingsR01_g0)
-% 3) type: activate phy
-% 4) type: phy template-gui params.py
-%
-% For more info on phy-contrib's template-gui, see: 
-%	https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md
-%
-%You can also directly copy these lines (one by one) into the matlab
-%command window  (but note that matlab is locked in the mean time)
-%{
-!cmd
-D:
-cd D:\Data\Raw\ePhys\KiloSortBinaries\Roku_20180514_B5
-C:\ProgramData\Miniconda3\Scripts\activate.bat C:\ProgramData\Miniconda3
-activate phy
-phy template-gui params.py
-exit
-%}
 %% recordings
 clear all;close all;
 %sites
@@ -26,34 +6,71 @@ cellRec{1}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-11-21\20191121_MP2_RunDrifti
 cellRec{1}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_RunDriftingGratingsR01_g0';
 cellRec{1}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_R02_RunDriftingGratingsR01_g0';
 cellRec{2}{1} = 'P:\Montijn\DataNeuropixels\Exp2019-12-10\20191210_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-12-11\20191210_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-12-12\20191210_MP3_RunDriftingGratingsR01_g0';
+cellRec{2}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-12-11\20191211_MP3_RunDriftingGratingsR01_g0';
+cellRec{2}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-12-12\20191212_MP3_RunNaturalMovieR01_g0';
+cellRec{2}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-12-13\20191213_MP3_RunDriftingGratingsR01_g0';
+cellRec{2}{5} = 'P:\Montijn\DataNeuropixels\Exp2019-12-16\20191216_MP3_RunNaturalMovieR01_g0';
+cellRec{2}{6} = 'P:\Montijn\DataNeuropixels\Exp2019-12-17\20191217_MP3_RunDriftingGratingsR01_g0';
+cellRec{3}{1} = 'P:\Montijn\DataNeuropixels\Exp2020-01-15\20200115_MP4_RunDriftingGratingsR01_g0';
+cellRec{3}{2} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0';
+cellRec{3}{3} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0';
 
-runPreGLX = [1 2];
+matRunPre = [...
+	1 3;...
+	2 2;...
+	2 5;...
+	3 1;...
+	3 2;...
+	3 3;...
+	1 4;...
+	2 1;...
+	2 3;...
+	2 4;...
+	2 6;...
+	];
 
-%processed?
-%Rec	Mouse	Date		GLX-Pre		Eye-Pre		Sorted	Post
-%1-1	MP2		2019-11-20	Yes			Yes			x		x
-%1-2	MP2		2019-11-21	x			Yes			x		x
-%1-3	MP2		2019-11-22a	x			x			x		x
-%1-4	MP2		2019-11-22b	x			x			x		x
-%2-1	MP3		2019-12-10	x			x			x		x
-%2-2	MP3		2019-12-11	x			x			x		x
-%2-3	MP3		2019-12-12	x			x			x		x
+%											0=none, 1=KS, 2=eye,3=post,4=area+depth
+%Rec	Mouse	Date		Quality	V+good	Processed	CORT		SUBCORT	Comments
+%01:1-1	MP2		2019-11-20	Good	115/298	4			PM			LP		SUBCORT, some CORT, nice responses
+%02:1-2	MP2		2019-11-21	Good	 72/285	4			V1			LP		SUBCORT, some CORT, nice responses	
+%03:1-3	MP2		2019-11-22a	Fair	 54/571	4			PM			NOT		a few very nice responses, B2 only good up to T=2500
+%04:1-4	MP2		2019-11-22b					2								<<RE-ANALYZE! CHECK ORIGINAL FILES>>					
+%05:2-1	MP3		2019-12-10	Good	 53/283	4			PM			NOT		Some nice responses				
+%06:2-2	MP3		2019-12-11	Great	182/417	4			PM			SC		Many nice cells					
+%07:2-3	MP3		2019-12-12	Good	120/388	4			AM			APN		Many nice cells, mostly subcortical; Subcort vis?					
+%08:2-4	MP3		2019-12-13	Great	196/512	4			PM			NOT/APN	Great recording, Eye-tracking possibly weird.. Subcort vis?					
+%09:2-5	MP3		2019-12-16	Great!	232/621	4			V1			LGN		Eye-tr is ~ & missing stim1
+%10:2-6	MP3		2019-12-17	Good	 72/407	4			AM			-/(LP)	Cort{PPC}, few subcort										
+%11:3-1	MP4		2020-01-15	Good	133/398 4			RS/AM		NOT/APN	Eye-tr bad after t=2500s, Subcort vis, Possibly NOT: SUBCORT (+some CORT) very nice responses					
+%12:3-2	MP4		2020-01-16a	Poor	 47/325	4			AM			LP		CORT{AM} (+some SUBCORT{LP}~2500)					
+%13:3-3	MP4		2020-01-16b	Good	 51/216	4			RS			NOT		Subcort vis, Possibly NOT: SUBCORT, but very nice cells					
+
+for intRunPrePro=1:size(matRunPre,1)
+%% clear variables and select session to preprocess
+clearvars -except cellRec matRunPre intRunPrePro
+runPreGLX = matRunPre(intRunPrePro,:);
+fprintf('Starting pre-processing of "%s" [%s]\n',cellRec{runPreGLX(1)}{runPreGLX(2)},getTime);
 
 %% path definitions
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 addpath(genpath('C:\Code\Acquisition\Kilosort2')); % path to kilosort folder
 addpath('C:\Code\Acquisition\npy-matlab'); % for converting to Phy
-strExpPath = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\';
-strRec = '20191122_MP2_R02_RunDriftingGratingsR01_g0';
 rootZ = cellRec{runPreGLX(1)}{runPreGLX(2)}; % the raw data binary file is in this folder
-strTempDirDefault = 'C:\_TempData'; % path to temporary binary file (same size as data, should be on fast SSD)
+strTempDirDefault = 'E:\_TempData'; % path to temporary binary file (same size as data, should be on fast SSD)
 strPathToConfigFile = strcat(strThisPath,'subfunctionsPP',filesep); % take from Github folder and put it somewhere else (together with the master_file)
 chanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
 
-%% check which temp folder to use
+%% check which temp folder to use & clear data
+sTempFiles = dir(fullfile(strTempDirDefault,'*.dat'));
+for intTempFile=1:numel(sTempFiles)
+	boolDir = sTempFiles(intTempFile).isdir;
+	strFile = sTempFiles(intTempFile).name;
+	if ~boolDir
+		delete(fullfile(strTempDirDefault,strFile));
+		fprintf('Deleted "%s" from temporary path "%s" [%s]\n',strFile,strTempDirDefault,getTime);
+	end
+end
 fs          = [dir(fullfile(rootZ, '*.bin')) dir(fullfile(rootZ, '*.dat'))];
 objFile      = java.io.File('C:\');
 dblFreeBytes   = objFile.getFreeSpace;
@@ -63,7 +80,7 @@ if dblFreeBytes > (dblFileSize*1.05)
 	strTempDir = strTempDirDefault;
 	fprintf('Using temp dir "%s" (%.1fGB free)\n',strTempDir,dblFreeBytes/(1024.^3));
 else
-	strTempDir = strrep(strTempDirDefault,'C:\','D:\');
+	strTempDir(1) = 'D';
 	fprintf('Not enough space on SSD (%.1fGB free). Using temp dir "%s"\n',dblFreeBytes/(1024.^3),strTempDir);
 end
 
@@ -126,7 +143,6 @@ fprintf('Saving results to Phy  \n')
 rezToPhy(rez, rootZ);
 
 %% if you want to save the results to a Matlab file...
-
 % discard features in final rez file (too slow to save)
 rez.cProj = [];
 rez.cProjPC = [];
@@ -135,3 +151,4 @@ rez.cProjPC = [];
 fprintf('Saving final results in rez2  \n')
 fname = fullfile(rootZ, 'rez2.mat');
 save(fname, 'rez', '-v7.3');
+end

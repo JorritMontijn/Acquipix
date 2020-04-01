@@ -398,11 +398,11 @@ try
 		
 		%fill DAQ with data
 		if boolUseSGL
-		stop(objDAQOut);
-		outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
-		outputData2 = linspace(3, 3, 250)';
-		queueOutputData(objDAQOut,[outputData1 outputData2]);
-		prepare(objDAQOut);
+			stop(objDAQOut);
+			outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
+			outputData2 = linspace(3, 3, 250)';
+			queueOutputData(objDAQOut,[outputData1 outputData2]);
+			prepare(objDAQOut);
 		end
 		
 		%retrieve stimulus info
