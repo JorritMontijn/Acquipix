@@ -25,6 +25,7 @@ if intStimSet == 1
 	%After each pulse train 10s pause
 	%Can run up to 500 trials (as discussed it should repeat the frequencies in a row and then start at 1Hz again) or until stopped
 	
+	dblPulseVoltage = 3;%volts
 	dblPrePostWait = 2;%secs
 	dblSamplingRate = 10000;%Hz
 	intRepsPerPulse = 5;%count
@@ -41,6 +42,7 @@ end
 cellPulseData = cell(1,intTrialNum);
 cellPulseITI = cell(1,intTrialNum);
 cellPulseDur = cell(1,intTrialNum);
+vecPulseVolt = nan(1,intTrialNum);
 vecStimOnNI = nan(1,intTrialNum);
 vecStimOffNI = nan(1,intTrialNum);
 for intTrial=1:intTrialNum
@@ -48,14 +50,15 @@ for intTrial=1:intTrialNum
 	vecRand = randperm(numel(vecPulseITI));
 	vecShuffITI = vecPulseITI(vecRand);
 	vecShuffDur = vecPulseDur(vecRand);
-	vecData = uint8([]);
+	vecData = logical([]);
 	
 	for intPulseType=1:numel(vecShuffITI)
-		vecOnePulse = uint8(cat(1,ones(round(vecShuffDur(intPulseType)*dblSamplingRate),1),zeros(round(vecShuffITI(intPulseType)*dblSamplingRate),1)));
+		vecOnePulse = cat(1,true(round(vecShuffDur(intPulseType)*dblSamplingRate),1),false(round(vecShuffITI(intPulseType)*dblSamplingRate),1));
 		vecPulses = repmat(vecOnePulse,[intRepsPerPulse 1]);
-		vecWait = uint8(zeros(round(dblSamplingRate*dblPulseWaitSignal),1));
+		vecWait = false(round(dblSamplingRate*dblPulseWaitSignal),1);
 		vecData = cat(1,vecData,vecPulses,vecWait);
 	end
+	vecPulseVolt(intTrial) = dblPulseVoltage;
 	cellPulseData{intTrial} = vecData;
 	cellPulseITI{intTrial} = vecShuffITI;
 	cellPulseDur{intTrial} = vecShuffDur;
@@ -179,16 +182,17 @@ try
 		hTicTrial = tic;
 		
 		%save current data
+		vecPulseVolt_Temp = vecPulseVolt(1:(intTrial-1));
 		cellPulseData_Temp = cellPulseData(1:(intTrial-1));
 		cellPulseITI_Temp = cellPulseITI(1:(intTrial-1));
 		cellPulseDur_Temp = cellPulseDur(1:(intTrial-1));
 		vecStimOnNI_Temp = vecStimOnNI(1:(intTrial-1));
 		vecStimOffNI_Temp = vecStimOffNI(1:(intTrial-1));
 		save([strOutputDir filesep strFilename '_Temp'],...
-			'cellPulseData_Temp','cellPulseITI_Temp','cellPulseDur_Temp','vecStimOnNI_Temp','vecStimOffNI_Temp');
+			'vecPulseVolt_Temp','cellPulseData_Temp','cellPulseITI_Temp','cellPulseDur_Temp','vecStimOnNI_Temp','vecStimOffNI_Temp');
 		
 		%get new pulse data
-		matData = cellPulseData{intTrial};
+		matData = vecPulseVolt(intTrial)*double(cellPulseData{intTrial});
 		
 		%msg
 		fprintf('Trial %d/%d [%s]\n',intTrial,intTrialNum,getTime);
@@ -249,6 +253,7 @@ try
 	end
 	
 	%save data
+	structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
 	structEP.cellPulseData = cellPulseData(1:intTrial);
 	structEP.cellPulseITI = cellPulseITI(1:intTrial);
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
@@ -282,6 +287,7 @@ catch ME
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
 	
 	%save data
+	structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
 	structEP.cellPulseData = cellPulseData(1:intTrial);
 	structEP.cellPulseITI = cellPulseITI(1:intTrial);
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
