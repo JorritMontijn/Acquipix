@@ -7,10 +7,12 @@ close all;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = true;
+boolUseSGL = false;
+boolUseNI = true;
 intDebug = 0;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
+dblLightMultiplier = 0.7; %strength of infrared LEDs
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -107,7 +109,7 @@ fprintf('Preparing variables...\n');
 structEP = struct; %structureElectroPhysiology
 
 %get default settings in Set
-intUseDaqDevice = boolUseSGL; %set to 0 to skip I/O
+intUseDaqDevice = 1; %set to 0 to skip I/O
 
 %assign filename
 structEP.strFile = mfilename;
@@ -220,7 +222,7 @@ structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsSti
 structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
 
 %% initialize NI I/O box
-if boolUseSGL
+if boolUseNI
 	%initialize
 	fprintf('Connecting to National Instruments box...\n');
 	strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
@@ -236,6 +238,15 @@ if boolUseSGL
 		end
 	end
 	objDAQOut = openDaqOutput(intUseDaqDevice);
+	
+	%turns leds on
+	stop(objDAQOut);
+	outputData1 = dblLightMultiplier*cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
+	outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
+	queueOutputData(objDAQOut,[outputData1 outputData2]);
+	prepare(objDAQOut);
+	pause(0.1);
+	startBackground(objDAQOut)
 end
 
 try
@@ -397,10 +408,10 @@ try
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
 		
 		%fill DAQ with data
-		if boolUseSGL
+		if boolUseNI
 			stop(objDAQOut);
-			outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
-			outputData2 = linspace(3, 3, 250)';
+			outputData1 = dblLightMultiplier*cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
+			outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
 			queueOutputData(objDAQOut,[outputData1 outputData2]);
 			prepare(objDAQOut);
 		end
@@ -454,7 +465,7 @@ try
 		end
 		
 		%% 250ms pulse at stim start
-		if boolUseSGL,startBackground(objDAQOut);end
+		if boolUseNI,startBackground(objDAQOut);end
 		
 		%% show stimulus
 		dblStimStartFlip = dblLastFlip;
@@ -602,7 +613,7 @@ try
 	if boolUseSGL,CloseSGL(hSGL);end
 	
 	%close Daq IO
-	if intUseDaqDevice > 0
+	if boolUseNI > 0
 		if boolDaqIn
 			closeDaqInput(objDAQIn);
 		end

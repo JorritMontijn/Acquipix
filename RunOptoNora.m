@@ -7,8 +7,8 @@ close all;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = false;
-intUseDaqDevice = 0; %set to 0 to skip I/O
+boolUseSGL = true;
+intUseDaqDevice = 1; %set to 0 to skip I/O
 intDebug = 0;
 boolDaqIn = false;
 
@@ -29,10 +29,10 @@ if intStimSet == 1
 	dblPrePostWait = 2;%secs
 	dblSamplingRate = 10000;%Hz
 	intRepsPerPulse = 5;%count
-	intTrialNum = 500;%count
+	intTrialNum = 40;%count
 	dblPulseWait = 2;%secs, at least ~0.2s
-	vecPulseITI = 1./[1 2 5 10 20 50 100];%secs
-	dblPulseDur = 5/1000;%secs
+	vecPulseITI = 1./[1 2 5 10 20 50];%secs
+	dblPulseDur = 10/1000;%secs
 	vecPulseDur = dblPulseDur*ones(size(vecPulseITI));%secs
 	dblPulseWaitSignal = dblPulseWait/2;
 	dblPulseWaitPause = dblPulseWait - dblPulseWaitSignal;
@@ -138,7 +138,32 @@ sStimParamsSettings.strStimType = 'OptoNora';
 
 %% initialize NI I/O box
 if intUseDaqDevice > 0
-	objDAQOut = openDaqOutputOptoSpritzer(intUseDaqDevice,dblSamplingRate);
+	%% setup connection
+	%query connected devices
+	objDevice = daq.getDevices;
+	strCard = objDevice.Model;
+	strID = objDevice.ID;
+	
+	%create connection
+	objDAQOut = daq.createSession(objDevice(intUseDaqDevice).Vendor.ID);
+	
+	%set variables
+	objDAQOut.IsContinuous = true;
+	objDAQOut.Rate=round(dblSamplingRate); %1ms precision
+	objDAQOut.NotifyWhenScansQueuedBelow = 100;
+	
+	%add picospritzer output channels
+	%[chOut0,dblIdx0] = addAnalogOutputChannel(objDAQOut, strID, 'ao0', 'Voltage');
+	
+	%add opto LED output channels
+	[chOut1,dblIdx1] = addAnalogOutputChannel(objDAQOut, strID, 'ao1', 'Voltage');
+	
+	%% set spritzer off
+	dblStartT = 0.1;
+	%queueOutputData(objDAQOut,repmat([0 0],[ceil(objDAQOut.Rate*dblStartT) 1]));
+	queueOutputData(objDAQOut,zeros([ceil(objDAQOut.Rate*dblStartT) 1]));
+	startBackground(objDAQOut);
+	pause(dblStartT);
 else
 	objDAQOut = struct;
 end
@@ -205,7 +230,7 @@ try
 			stop(objDAQOut);
 			%extend
 			if size(matData,2) == 1
-				matData = repmat(matData,[1 2]);
+				%matData = repmat(matData,[1 2]);
 			end
 			%prep
 			stop(objDAQOut);
@@ -234,7 +259,8 @@ try
 		
 		%wait
 		if intUseDaqDevice > 0
-			wait(objDAQOut);
+			dblTimeout = (size(matData,1)/dblSamplingRate)*1.5;
+			wait(objDAQOut,dblTimeout);
 		end
 		
 		%log NI timestamp
@@ -277,10 +303,13 @@ try
 	
 	%close Daq IO
 	if intUseDaqDevice > 0
-		if boolDaqIn
-			closeDaqInput(objDAQIn);
+		try
+			closeDaqOutput(objDAQOut);
+			if boolDaqIn
+				closeDaqInput(objDAQIn);
+			end
+		catch
 		end
-		closeDaqOutput(objDAQOut);
 	end
 catch ME
 	%% catch me and throw me

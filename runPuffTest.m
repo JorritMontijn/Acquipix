@@ -1,4 +1,4 @@
-function varargout = runOptoTest(varargin)
+function varargout = runPuffTest(varargin)
 	% RUNOPTOTEST MATLAB code for runOptoTest.fig
 	%      RUNOPTOTEST, by itself, creates a new RUNOPTOTEST or raises the existing
 	%      singleton*.
@@ -22,7 +22,7 @@ function varargout = runOptoTest(varargin)
 	
 	% Edit the above text to modify the response to help runOptoTest
 	
-	% Last Modified by GUIDE v2.5 28-Aug-2020 15:12:21
+	% Last Modified by GUIDE v2.5 22-Sep-2020 14:53:43
 	
 	% Begin initialization code - DO NOT EDIT
 	gui_Singleton = 1;
@@ -89,12 +89,13 @@ function runOptoTest_OpeningFcn(hObject, eventdata, handles, varargin)
 		objDaqOut.NotifyWhenScansQueuedBelow = 100;
 		
 		%add opto LED output channels
-		[chOut1,dblIdx1] = addAnalogOutputChannel(objDaqOut, strID, 'ao1', 'Voltage');
+		[chOut1,dblIdx1] = addAnalogOutputChannel(objDaqOut, strID, 'ao0', 'Voltage');
 	end
 	%set global variables
 	sOptoTest.objDaqOut = objDaqOut;
 	sOptoTest.dblSamplingRate = dblSamplingRate;
 	sOptoTest.dblPrePost = dblPrePost;
+	set(handles.ptrButtonPulse,'Enable','on','String','Puff!','BackgroundColor',[1 1 1],'ForegroundColor',[0 0.45 0.74]);
 end
 % --- Outputs from this function are returned to the command line.
 function varargout = runOptoTest_OutputFcn(hObject, eventdata, handles)
@@ -183,7 +184,7 @@ function ptrButtonPulse_Callback(hObject, eventdata, handles)
 	vecData = dblVolt*cat(1,vecPrePost,vecPulses,vecPrePost);
 	
 	%block button
-	set(hObject,'Enable','off','String','Zapping...','BackgroundColor',[0.6667    0.8167    0.9133],'ForegroundColor','white');
+	set(hObject,'Enable','off','String','Puffing...','BackgroundColor',[0.6667    0.8167    0.9133],'ForegroundColor','white');
 	
 	%send pulse
 	if isempty(objDaqOut)
@@ -196,9 +197,9 @@ function ptrButtonPulse_Callback(hObject, eventdata, handles)
 		startBackground(objDaqOut);
 		wait(objDaqOut,10);
 	end
-	
+	hObject
 	%re-enable button
-	set(hObject,'Enable','on','String','Zap!','BackgroundColor',[1 1 1],'ForegroundColor',[0 0.45 0.74]);
+	set(hObject,'Enable','on','String','Puff!','BackgroundColor',[1 1 1],'ForegroundColor',[0 0.45 0.74]);
 	
 end
 
