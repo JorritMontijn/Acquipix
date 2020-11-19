@@ -7,7 +7,7 @@ close all;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = false;
+boolUseSGL = true;
 boolUseNI = true;
 intDebug = 0;
 intUseMask = 0;
@@ -160,12 +160,19 @@ elseif intStimSet == 2
 	intNumRepeats = 400;
 	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
 	sStimParamsSettings.vecOrientationNoise = [0 2 0 2]; %noise in degrees
+elseif intStimSet == 3
+	intNumRepeats = 16;
+	sStimParamsSettings.vecStimulusSize_deg = [4 6 9 14 21 32 48 72];%circular window in degrees [35]
+	sStimParamsSettings.vecOrientations = [0 45 90 135]; %orientation (0 is drifting rightward)
+	sStimParamsSettings.vecOrientationNoise = 0; %noise in degrees
 end
 
 %get stimuli
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
+if intStimSet == 2
 for intObject=1:numel(sStimObject)
 	sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
+end
 end
 
 %get noise stimuli

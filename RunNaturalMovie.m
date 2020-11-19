@@ -154,7 +154,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 100;
+structEP.intNumRepeats = 20;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0;
 structEP.dblSecsStimDur = 20;
