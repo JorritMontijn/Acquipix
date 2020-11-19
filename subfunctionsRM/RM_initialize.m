@@ -1,63 +1,42 @@
 function [sFig,sRM] = RM_initialize(sFig,sRM)
 	%RM_initialize initializes all fields when data paths are set
 	
-	%attempt to read which channels exist
-	cellText = {};
-	try
-		%set data
-		sMetaData = struct;
-		sMetaData.Myevent = 'dRAW';
-		sMetaData.Mytank = get(sFig.ptrTextRecording, 'string');
-		sMetaData.Myblock = get(sFig.ptrTextBlock, 'string');
-		%read
-		sMetaData = getMetaDataTDT(sMetaData);
-		%assign
-		vecChannels = 1:sMetaData.strms(1).channels;
-		dblSampFreq = sMetaData.strms(strcmpi(sMetaData.Myevent, {sMetaData.strms(:).name} )).sampf;
-		sRM.dblSampFreq = dblSampFreq;
-		%msg
-		cellText(end+1) = {'TDT data tank query has succeeded!'};
-	catch ME
-		%prep message
-		cellText(end+1) = {'TDT data tank query has failed!'};
-		cellText(end+1) = {''};
-		cellText(end+1) = {'Please reinitialize when ready'};
-		cellText(end+1) = {''};
-		cellText(end+1) = {ME.message};
-		RM_updateTextInformation(cellText);
-		return
-	end
 	%lock GUI
 	RM_lock(sFig);
 	drawnow;
 	
-	%map pre-processing
-	set(sFig.ptrListSelectImage,'String',sRM.metaData.cellFilter);
+	%msg
+	cellText = {'Initializing...'};
+	
+	RM_updateTextInformation(cellText);
+	%data processing
+	set(sFig.ptrListSelectDataProcessing,'String',sRM.metaData.cellProcess);
+	
+	%metrics
+	set(sFig.ptrListSelectMetric,'String',sRM.metaData.cellMetric);
 	
 	%channel list
-	cellPreChannels{1} = 'Magic+';
-	cellPreChannels{2} = 'Mean';
-	cellPreChannels{3} = 'Best';
-	intPreNum = numel(cellPreChannels);
-	cellChannels = cell(1,intPreNum+numel(vecChannels));
-	cellChannels(1:intPreNum) = cellPreChannels;
-	for intChannel=1:numel(vecChannels)
-		cellChannels(intChannel+intPreNum) = {sprintf('Ch-%02d',vecChannels(intChannel))};
-	end
+	cellChannels{1} = 'Magic+';
+	cellChannels{2} = 'Mean';
+	cellChannels{3} = 'Best';
+	cellChannels{4} = 'Single';
 	set(sFig.ptrListSelectChannel,'String',cellChannels);
 	
 	%default downsample
-	dblSubSampleToReq = sRM.metaData.dblSubSampleToReq;
-	intSubSampleFactor = round(dblSubSampleToReq*dblSampFreq);
-	dblSubSampleTo = intSubSampleFactor/dblSampFreq;
-	set(sFig.ptrEditDownsample,'String',sprintf('%.3f',dblSubSampleTo));
-	set(sFig.ptrTextDownsampleFactor,'String',num2str(intSubSampleFactor));
+	dblSampFreqIM = sRM.dblSampFreqIM;
+	dblSampFreqNI = sRM.dblSampFreqNI;
+	dblSubSampleToReq = str2double(get(sFig.ptrEditDownsample,'String'));
+	sRM.intSubSampleFactorIM = round(dblSubSampleToReq*dblSampFreqIM);
+	if isnan(sRM.intSubSampleFactorIM),sRM.intSubSampleFactorIM=0;end
+	sRM.dblSubSampleTo = sRM.intSubSampleFactorIM/dblSampFreqIM;
+	if isnan(sRM.dblSubSampleTo),sRM.dblSubSampleTo=0;end
+	sRM.dblSubSampleFactorNI = dblSampFreqNI*sRM.dblSubSampleTo;
+	set(sFig.ptrEditDownsample,'String',sprintf('%.3f',sRM.dblSubSampleTo));
+	set(sFig.ptrTextDownsampleFactor,'String',num2str(sRM.intSubSampleFactorIM));
 	
 	%sample frequency
-	set(sFig.ptrTextEphysFreq,'String',sprintf('%.2f',sRM.dblSampFreq));
-	
-	%default high-pass frequency
-	set(sFig.ptrEditHighpassFreq,'String',sprintf('%.1f',sRM.metaData.dblFiltFreq));
+	set(sFig.ptrTextFreqIM,'String',sprintf('%.2f',dblSampFreqIM));
+	set(sFig.ptrTextFreqNI,'String',sprintf('%.2f',dblSampFreqNI));
 	
 	%test GPU
 	cellText(end+1) = {'Testing GPU Compute Capability...'};
@@ -72,12 +51,18 @@ function [sFig,sRM] = RM_initialize(sFig,sRM)
 	if dblCompCap >= 3
 		sRM.UseGPU = true;
 		cellText(end+1) = {['GPU CC is good (' strCompCap '); GPU processing enabled!']};
-		OT_updateTextInformation(cellText);
+		RM_updateTextInformation(cellText);
 	else
 		sRM.UseGPU = false;
 		cellText(end+1) = {['GPU CC is bad (' strCompCap '); GPU processing disabled!']};
-		OT_updateTextInformation(cellText);
+		RM_updateTextInformation(cellText);
 	end
+	
+	%load channel map
+	sRM.sChanMap = load([sRM.metaData.strChanMapPath sRM.metaData.strChanMapFile]);
+	
+	%enable all fields
+	RM_enable(sFig);
 	
 	%set msg
 	sRM.IsInitialized = true;

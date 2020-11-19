@@ -10,11 +10,10 @@
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = false;
-boolUseNI = false;
+boolUseSGL = true;
+boolUseNI = true;
 intDebug = 0;
 intUseMask = 0;
-dblStimSizeDegs = 140;%was 120
 dblLightMultiplier = 0.7; %strength of infrared LEDs
 
 %% define paths

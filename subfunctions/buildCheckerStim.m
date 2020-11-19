@@ -81,7 +81,7 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 		vecUnusedOff =  find(matUsedLocOff==min(matUsedLocOff(:)));
 		intUnusedOff = numel(vecUnusedOff);
 		vecUnusedOff(ismember(vecUnusedOff,vecUseOn)) = []; %remove currently used on locations
-		vecUseOff = vecUnusedOff(randperm(intUnusedOff,intAddOff)); %if so, remove excess
+		vecUseOff = vecUnusedOff(randperm(intUnusedOff,min([intUnusedOff intAddOff]))); %if so, remove excess
 		vecUseOn = vecUseOn(1:min([numel(vecUseOff) numel(vecUseOn)])); %remove on values for balance
 		%update buffer
 		matUsedLocOn(vecUseOn) = matUsedLocOn(vecUseOn) + 1;

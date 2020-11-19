@@ -1,7 +1,6 @@
 function RM_redraw(varargin)
 	%DC_redraw Sets and redraws windows
 	%   DC_redraw([redrawImage=true])
-	
 	%get structures
 	global sRM;
 	global sFig;
@@ -12,13 +11,6 @@ function RM_redraw(varargin)
 	%check if data has been loaded
 	if isempty(sRM) || isempty(sFig)
 		return;
-	else
-		try
-			%get current image
-			intImSelected = get(sFig.ptrListSelectImage,'Value');
-		catch %#ok<CTCH>
-			return;
-		end
 	end
 	
 	% Draw the image if requested
@@ -110,9 +102,10 @@ function RM_redraw(varargin)
 	elseif strcmp(strChannel,'Best')
 		matPlot = matMeanR(:,:,intBest);
 		strChannel = strcat(strChannel,sprintf('=%d',intBest));
-	elseif strcmp(strChannel(1:2),'Ch')
-		intChannelNumber = str2double(getFlankedBy(strChannel,'Ch-',''));
+	elseif strcmp(strChannel,'Single')
+		intChannelNumber = vecSelectChans(1);
 		matPlot = matMeanR(:,:,intChannelNumber);
+		strChannel = strcat(sprintf('Ch=%d',intChannelNumber));
 	else
 		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;

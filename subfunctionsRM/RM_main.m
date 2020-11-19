@@ -56,10 +56,6 @@ function RM_main(varargin)
 		
 		%get resp variables
 		intRespTrialN = sRM.intRespTrialN;
-		matRespBase = sRM.matRespBase;
-		matRespStim = sRM.matRespStim;
-		vecStimTypes = sRM.vecStimTypes;
-		vecStimOriDeg = sRM.vecStimOriDeg;
 		
 		%get data from figure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
@@ -311,8 +307,8 @@ function RM_main(varargin)
 			end
 			
 			%update variables
-			vecNewStimOnT = cell2mat({sStimObject(:).dblStimOnNI});
-			vecNewStimOffT = cell2mat({sStimObject(:).dblStimOffNI});
+			vecNewStimOnT = cell2mat({sStimObject(:).ActOnNI});
+			vecNewStimOffT = cell2mat({sStimObject(:).ActOffNI});
 			dblStimTrialT = max(cat(2,vecNewStimOnT,vecNewStimOffT));
 			intStimTrialN = vecNewObjectIDs(1);
 			dblStimCoverage = 100*sum(sStimObject(end).UsedLinLocOff(:))/numel(sStimObject(end).UsedLinLocOff);
@@ -341,7 +337,7 @@ function RM_main(varargin)
 		end
 		
 		%% update trial-average data matrix
-		intTrials = min([intEphysTrial intStimTrial]);
+		intTrials = min([intEphysTrialN intStimTrialN]);
 		if intTrials > intRespTrialN
 			%% calc RF estimate
 			%ON, OFF, ON-base OFF-base
@@ -366,6 +362,7 @@ function RM_main(varargin)
 				%get repetitions of locations
 				vecLinLocOn = sStimObject(intTrial).LinLocOn;
 				vecLinLocOff = sStimObject(intTrial).LinLocOff;
+				matLinLoc = sStimObject(intTrial).LinLoc;
 				
 				%get data
 				if intTrial==1
@@ -384,11 +381,11 @@ function RM_main(varargin)
 				
 				%base resp
 				vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
-				vecBaseResp(intMaxChan+1) = 0;
+				vecBaseResp((end+1):intMaxChan) = 0;
 				
 				%stim resp
 				vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
-				vecStimResp(intMaxChan+1) = 0;
+				vecStimResp((end+1):intMaxChan) = 0;
 				
 				%assign data
 				for intLocOn=vecLinLocOn(:)'

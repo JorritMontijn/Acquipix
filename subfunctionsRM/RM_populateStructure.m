@@ -6,21 +6,58 @@ function sRM = RM_populateStructure(sRM)
 		sRM.metaData = struct;
 	end
 	%default path locations
-	sRM.metaData.strSourcePathTDT = 'E:\';
+	sRM.metaData.strHostAddressSGL = '127.0.0.1';
 	sRM.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
+	sRM.metaData.strChanMapPath = 'C:\Code\GitRepos\Acquipix\subfunctionsPP\';
+	sRM.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
+	
+	%data processing types
+	sRM.metaData.cellProcess{1} = 'Raw';
+	sRM.metaData.cellProcess{2} = 'Smoothed';
+	
+	%metrics
+ 	sRM.metaData.cellMetric{1} = 'Mean';
+ 	sRM.metaData.cellMetric{2} = 'ZETA (under construction)';
+
+	%initialize data stream variables
+	sRM.IsInitialized = false;
 	
 	%filters
-	sRM.metaData.cellFilter{1} = 'Smoothed ON+OFF Stim-Base';
-	sRM.metaData.cellFilter{2} = 'Smoothed ON+OFF Stim-Base/Sd';
-	sRM.metaData.cellFilter{3} = 'Smoothed ON Stim/Sd + OFF Stim/Sd';
-	sRM.metaData.cellFilter{4} = 'ON+OFF Stim-Base';
-	sRM.metaData.cellFilter{5} = 'ON+OFF Stim-Base/Sd';
-	sRM.metaData.cellFilter{6} = 'ON Stim/Sd + OFF Stim/Sd';
+	%sRM.metaData.cellFilter{1} = 'Smoothed ON+OFF Stim-Base';
+	%sRM.metaData.cellFilter{2} = 'Smoothed ON+OFF Stim-Base/Sd';
+	%sRM.metaData.cellFilter{3} = 'Smoothed ON Stim/Sd + OFF Stim/Sd';
+	%sRM.metaData.cellFilter{4} = 'ON+OFF Stim-Base';
+	%sRM.metaData.cellFilter{5} = 'ON+OFF Stim-Base/Sd';
+	%sRM.metaData.cellFilter{6} = 'ON Stim/Sd + OFF Stim/Sd';
 	
-	%default values
-	sRM.metaData.dblSubSampleToReq = 0.011;
-	sRM.metaData.dblFiltFreq = 500;
+	%ephys
+	sRM.intStimSyncChanNI = 0;
+	sRM.NumChannels = 0;
+	sRM.dblSampFreqIM = 0;
+	sRM.dblSampFreqNI = 0;
+	sRM.dblEphysTimeIM = 0;
+	sRM.dblEphysTimeNI = 0;
+	sRM.intEphysTrialN = 0;
+	sRM.dblEphysTrialT = 0;
+	sRM.intLastFetchNI = 0;
+	sRM.intLastFetchIM = 0;
+	sRM.vecDiodeOnT = [];
+	sRM.vecDiodeOffT = [];
 	
+	%data
+	sRM.boolChannelsCulled = false;
+	sRM.vecTimestampsNI = [];
+	sRM.vecSyncData = [];
+	sRM.dblDataBufferSize = 3;
+	sRM.intDataBufferPos = [];
+	sRM.intDataBufferSize = [];
+	sRM.matDataBufferIM = [];
+	sRM.vecTimestampsIM = [];
+	sRM.dblSubLastUpdate = [];
+	sRM.dblCurrT = [];
+	sRM.vecSubSpikeCh = [];
+	sRM.vecSubSpikeT = [];
+		
 	%initialize data stream variables
 	sRM.IsInitialized = false;
 	sRM.NumChannels = 0;
@@ -32,4 +69,17 @@ function sRM = RM_populateStructure(sRM)
 	sRM.sStimObject = [];
 	sRM.vecTimestamps = [];
 	sRM.matData = [];
+	
+	%stim
+	sRM.dblStimCoverage = 0;
+	sRM.intStimTrialN = 0;
+	sRM.dblStimTrialT = 0;
+	sRM.sStimObject = [];
+	sRM.vecStimOnT = [];
+	sRM.vecStimOffT = [];
+	
+	%resp
+	sRM.intRespTrialN = 0;
+	sRM.intMinChan = 1;
+	sRM.intMaxChan = 384;
 end
