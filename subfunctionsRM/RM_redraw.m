@@ -50,127 +50,69 @@ function RM_redraw(varargin)
 		sFig.ptrAxesHandle = axes;
 	end
 	
-	%% get requested parameters
-	intImFilter = get(sFig.ptrListSelectImage,'Value');
-	cellImFilters = get(sFig.ptrListSelectImage,'String');
-	strImFilter = cellImFilters{intImFilter};
+	%% get data & requested parameters
 	intChannel = get(sFig.ptrListSelectChannel,'Value');
 	cellChannels = get(sFig.ptrListSelectChannel,'String');
-	strChannel = cellChannels{intChannel};
+	strChannel = cellChannels{intChannel}; %type of selection; best, magic, etc
+	%intTrials = sRM.intRespTrialN;
+	vecSelectChans = sRM.vecSelectChans;
+	cellStimON = sRM.cellStimON; %[y by x] cell with [chan x rep] matrix
+	%cellBaseON = sRM.cellBaseON; %[y by x] cell with [chan x rep] matrix
+	cellStimOFF = sRM.cellStimOFF; %[y by x] cell with [chan x rep] matrix
+	%cellBaseOFF = sRM.cellBaseOFF; %[y by x] cell with [chan x rep] matrix
+	dblFlickerFreq = sRM.FlickerFreq; %ON/OFF if 0, otherwise merge
 	
 	%% prep data
-	intTrials = min([sRM.intEphysTrial sRM.intStimTrial]);
 	%define smoothing filter
-	matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);
-	matFilter = matFilter ./ sum(matFilter(:));
-	
-	%get data
-	cellStimON = sRM.cellStimON;
-	cellBaseON = sRM.cellBaseON;
-	cellStimOFF = sRM.cellStimOFF;
-	cellBaseOFF = sRM.cellBaseOFF;
+	%matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);
+	%matFilter = matFilter ./ sum(matFilter(:));
 	
 	%fill empty entries with zeros
 	[intNumCh,intNonEmptyIdx] = max(flat(cellfun(@size,cellStimON,cellfill(1,size(cellStimON)))));
 	cellStimON(cellfun(@isempty,cellStimON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
-	cellBaseON(cellfun(@isempty,cellBaseON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
+	%cellBaseON(cellfun(@isempty,cellBaseON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
 	cellStimOFF(cellfun(@isempty,cellStimOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
-	cellBaseOFF(cellfun(@isempty,cellBaseOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
+	%cellBaseOFF(cellfun(@isempty,cellBaseOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
 	
-	%get mean/sd responses
-	vecSize = size(cellStimON);
+	%get mean/sd responses; [y by x by ch]
+	vecSize = size(cellStimON); %[y by x]
 	matMeanStimON = cell2mat(cellfun(@reshape,cellfun(@mean,cellStimON,cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
 	matMeanStimOFF = cell2mat(cellfun(@reshape,cellfun(@mean,cellStimOFF,cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matMeanBaseON = cell2mat(cellfun(@reshape,cellfun(@mean,cellBaseON,cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matMeanBaseOFF = cell2mat(cellfun(@reshape,cellfun(@mean,cellBaseOFF,cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matSdStimON = cell2mat(cellfun(@reshape,cellfun(@std,cellStimON,cellfill([],vecSize),cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matSdStimOFF = cell2mat(cellfun(@reshape,cellfun(@std,cellStimOFF,cellfill([],vecSize),cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matSdBaseON = cell2mat(cellfun(@reshape,cellfun(@std,cellBaseON,cellfill([],vecSize),cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
-	matSdBaseOFF = cell2mat(cellfun(@reshape,cellfun(@std,cellBaseOFF,cellfill([],vecSize),cellfill(2,vecSize),'uniformoutput',false),cellfill([1 1 intNumCh],vecSize),'uniformoutput',false));
 	
-	%pre-allocate aggregates
-	matAllRelSum = nan(size(matMeanStimON));
-	matAllNormRel = nan(size(matMeanStimON));
-	matAllNormSum = nan(size(matMeanStimON));
-	matAllSmoothRelSum = nan(size(matMeanStimON));
-	matAllSmoothNormRel = nan(size(matMeanStimON));
-	matAllSmoothNormSum = nan(size(matMeanStimON));
-	%close all
-	for intCh=1:intNumCh
-		%get means + stds
-		matStimOnMean = matMeanStimON(:,:,intCh) - mean(matMeanStimON,3);
-		matStimOnSd = matSdStimON(:,:,intCh);
-		matStimOffMean = matMeanStimOFF(:,:,intCh) - mean(matMeanStimOFF,3);
-		matStimOffSd = matSdStimOFF(:,:,intCh);
-		matBaseOnMean = matMeanBaseON(:,:,intCh) - mean(matMeanBaseON,3);
-		matBaseOnSd = matSdBaseON(:,:,intCh);
-		matBaseOffMean = matMeanBaseOFF(:,:,intCh) - mean(matMeanBaseOFF,3);
-		matBaseOffSd = matSdBaseOFF(:,:,intCh);
-		
-		%get plot matrices
-		matRelOn = matStimOnMean - matBaseOnMean;
-		matRelOff = matStimOffMean - matBaseOffMean;
-		matRelSum = matRelOn + matRelOff;
-		matNormRel = matRelOn./matStimOnSd + matRelOff./matStimOffSd;
-		matNormSum = matStimOnMean./matStimOnSd + matStimOffMean./matStimOffSd;
-		
-		%get filters
-		matAllSmoothRelSum(:,:,intCh) = conv2(matRelSum-mean(matRelSum(:)),matFilter,'same');
-		matAllSmoothNormRel(:,:,intCh) = conv2(matNormRel-mean(matNormRel(:)),matFilter,'same');
-		matAllSmoothNormSum(:,:,intCh) = conv2(matNormSum-mean(matNormSum(:)),matFilter,'same');
-		matAllRelSum(:,:,intCh) = matRelSum;
-		matAllNormRel(:,:,intCh) = matNormRel;
-		matAllNormSum(:,:,intCh) = matNormSum;
+	% get response
+	if dblFlickerFreq == 0
+		matMeanR = matMeanStimON - matMeanStimOFF;
+	else
+		matMeanR = matMeanStimON + matMeanStimOFF;
 	end
 	
-	%% magic
-	matStimOnAll = bsxfun(@minus,matMeanStimON,mean(matMeanStimON,3));
-	matBaseOnAll =  bsxfun(@minus,matMeanBaseON , mean(matMeanBaseON,3));
-	matStimOffAll =  bsxfun(@minus,matMeanStimOFF , mean(matMeanStimOFF,3));
-	matBaseOffAll =  bsxfun(@minus,matMeanBaseOFF , mean(matMeanBaseOFF,3));
-	matRelOn = matStimOnAll - matBaseOnAll;
-	matRelOff = matStimOffAll - matBaseOffAll;
-	matRelSum = matRelOn + matRelOff;
-	matAbs = mean(abs(bsxfun(@minus,matRelSum,mean(mean(matRelSum,1),2))),3);
-	matMagicPlus = conv2(matAbs-mean(matAbs(:)),matFilter,'same');
-	
-	%% select filter
-	if intImFilter == 1
-		matUseMap = matAllSmoothRelSum;
-	elseif intImFilter == 2
-		matUseMap = matAllSmoothNormRel;
-	elseif intImFilter == 3
-		matUseMap = matAllSmoothNormSum;
-	elseif intImFilter == 4
-		matUseMap = matAllRelSum;
-	elseif intImFilter == 5
-		matUseMap = matAllNormRel;
-	elseif intImFilter == 6
-		matUseMap = matAllNormSum;
+	%% calculate best map
+	matAbsR = abs(matMeanR);
+	intChMax = size(matMeanR,3);
+	vecSd = nan(1,intChMax);
+	for intCh=vecSelectChans
+		vecSd(intCh) = std(flat(matAbsR(:,:,intCh)));
 	end
+	matRelR = bsxfun(@rdivide,matAbsR,reshape(vecSd,[1 1 intChMax]));
+	vecRelMax = nan(1,intChMax);
+	for intCh=vecSelectChans
+		vecRelMax(intCh) = max(flat(matRelR(:,:,intCh)));
+	end
+	vecRelMax(isnan(vecRelMax)) = 0;
+	[dblRelMax,intBest]=max(vecRelMax);
 	
 	%% draw image
 	%select channel
 	if strcmp(strChannel,'Magic+')
-		matPlot = matMagicPlus;
+		matPlot = mean(bsxfun(@mtimes,matMeanR,reshape(vecRelMax,[1 1 intChMax])),3);
 	elseif strcmp(strChannel,'Mean')
-		matPlot = mean(matUseMap,3);
+		matPlot = mean(matMeanR(:,:,vecSelectChans),3);
 	elseif strcmp(strChannel,'Best')
-		matFiltSquare = [1 1; 1 1];
-		matFiltSquare = matFiltSquare./sum(matFiltSquare(:));
-		vecRangeZ = nan(1,intNumCh);
-		for intChIdx=1:intNumCh
-			matSmoothed = conv2(matUseMap(:,:,intChIdx)-mean(flat(matUseMap(:,:,intChIdx))),matFiltSquare,'same');
-			dblMu = mean(matSmoothed(:));
-			dblSd = std(matSmoothed(:));
-			vecRangeZ(intChIdx) = max(abs((matSmoothed(:)-dblMu)./dblSd));
-		end
-		[dummy,intBest] = max(vecRangeZ);
-		matPlot = matUseMap(:,:,intBest);
+		matPlot = matMeanR(:,:,intBest);
 		strChannel = strcat(strChannel,sprintf('=%d',intBest));
 	elseif strcmp(strChannel(1:2),'Ch')
 		intChannelNumber = str2double(getFlankedBy(strChannel,'Ch-',''));
-		matPlot = matUseMap(:,:,intChannelNumber);
+		matPlot = matMeanR(:,:,intChannelNumber);
 	else
 		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;
