@@ -8,7 +8,7 @@ close all;
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
 boolUseSGL = false;
-boolUseNI = true;
+boolUseNI = false;
 intDebug = 0;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
