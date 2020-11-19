@@ -10,6 +10,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		{...
 		%stimulus type
 		'strStimType','SparseCheckers';...
+		'strLinLoc','LinLoc matrix is upside down; top of screen are bottom elements';...
 		
 		%subject parameters
 		'dblSubjectPosX_cm',0;... % cm; relative to center of screen
@@ -34,6 +35,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		'dblCheckerSizeY_deg',5;... % deg; height of checker
 		'intOnOffCheckers',6;... % how many are on/off at any frame?
 		'dblContrast',[100];... %contrast [0-100]
+		'dblFlickerFreq',0;... %flicker frequency (Hz)
 		'dblLuminance',[100];...%luminance [0-100]
 		'dblBackground',0.5;...%background intensity (dbl, [0 1])
 		'dblFlickerFreq',0;...%flicker frequency, 0 for none
@@ -173,6 +175,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	sStimObject(intStim).OnOffCheckers = sStimParams.intOnOffCheckers;
 	sStimObject(intStim).Contrast = sStimParams.dblContrast;
 	sStimObject(intStim).Luminance = sStimParams.dblLuminance;
+	sStimObject(intStim).FlickerFreq = sStimParams.dblFlickerFreq;
 	sStimObject(intStim).Background = sStimParams.dblBackground;
 	sStimObject(intStim).AntiAlias = sStimParams.intAntiAlias;
 	sStimObject(intStim).UseGPU = sStimParams.intUseGPU;
