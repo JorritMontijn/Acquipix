@@ -7,7 +7,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
 	[fb,fa] = butter(2,vecWindow2,'bandpass');
 	vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
-	boolPupilSync = vecFiltSyncLum>(-std(vecFiltSyncLum)/3);
+	boolPupilSync = vecFiltSyncLum>(std(vecFiltSyncLum)/3);
 	
 	figure
 	subplot(2,1,1)
@@ -22,7 +22,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	
 	subplot(2,1,2)
 	hold on
-	plot(vecPupilTime,vecFiltSyncLum);
+	plot(vecPupilTime,vecFiltSyncLum./std(vecFiltSyncLum));
 	plot(vecPupilTime,boolPupilSync);
 	hold off
 	xlabel('Time (s)');
