@@ -12,7 +12,7 @@ boolUseNI = true;
 intDebug = 0;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
-dblLightMultiplier = 0.7; %strength of infrared LEDs
+dblLightMultiplier = 0.8; %strength of infrared LEDs
 
 %% define paths
 strThisPath = mfilename('fullpath');

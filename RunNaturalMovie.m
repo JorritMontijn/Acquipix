@@ -6,7 +6,9 @@ clear all;
 close all;
 
 %% define paths
+dblLightMultiplier = 0.8;
 boolUseSGL = true;
+boolUseNI = true;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
@@ -181,22 +183,34 @@ structEP.vecTrialStimOnSecs = structEP.vecTrialStartSecs + structEP.dblSecsBlank
 structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsStimDur;
 structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
 
+
 %% initialize NI I/O box
-%initialize
-fprintf('Connecting to National Instruments box...\n');
-strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
-boolDaqIn = boolUseSGL;
-try
-	if boolDaqIn,objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);end
-catch ME
-	if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
-		fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
-		boolDaqIn = false;
-	else
-		rethrow(ME);
+if boolUseNI
+	%initialize
+	fprintf('Connecting to National Instruments box...\n');
+	strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
+	boolDaqIn = true;
+	try
+		objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);
+	catch ME
+		if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
+			fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
+			boolDaqIn = false;
+		else
+			rethrow(ME);
+		end
 	end
+	objDAQOut = openDaqOutput(intUseDaqDevice);
+	
+	%turns leds on
+	stop(objDAQOut);
+	outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+	outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
+	queueOutputData(objDAQOut,[outputData1 outputData2]);
+	prepare(objDAQOut);
+	pause(0.1);
+	startBackground(objDAQOut)
 end
-if boolUseSGL,objDAQOut = openDaqOutput(intUseDaqDevice);end
 
 try
 	%% INITALIZE SCREEN
@@ -330,10 +344,10 @@ try
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
 		
 		%fill DAQ with data
-		if boolUseSGL
+		if boolUseNI
 			stop(objDAQOut);
-			outputData1 = cat(1,linspace(1.5, 1.5, 200)',linspace(0, 0, 50)');
-			outputData2 = linspace(3, 3, 250)';
+			outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+			outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
 			queueOutputData(objDAQOut,[outputData1 outputData2]);
 			prepare(objDAQOut);
 		end
@@ -391,7 +405,7 @@ try
 		end
 		
 		%% 250ms pulse at stim start
-		if boolUseSGL,startBackground(objDAQOut);end
+		if boolUseNI,startBackground(objDAQOut);end
 		
 		%% show stimulus
 		dblStimStartFlip = dblLastFlip;
