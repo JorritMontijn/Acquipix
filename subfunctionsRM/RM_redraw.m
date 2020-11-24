@@ -99,6 +99,7 @@ function RM_redraw(varargin)
 	end
 	vecRelMax(isnan(vecRelMax)) = 0;
 	[dblRelMax,intBest]=max(vecRelMax);
+	intUnculledChannels = numel(vecRelMax);
 	
 	%% draw image
 	%select channel
@@ -108,11 +109,12 @@ function RM_redraw(varargin)
 		matPlot = mean(matMeanR(:,:,vecSelectChans),3);
 	elseif strcmp(strChannel,'Best')
 		matPlot = matMeanR(:,:,intBest);
-		strChannel = strcat(strChannel,sprintf('=%d',intBest));
+		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intBest,intUnculledChannels,vecActChans(intBest)));
+
 	elseif strcmp(strChannel,'Single')
 		intChannelNumber = vecSelectChans(1);
 		matPlot = matMeanR(:,:,intChannelNumber);
-		strChannel = strcat(sprintf('Ch=%d',intChannelNumber));
+		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intChannelNumber,intUnculledChannels,vecActChans(intChannelNumber)));
 	else
 		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;
