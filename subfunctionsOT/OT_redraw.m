@@ -67,13 +67,20 @@ function OT_redraw(varargin)
 	intTrials = sOT.intRespTrialN;
 	
 	%get data from globals
-	vecSelectChans = sOT.vecSelectChans;
 	matRespBase = sOT.matRespBase; %[1 by S] cell with [chan x rep] matrix
 	matRespStim = sOT.matRespStim; %[1 by S] cell with [chan x rep] matrix
 	vecStimTypes = sOT.vecStimTypes; %[1 by S] cell with [chan x rep] matrix
 	vecStimOriDeg = sOT.vecStimOriDeg; %[1 by S] cell with [chan x rep] matrix
 	vecUnique = unique(vecStimOriDeg);
 	intNumStimTypes = numel(vecUnique);
+	
+	%% get channel selection vectors
+	vecAllChans = sOT.vecAllChans; %AP, LFP, NI; 0-start
+	vecSpkChans = sOT.vecSpkChans; %AP; 0-start
+	vecIncChans = sOT.vecIncChans; %AP, minus culled; 0-start
+	vecSelectChans = sOT.vecSelectChans; %AP, selected chans; 1-start
+	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans)); %AP, selected chans; 0-start
+	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
 	
 	%% plot OT estimate
 	matRelResp = matRespStim-matRespBase;
@@ -154,13 +161,13 @@ function OT_redraw(varargin)
 	if strcmp(strChannel,'Best')
 		[dummy,intChNr] = max(vecTuningValue);
 		vecUseResp = matUseResp(intChNr,:);
-		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intChNr,intUnculledChannels,sOT.vecSpkChans(vecSelectChans(intChNr))));
+		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intChNr,intUnculledChannels,vecActChans(intChNr)));
 	elseif strcmp(strChannel,'Mean')
 		intChNr = 0;
 		vecUseResp = mean(matUseResp,1);
 	elseif strcmp(strChannel,'Single')
 		intChNr = sOT.intMinChan;
-		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,sOT.vecSpkChans(vecSelectChans(intChNr))));
+		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,vecActChans(intChNr)));
 		vecUseResp = matUseResp(intChNr,:);
 	else
 		OT_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});

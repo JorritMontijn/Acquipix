@@ -35,6 +35,10 @@ function OT_main(varargin)
 		sChanMap = sOT.sChanMap;
 		sP = DP_GetParamStruct;
 		
+		%update
+		sOT.vecSelectChans = sOT.intMinChan:sOT.intMaxChan;
+		sOT.vecActChans = sOT.vecSpkChans(ismember(sOT.vecSpkChans,sOT.vecSelectChans));
+		
 		%get data variables
 		sStimObject = sOT.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
@@ -43,9 +47,12 @@ function OT_main(varargin)
 		intDataBufferPos = sOT.intDataBufferPos;
 		intDataBufferSize = sOT.intDataBufferSize;
 		dblDataBufferSize = sOT.dblDataBufferSize;
-		vecAllChans = sOT.vecAllChans;
-		vecUseChans = sOT.vecUseChans;
-		vecSpkChans = sOT.vecSpkChans;
+		
+		vecAllChans = sOT.vecAllChans; %AP, LFP, NI; 0-start
+		vecSpkChans = sOT.vecSpkChans; %AP; 0-start
+		vecIncChans = sOT.vecIncChans; %AP, minus culled; 0-start
+		vecSelectChans = sOT.vecSelectChans; %AP, selected chans; 1-start
+		vecActChans = sOT.vecActChans ; %AP, active channels (selected and unculled); 0-start
 		boolChannelsCulled = sOT.boolChannelsCulled;
 		
 		%get stimulus variables

@@ -65,10 +65,19 @@ function sOT = OT_populateStructure(sOT)
 	
 	%resp
 	sOT.intRespTrialN = 0;
-	sOT.intMinChan = 1;
-	sOT.intMaxChan = 384;
 	sOT.matRespBase = [];
 	sOT.matRespStim = [];
 	sOT.vecStimTypes = [];
 	sOT.vecStimOriDeg = [];
+	
+	%ephys selection
+	sOT.intRespTrialN = 0;
+	sOT.intMinChan = 1;
+	sOT.intMaxChan = 384;
+	sOT.vecAllChans = (sOT.intMinChan:(sOT.intMaxChan*2 + 1))-1; %AP, LFP, NI; 0-start
+	sOT.vecSpkChans = (sOT.intMinChan:sOT.intMaxChan)-1; %AP; 0-start
+	sOT.vecIncChans = (sOT.intMinChan:sOT.intMaxChan)-1; %AP, minus culled; 0-start
+	sOT.vecSelectChans = (sOT.intMinChan:sOT.intMaxChan); %AP, selected chans; 1-start
+	sOT.vecActChans = sOT.vecIncChans(ismember(sOT.vecIncChans,sOT.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+	
 end
