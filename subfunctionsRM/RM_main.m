@@ -35,6 +35,10 @@ function RM_main(varargin)
 		sChanMap = sRM.sChanMap;
 		sP = DP_GetParamStruct;
 		
+		%update
+		sRM.vecSelectChans = sRM.intMinChan:sRM.intMaxChan;
+		sRM.vecActChans = sRM.vecSpkChans(ismember(sRM.vecSpkChans,sRM.vecSelectChans));
+		
 		%get data variables
 		sStimObject = sRM.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
@@ -47,8 +51,7 @@ function RM_main(varargin)
 		vecSpkChans = sRM.vecSpkChans; %AP; 0-start
 		vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
 		vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
-		vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
-		sRM.vecActChans = vecActChans;
+		vecActChans = sRM.vecActChans ; %AP, active channels (selected and unculled); 0-start
 		
 		boolChannelsCulled = sRM.boolChannelsCulled;
 		
@@ -87,7 +90,7 @@ function RM_main(varargin)
 		
 		%check if this is the initial fetch
 		if intLastFetchNI == 0
-			intRetrieveSamplesNI = round(5*dblSampFreqNI); %retrieve last 5 seconds
+			intRetrieveSamplesNI = round(0.1*dblSampFreqNI); %retrieve last 0.1 seconds
 			intRetrieveSamplesNI = min(intCurCountNI-1,intRetrieveSamplesNI); %ensure we're not requesting data prior to start
 			intStartFetch = intCurCountNI - intRetrieveSamplesNI; %set last fetch to starting position
 			dblLastTimestampNI = 0;
@@ -180,7 +183,7 @@ function RM_main(varargin)
 		
 		%check if this is the initial fetch
 		if intLastFetchIM == 0
-			intRetrieveSamplesIM = round(5*dblSampFreqIM); %retrieve last 5 seconds
+			intRetrieveSamplesIM = round(0.1*dblSampFreqIM); %retrieve last 0.1 seconds
 			intRetrieveSamplesIM = min(intCurCountIM-1,intRetrieveSamplesIM); %ensure we're not requesting data prior to start
 			intStartFetch = intCurCountIM - intRetrieveSamplesIM; %set last fetch to starting position
 		else
@@ -230,8 +233,7 @@ function RM_main(varargin)
 			vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);
 			
 			%message
-			cellText(end+1:end+2) = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
-			if numel(cellText) == 2,cellText(1) = [];end
+			cellText = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
 			RM_updateTextInformation(cellText);
 			
 			%retrieve which data to use, subsample & assign
@@ -262,15 +264,13 @@ function RM_main(varargin)
 			end
 			
 			%msg
-			cellText{end} = strcat(cellText{end},sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
-			RM_updateTextInformation(cellText);
+			RM_updateTextInformation(sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
 			boolDidSomething = true;
 			
 			%% check if channels are culled yet & if first repetition is finished
 			if 0%boolChannelsCulled && sRM.dblStimCoverage > 100 && numel(sRM.vecSubSpikeCh) > 10000
 				%msg
-				cellText{end+1} = sprintf('Time for channel cull! Using %d spikes...',numel(sRM.vecSubSpikeCh));
-				RM_updateTextInformation(cellText);
+				RM_updateTextInformation(sprintf('Time for channel cull! Using %d spikes...',numel(sRM.vecSubSpikeCh)));
 				
 				%when initial run is complete, calc channel cull
 				vecUseChannelsFilt = DP_CullChannels(sRM.vecSubSpikeCh,sRM.vecSubSpikeT,dblSubNewTotT,sP,sChanMap);
@@ -292,8 +292,7 @@ function RM_main(varargin)
 				sRM.vecSubSpikeCh = vecNewCh(:);
 				
 				%msg
-				cellText{end} = strcat(cellText{end},sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
-				RM_updateTextInformation(cellText);
+				RM_updateTextInformation(sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
 			end
 		end
 		
@@ -334,9 +333,7 @@ function RM_main(varargin)
 			drawnow;
 			
 			%msg
-			cellText{end+1} = sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs));
-			cellText{end+1} = '';
-			RM_updateTextInformation(cellText);
+			RM_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
 			boolDidSomething = true;
 		end
 		
@@ -352,7 +349,7 @@ function RM_main(varargin)
 			
 			%get data
 			vecSpikeT = sRM.vecSubSpikeT; %time in ms (uint32)
-			vecSpikeCh = sRM.vecSubSpikeCh; %channel id (uint16)
+			vecSpikeCh = sRM.vecSubSpikeCh; %channel id (uint16); 1-start
 			vecStimOnT = sRM.vecDiodeOnT; %on times of all stimuli (diode on time)
 			vecStimOffT = sRM.vecDiodeOffT; %off times of all stimuli (diode off time)
 			
@@ -431,7 +428,7 @@ function RM_main(varargin)
 				end
 				cellText{1}(end) = cellBar{intNext};
 			else
-				cellText{end+1} = strcat(strBaseString,' -');
+				cellText = {strcat(strBaseString,' -'),''};
 			end
 			RM_updateTextInformation(cellText);
 			pause(0.5);
