@@ -386,9 +386,10 @@ function RM_main(varargin)
 				%stim resp
 				vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
 				vecStimResp((end+1):intMaxChan) = 0;
-				
 				%assign data
 				for intLocOn=vecLinLocOn(:)'
+					size(cellBaseON{matLinLoc==intLocOn})
+					size(vecBaseResp)
 					cellBaseON{matLinLoc==intLocOn}(:,end+1) = vecBaseResp;
 					cellStimON{matLinLoc==intLocOn}(:,end+1) = vecStimResp;
 				end

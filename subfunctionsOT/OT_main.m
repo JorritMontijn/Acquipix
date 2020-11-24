@@ -267,7 +267,7 @@ function OT_main(varargin)
 			boolDidSomething = true;
 			
 			%% check if channels are culled yet & if first repetition is finished
-			if ~boolChannelsCulled && sOT.dblStimCoverage > 100 && numel(sOT.vecSubSpikeCh) > 10000
+			if 0%~boolChannelsCulled && sOT.dblStimCoverage > 100 && numel(sOT.vecSubSpikeCh) > 10000
 				%msg
 				cellText{end+1} = sprintf('Time for channel cull! Using %d spikes...',numel(sOT.vecSubSpikeCh));
 				OT_updateTextInformation(cellText);
@@ -360,6 +360,8 @@ function OT_main(varargin)
 			intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
 			vecSelectChans = intMinChan:intMaxChan;
 			intUseCh = numel(vecUseSpkChans);
+			%fprintf('intUseCh=%d; selectchans=%d-%d\n',intUseCh,intMinChan,intMaxChan);
+			
 			%base, stim
 			matRespBase = nan(intUseCh,intTrials);
 			matRespStim = nan(intUseCh,intTrials);
@@ -405,10 +407,10 @@ function OT_main(varargin)
 			%% save data to globals
 			sOT.intRespTrialN = intTrials;
 			sOT.vecSelectChans = vecSelectChans;
-			sOT.matRespBase = matRespBase(vecSelectChans,:); %[1 by S] cell with [chan x rep] matrix
-			sOT.matRespStim = matRespStim(vecSelectChans,:); %[1 by S] cell with [chan x rep] matrix
-			sOT.vecStimTypes = vecStimTypes; %[1 by S] cell with [chan x rep] matrix
-			sOT.vecStimOriDeg = vecStimOriDeg; %[1 by S] cell with [chan x rep] matrix
+			sOT.matRespBase = matRespBase(vecSelectChans,:); %[chan x rep] matrix
+			sOT.matRespStim = matRespStim(vecSelectChans,:); %[chan x rep] matrix
+			sOT.vecStimTypes = vecStimTypes; %
+			sOT.vecStimOriDeg = vecStimOriDeg; %
 			
 			%% update maps
 			OT_redraw(0);

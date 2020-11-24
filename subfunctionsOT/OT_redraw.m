@@ -91,6 +91,11 @@ function OT_redraw(varargin)
 		matUseResp = matRelResp;
 	end
 	matUseResp = matUseResp(:,1:intTrials);
+	intUnculledChannels = size(matUseResp,1);
+	intChannelsInSelectChans = numel(vecSelectChans);
+	if intUnculledChannels ~= intChannelsInSelectChans
+		fprintf('ERROR: # of ch in matUseResp=%d, but # in vecSelectChans=%d\n',intUnculledChannels,intChannelsInSelectChans);
+	end
 	
 	%% get directionality data
 	%get quadrant inclusion lists
@@ -149,13 +154,13 @@ function OT_redraw(varargin)
 	if strcmp(strChannel,'Best')
 		[dummy,intChNr] = max(vecTuningValue);
 		vecUseResp = matUseResp(intChNr,:);
-		strChannel = strcat(strChannel,sprintf('=%d (%d)',intChNr,vecSelectChans(intChNr)));
+		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intChNr,intUnculledChannels,sOT.vecSpkChans(vecSelectChans(intChNr))));
 	elseif strcmp(strChannel,'Mean')
 		intChNr = 0;
 		vecUseResp = mean(matUseResp,1);
 	elseif strcmp(strChannel,'Single')
 		intChNr = sOT.intMinChan;
-		strChannel = strcat(strChannel,sprintf(': %d (%d)',intChNr,vecSelectChans(intChNr)));
+		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,sOT.vecSpkChans(vecSelectChans(intChNr))));
 		vecUseResp = matUseResp(intChNr,:);
 	else
 		OT_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
@@ -163,7 +168,7 @@ function OT_redraw(varargin)
 	end
 	%add tuning metrics to title
 	if intChNr > 0
-		strTitle = strcat(strChannel,sprintf('; %s''=%.3f; %s=%.3f; OPI=%.3f; OSI=%.3f; LR=%.3f; UD=%.3f; VH=%.3f',...
+		strTitle = strcat(strChannel,sprintf('; %s''=%.2f; %s=%.2f; OPI=%.2f; OSI=%.2f; LR=%.2f; UD=%.2f; VH=%.2f',...
 			getGreek('delta','lower'),vecDeltaPrime(intChNr),getGreek('rho','lower'),vecRho_bc(intChNr),...
 			vecOPI(intChNr),vecOSI(intChNr),vecLRIndex(intChNr),vecUDIndex(intChNr),vecVHIndex(intChNr)));
 	else

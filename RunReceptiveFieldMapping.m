@@ -14,7 +14,7 @@ boolUseSGL = true;
 boolUseNI = true;
 intDebug = 0;
 intUseMask = 0;
-dblLightMultiplier = 0.7; %strength of infrared LEDs
+dblLightMultiplier = 0.8; %strength of infrared LEDs
 
 %% define paths
 strThisPath = mfilename('fullpath');
