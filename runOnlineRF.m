@@ -12,7 +12,9 @@ function varargout = runOnlineRF(varargin)
 	%		ENV-support and bug fixes
 	%	Version 2.0.0a [2020-11-19]
 	%		Neuropixels support with SpikeGLX
-		
+	%	Version 2.0.0b [2020-11-24]
+	%		Attempted bug fix
+	
 	%set tags
 	%#ok<*INUSL>
 	%#ok<*INUSD>

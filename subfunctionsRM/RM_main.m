@@ -43,9 +43,13 @@ function RM_main(varargin)
 		intDataBufferPos = sRM.intDataBufferPos;
 		intDataBufferSize = sRM.intDataBufferSize;
 		dblDataBufferSize = sRM.dblDataBufferSize;
-		vecAllChans = sRM.vecAllChans;
-		vecUseChans = sRM.vecUseChans;
-		vecSpkChans = sRM.vecSpkChans;
+		vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
+		vecSpkChans = sRM.vecSpkChans; %AP; 0-start
+		vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
+		vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
+		vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+		sRM.vecActChans = vecActChans;
+		
 		boolChannelsCulled = sRM.boolChannelsCulled;
 		
 		%get stimulus variables
@@ -59,9 +63,6 @@ function RM_main(varargin)
 		
 		%get data from figure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
-		
-		%default high-pass frequency
-		dblFiltFreq = str2double(get(sFig.ptrEditHighpassFreq,'String'));
 		
 		%use GPU?
 		boolUseGPU = sRM.UseGPU;
@@ -194,6 +195,9 @@ function RM_main(varargin)
 			try
 				%fetch "intRetrieveSamplesIM" samples starting at "intFetchStartCountIM"
 				[matNewData,intStartCountIM] = Fetch(sRM.hSGL, intStreamIM, intStartFetch, intRetrieveSamplesIM, vecSpkChans,intDownsampleIM);
+				
+				%% CHECK: if channels are missing in vecSpkChans, is matNewData size of vecSpikeChans or of [t x 384]?
+				%% chans vecSpkChans to vecIncChans to select only unculled channels
 			catch ME
 				%buffer has likely already been cleared; unable to fetch data
 				cellText = {'<< ERROR >>',ME.identifier,ME.message};
@@ -263,7 +267,7 @@ function RM_main(varargin)
 			boolDidSomething = true;
 			
 			%% check if channels are culled yet & if first repetition is finished
-			if ~boolChannelsCulled && sRM.dblStimCoverage > 100 && numel(sRM.vecSubSpikeCh) > 10000
+			if 0%boolChannelsCulled && sRM.dblStimCoverage > 100 && numel(sRM.vecSubSpikeCh) > 10000
 				%msg
 				cellText{end+1} = sprintf('Time for channel cull! Using %d spikes...',numel(sRM.vecSubSpikeCh));
 				RM_updateTextInformation(cellText);
@@ -272,7 +276,7 @@ function RM_main(varargin)
 				vecUseChannelsFilt = DP_CullChannels(sRM.vecSubSpikeCh,sRM.vecSubSpikeT,dblSubNewTotT,sP,sChanMap);
 				
 				%update vecSpkChans & boolChannelsCulled
-				sRM.vecSpkChans = vecUseChans(vecUseChannelsFilt);
+				sRM.vecSpkChans = sRM.vecSpkChans(vecUseChannelsFilt);
 				sRM.boolChannelsCulled = true;
 				
 				%remove channels from sRM.matDataBufferIM
@@ -353,11 +357,14 @@ function RM_main(varargin)
 			vecStimOffT = sRM.vecDiodeOffT; %off times of all stimuli (diode off time)
 			
 			%get selected channels
-			vecUseSpkChans = sRM.vecSpkChans;
-			intMaxChan = min(sRM.intMaxChan,numel(vecUseSpkChans));
-			intMinChan = min(sRM.intMinChan,numel(vecUseSpkChans));
-			vecSelectChans = intMinChan:intMaxChan;
-			%go through objects and assign to matrices
+			vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
+			vecSpkChans = sRM.vecSpkChans; %AP; 0-start
+			vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
+			vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
+			vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+			intSpkChNum = numel(vecSpkChans); %number of original spiking channels
+			
+			%% go through objects and assign to matrices
 			for intTrial=1:intTrials
 				%get repetitions of locations
 				vecLinLocOn = sStimObject(intTrial).LinLocOn;
@@ -381,15 +388,13 @@ function RM_main(varargin)
 				
 				%base resp
 				vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
-				vecBaseResp((end+1):intMaxChan) = 0;
+				vecBaseResp((end+1):intSpkChNum) = 0;
 				
 				%stim resp
 				vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
-				vecStimResp((end+1):intMaxChan) = 0;
+				vecStimResp((end+1):intSpkChNum) = 0;
 				%assign data
 				for intLocOn=vecLinLocOn(:)'
-					size(cellBaseON{matLinLoc==intLocOn})
-					size(vecBaseResp)
 					cellBaseON{matLinLoc==intLocOn}(:,end+1) = vecBaseResp;
 					cellStimON{matLinLoc==intLocOn}(:,end+1) = vecStimResp;
 				end

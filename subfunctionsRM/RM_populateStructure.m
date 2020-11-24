@@ -78,8 +78,14 @@ function sRM = RM_populateStructure(sRM)
 	sRM.vecStimOnT = [];
 	sRM.vecStimOffT = [];
 	
-	%resp
+	%ephys selection
 	sRM.intRespTrialN = 0;
 	sRM.intMinChan = 1;
 	sRM.intMaxChan = 384;
+	sRM.vecAllChans = (sRM.intMinChan:(sRM.intMaxChan*2 + 1))-1; %AP, LFP, NI; 0-start
+	sRM.vecSpkChans = (sRM.intMinChan:sRM.intMaxChan)-1; %AP; 0-start
+	sRM.vecIncChans = (sRM.intMinChan:sRM.intMaxChan)-1; %AP, minus culled; 0-start
+	sRM.vecSelectChans = (sRM.intMinChan:sRM.intMaxChan); %AP, selected chans; 1-start
+	sRM.vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+	
 end

@@ -47,13 +47,20 @@ function RM_redraw(varargin)
 	cellChannels = get(sFig.ptrListSelectChannel,'String');
 	strChannel = cellChannels{intChannel}; %type of selection; best, magic, etc
 	%intTrials = sRM.intRespTrialN;
-	vecSelectChans = sRM.vecSelectChans;
 	cellStimON = sRM.cellStimON; %[y by x] cell with [chan x rep] matrix
 	%cellBaseON = sRM.cellBaseON; %[y by x] cell with [chan x rep] matrix
 	cellStimOFF = sRM.cellStimOFF; %[y by x] cell with [chan x rep] matrix
 	%cellBaseOFF = sRM.cellBaseOFF; %[y by x] cell with [chan x rep] matrix
 	dblFlickerFreq = sRM.FlickerFreq; %ON/OFF if 0, otherwise merge
 	
+	%% get channel selection vectors
+	vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
+	vecSpkChans = sRM.vecSpkChans; %AP; 0-start
+	vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
+	vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
+	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans)); %AP, selected chans; 0-start
+	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
+			
 	%% prep data
 	%define smoothing filter
 	%matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);

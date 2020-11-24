@@ -20,7 +20,8 @@ function RM_updateTextInformation(varargin)
 	else
 		cellText = {'...'};
 	end
-	if numel(cellText) > 6,cellText(7:end) = [];end
-	set(sFig.ptrTextInformation, 'string', cellText );
+	cellNewText = [cellOldText cellText];
+	if numel(cellNewText) > 6,cellNewText((end-6):end) = [];end
+	set(sFig.ptrTextInformation, 'string', cellNewText );
 	drawnow;
 end

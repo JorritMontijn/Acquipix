@@ -20,6 +20,7 @@ dblLightMultiplier = 0.8; %strength of infrared LEDs
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
+strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 
@@ -78,7 +79,7 @@ catch
 end
 
 %% check if temporary directory exists, clean or make
-strTempDir = 'X:\JorritMontijn\TempObjects';
+strTempDir = fullfile(strTempMasterPath,'TempObjects');
 if exist(strTempDir,'dir')
 	warning('off','backtrace')
 	warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
@@ -96,7 +97,7 @@ if exist(strTempDir,'dir')
 		end
 	end
 else
-	if exist('X:\JorritMontijn\','dir')
+	if exist(strTempMasterPath,'dir')
 		mkdir(strTempDir);
 	else
 		sME.identifier = [mfilename ':NetworkDirMissing'];
