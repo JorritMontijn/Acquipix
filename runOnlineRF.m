@@ -14,6 +14,10 @@ function varargout = runOnlineRF(varargin)
 	%		Neuropixels support with SpikeGLX
 	%	Version 2.0.0b [2020-11-24]
 	%		Attempted bug fix
+	%	Version 2.0.1 [2020-11-25]
+	%		Bug fixes
+	%		Added optional smoothing
+	%		Added scatter plot of RF per channel
 	
 	%set tags
 	%#ok<*INUSL>
@@ -97,11 +101,12 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	set(sFig.ptrEditDownsample,'UserData','lock');
 	set(sFig.ptrEditChannelMin,'UserData','lock');
 	set(sFig.ptrEditChannelMax,'UserData','lock');
-	%set(sFig.ptrButtonScatterYes,'UserData','lock')
-	%set(sFig.ptrButtonScatterNo,'UserData','lock')
-	%set(sFig.ptrButtonNewFig,'UserData','lock')
-	%set(sFig.ptrButtonOldFig,'UserData','lock')
-	%set(sFig.ptrButtonClearAndRecompute,'UserData','lock')
+	set(sFig.ptrButtonScatterYes,'UserData','lock')
+	set(sFig.ptrButtonScatterNo,'UserData','lock')
+	set(sFig.ptrButtonNewFig,'UserData','lock')
+	set(sFig.ptrButtonOldFig,'UserData','lock')
+	set(sFig.ptrButtonClearAll,'UserData','lock')
+	set(sFig.ptrListSelectProbe,'UserData','lock');
 	set(sFig.ptrListSelectDataProcessing,'UserData','lock');
 	set(sFig.ptrListSelectMetric,'UserData','lock');
 	set(sFig.ptrListSelectChannel,'UserData','lock')
