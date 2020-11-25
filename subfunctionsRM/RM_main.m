@@ -90,10 +90,10 @@ function RM_main(varargin)
 		
 		%check if this is the initial fetch
 		if intLastFetchNI == 0
-			intRetrieveSamplesNI = round(0.1*dblSampFreqNI); %retrieve last 0.1 seconds
+			intRetrieveSamplesNI = round(1*dblSampFreqNI); %retrieve last 0.1 seconds
 			intRetrieveSamplesNI = min(intCurCountNI-1,intRetrieveSamplesNI); %ensure we're not requesting data prior to start
 			intStartFetch = intCurCountNI - intRetrieveSamplesNI; %set last fetch to starting position
-			dblLastTimestampNI = 0;
+			dblLastTimestampNI = intStartFetch;
 		else
 			intStartFetch = intLastFetchNI - round(dblSampFreqNI);
 			intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
@@ -183,7 +183,7 @@ function RM_main(varargin)
 		
 		%check if this is the initial fetch
 		if intLastFetchIM == 0
-			intRetrieveSamplesIM = round(0.1*dblSampFreqIM); %retrieve last 0.1 seconds
+			intRetrieveSamplesIM = round(1*dblSampFreqIM); %retrieve last 0.1 seconds
 			intRetrieveSamplesIM = min(intCurCountIM-1,intRetrieveSamplesIM); %ensure we're not requesting data prior to start
 			intStartFetch = intCurCountIM - intRetrieveSamplesIM; %set last fetch to starting position
 		else

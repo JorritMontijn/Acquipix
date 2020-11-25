@@ -23,8 +23,8 @@ function RM_updateTextInformation(varargin)
 	if ~iscell(cellText)
 		cellText = {cellText};
 	end
-	cellNewText = [cellText(:); cellOldText(:)];
-	if numel(cellNewText) > 6,cellNewText(7:end) = [];end
+	cellNewText = [cellOldText(:); cellText(:)];
+	if numel(cellNewText) > 7,cellNewText(1:(end-8)) = [];end
 	set(sFig.ptrTextInformation, 'string', cellNewText );
 	drawnow;
 end

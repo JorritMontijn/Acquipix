@@ -14,6 +14,7 @@ function sRM = RM_populateStructure(sRM)
 	%data processing types
 	sRM.metaData.cellProcess{1} = 'Raw';
 	sRM.metaData.cellProcess{2} = 'Smoothed';
+	sRM.metaData.cellProcess{3} = 'Blurred';
 	
 	%metrics
  	sRM.metaData.cellMetric{1} = 'Mean';

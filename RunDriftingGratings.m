@@ -6,7 +6,7 @@ clear all;
 close all;
 
 %% define variables
-intStimSet = 3;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
+intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = true;
 boolUseNI = true;
 intDebug = 0;

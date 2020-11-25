@@ -118,7 +118,7 @@ function varargout = runOnlineRM_OutputFcn(hObject, eventdata, handles)
 	varargout{1} = handles.output;
 end
 %% change in scatter plot
-function ptrPanelScatterPlRM_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
+function ptrPanelScatterPlot_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
 	%selection is automatically queried by drawing function, 
 	%so no other action is required other than redrawing
 	
@@ -187,8 +187,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		sWarn = warning('off');
 		sRM.hSGL = SpikeGL(sRM.strHostSGL);
 		warning(sWarn);
-		cellText{2} = 'Success!';
-		RM_updateTextInformation(cellText);
+		RM_updateTextInformation('Success!');
 	catch ME
 		%unlock GUI
 		RM_unlock(handles);

@@ -5,13 +5,17 @@ function RM_redraw(varargin)
 	global sRM;
 	global sFig;
 	
-	%check whether to plot in new figure
-	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
 	
 	%check if data has been loaded
 	if isempty(sRM) || isempty(sFig)
 		return;
 	end
+	
+	%check whether to plot in new figure
+	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
+	
+	%check whether to make scatter plot
+	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
 	
 	% Draw the image if requested
 	if intNewFigure == 0
@@ -31,7 +35,9 @@ function RM_redraw(varargin)
 			
 			% create figure
 			sFig.ptrWindowHandle = figure;
-			sFig.ptrAxesHandle = axes;
+			sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
+			sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
+			axis(sFig.ptrAxesHandle2,'off');
 		else
 			%set active figure
 			%figure(sFig.ptrWindowHandle);
@@ -39,10 +45,15 @@ function RM_redraw(varargin)
 	else
 		% create figure
 		sFig.ptrWindowHandle = figure;
-		sFig.ptrAxesHandle = axes;
+		sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
+		sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
+		axis(sFig.ptrAxesHandle2,'off');
 	end
 	
 	%% get data & requested parameters
+	intDataProc = get(sFig.ptrListSelectDataProcessing,'Value');
+	cellDataProcs = get(sFig.ptrListSelectDataProcessing,'String');
+	strDataProc = cellDataProcs{intDataProc}; %type of selection; best, magic, etc
 	intChannel = get(sFig.ptrListSelectChannel,'Value');
 	cellChannels = get(sFig.ptrListSelectChannel,'String');
 	strChannel = cellChannels{intChannel}; %type of selection; best, magic, etc
@@ -58,14 +69,10 @@ function RM_redraw(varargin)
 	vecSpkChans = sRM.vecSpkChans; %AP; 0-start
 	vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
 	vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
-	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans)); %AP, selected chans; 0-start
+	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans-1)); %AP, selected chans; 0-start
 	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
 			
 	%% prep data
-	%define smoothing filter
-	%matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);
-	%matFilter = matFilter ./ sum(matFilter(:));
-	
 	%fill empty entries with zeros
 	[intNumCh,intNonEmptyIdx] = max(flat(cellfun(@size,cellStimON,cellfill(1,size(cellStimON)))));
 	cellStimON(cellfun(@isempty,cellStimON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
@@ -85,9 +92,24 @@ function RM_redraw(varargin)
 		matMeanR = matMeanStimON + matMeanStimOFF;
 	end
 	
+	if contains(strDataProc,'Smooth')
+		%define smoothing filter
+		matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);
+		matFilter = matFilter ./ sum(matFilter(:));
+		
+		matMeanR = imfilt(matMeanR,matFilter);
+	elseif contains(strDataProc,'Blur')
+		%define smoothing filter
+		matFilter = normpdf(-4:4,0,1)' * normpdf(-4:4,0,1);
+		matFilter = matFilter ./ sum(matFilter(:));
+		
+		matMeanR = imfilt(matMeanR,matFilter);
+	end
+	
 	%% calculate best map
 	matAbsR = abs(matMeanR);
 	intChMax = size(matMeanR,3);
+	intUseChN = numel(vecSelectChans);
 	vecSd = nan(1,intChMax);
 	for intCh=vecSelectChans
 		vecSd(intCh) = std(flat(matAbsR(:,:,intCh)));
@@ -99,22 +121,24 @@ function RM_redraw(varargin)
 	end
 	vecRelMax(isnan(vecRelMax)) = 0;
 	[dblRelMax,intBest]=max(vecRelMax);
-	intUnculledChannels = numel(vecRelMax);
+	intUnculledChannels = numel(vecActChans);
 	
 	%% draw image
 	%select channel
 	if strcmp(strChannel,'Magic+')
 		matPlot = mean(bsxfun(@mtimes,matMeanR,reshape(vecRelMax,[1 1 intChMax])),3);
+		strChannel = strcat(strChannel,sprintf(' on Ch%d-%d (%d/%d used)',vecSelectChans(1)-1,vecSelectChans(end)-1,numel(vecSelectChans),intChMax));
 	elseif strcmp(strChannel,'Mean')
 		matPlot = mean(matMeanR(:,:,vecSelectChans),3);
+		strChannel = strcat(strChannel,sprintf(' on Ch%d-%d (%d/%d used)',vecSelectChans(1)-1,vecSelectChans(end)-1,numel(vecSelectChans),intChMax));
 	elseif strcmp(strChannel,'Best')
 		matPlot = matMeanR(:,:,intBest);
-		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intBest,intUnculledChannels,vecActChans(intBest)));
+		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intBest-1,intUseChN,intChMax));
 
 	elseif strcmp(strChannel,'Single')
 		intChannelNumber = vecSelectChans(1);
 		matPlot = matMeanR(:,:,intChannelNumber);
-		strChannel = strcat(strChannel,sprintf('=%d/%d (Ch%d)',intChannelNumber,intUnculledChannels,vecActChans(intChannelNumber)));
+		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intChannelNumber-1,intUseChN,intChMax));
 	else
 		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;
@@ -123,15 +147,28 @@ function RM_redraw(varargin)
 	boolGood = str2double(strVersion(1)) > 8;
 	if boolGood
 		imagesc(sFig.ptrAxesHandle,matPlot);
+		if intMakeScatterPlot == 1
+			scatter(sFig.ptrAxesHandle2,vecRelMax,vecSpkChans,'kx');
+		end
 	else
 		axes(sFig.ptrAxesHandle);
 		imagesc(matPlot);
+		if intMakeScatterPlot == 1
+			axes(sFig.ptrAxesHandle2);
+			scatter(vecRelMax,vecSpkChans,'kx');
+		end
 	end
 	
 	%clean up figure
-	title(sFig.ptrAxesHandle,strChannel);
-	fixfig(sFig.ptrAxesHandle,false);
+	title(sFig.ptrAxesHandle,[strDataProc '; ' strChannel]);
+	%fixfig(sFig.ptrAxesHandle,false);
 	grid(sFig.ptrAxesHandle,'off');
 	axis(sFig.ptrAxesHandle,'off');
+	if intMakeScatterPlot == 1
+		fixfig(sFig.ptrAxesHandle2,false);
+		title(sFig.ptrAxesHandle2,'RF qual.');
+		axis(sFig.ptrAxesHandle2,'on');
+		grid(sFig.ptrAxesHandle2,'off');
+	end
 	drawnow;
 end
