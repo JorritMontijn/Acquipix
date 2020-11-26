@@ -25,7 +25,7 @@ function sRM = RM_populateStructure(sRM)
 	sRM.IsInitialized = false;
 	
 	%% common stream core variables
-	sRM = populateStreamCoreStructure(sRM);
+	sRM = SC_populateStreamCoreStructure(sRM);
 	
 	%% specific parameters
 	%stim stream

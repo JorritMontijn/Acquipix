@@ -1,6 +1,6 @@
-function sStream = populateStreamCoreStructure(sStream)
-	%populateStreamCoreStructure Shared StreamCore initialization 
-	%   sStream = populateStreamCoreStructure(sStream)
+function sStream = SC_populateStreamCoreStructure(sStream)
+	%SC_populateStreamCoreStructure Shared Core initialization of StreamCore parameters
+	%   sStream = SC_populateStreamCoreStructure(sStream)
 	%
 	%Version 1.0 [2020-11-26]
 	%	Split from RM_populateStructure to standardized module by Jorrit Montijn

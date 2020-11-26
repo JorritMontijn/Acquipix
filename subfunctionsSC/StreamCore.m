@@ -1,6 +1,6 @@
-function [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
+function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%StreamCore Streaming Interface shared core module
-	%   [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
+	%   [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%
 	%StreamCore handles the IMEC and NI data streams.
 	%
@@ -12,7 +12,13 @@ function [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%Version 1.0 [2020-11-26]
 	%	Split from RM_main/OT_main to standardized module by Jorrit Montijn
 	
+	%check update function
+	if nargin < 3 || isempty(f_updateTextInformation)
+		f_updateTextInformation = @SC_updateTextInformation;
+	end
+	
 	%get stream variables
+	boolDidSomething = false;
 	cellText = {};
 	intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
 	intStimSyncChanNI = sStream.intStimSyncChanNI;
@@ -29,7 +35,7 @@ function [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%get probe variables
 	sChanMap = sStream.sChanMap;
 	sP = DP_GetParamStruct;
-	dblStreamBufferSize = 5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval at 7.5 to be safe
+	dblStreamBufferSize = 5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval lower to be safe
 	intMaxFetchIM = round(dblSampFreqIM*dblStreamBufferSize);
 	intMaxFetchNI = round(dblSampFreqNI*dblStreamBufferSize);
 	

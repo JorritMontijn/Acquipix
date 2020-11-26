@@ -18,6 +18,8 @@ function varargout = runOnlineRF(varargin)
 	%		Bug fixes
 	%		Added optional smoothing
 	%		Added scatter plot of RF per channel
+	%	Version 2.0.2 [2020-11-26]
+	%		Transformed main to use StreamCore module
 	
 	%set tags
 	%#ok<*INUSL>

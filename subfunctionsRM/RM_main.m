@@ -13,13 +13,11 @@ function RM_main(varargin)
 		%check if busy
 		if sFig.boolIsBusy,return;end
 		sFig.boolIsBusy = true;
-		boolDidSomething = false;
 		
 		%% run common stream processing module
-		[sFig,sRM] = StreamCore(sFig,sRM,@RM_updateTextInformation);
+		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@RM_updateTextInformation);
 		
 		%% retrieve variables
-		
 		%get stim data from stream structure
 		sStimObject = sRM.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
