@@ -12,21 +12,27 @@ function RM_main(varargin)
 		if ~sRM.IsInitialized,return;end
 		%check if busy
 		if sFig.boolIsBusy,return;end
+		
+		%% run common stream processing module
+		[sFig,sRM] = StreamCore(sFig,sRM,@RM_updateTextInformation);
+		
 		%% retrieve variables
 		sFig.boolIsBusy = true;
 		boolDidSomething = false;
 		
 		%get stim data from stream structure
-		sStimObject = sStream.sStimObject;
+		sStimObject = sRM.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
-		intStimTrialN = sStream.intStimTrialN;
-		dblStimTrialT = sStream.dblStimTrialT; %updated later
 		
 		%get stim data from figure structure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
-		%% run common stream processing module
-		[sFig,sRM] = StreamCore(sFig,sRM,@RM_updateTextInformation);
+		%stream variables
+		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
+		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
+		intRespTrialN = sRM.intEphysTrialN; %not used, only updated
+		intStimTrialN = sRM.intStimTrialN;
+		dblStimTrialT = sRM.dblStimTrialT; %updated later
 		
 		%% retrieve & update stim log data
 		%get stimulus object files

@@ -13,6 +13,7 @@ function [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%	Split from RM_main/OT_main to standardized module by Jorrit Montijn
 	
 	%get stream variables
+	cellText = {};
 	intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
 	intStimSyncChanNI = sStream.intStimSyncChanNI;
 	intLastFetchNI = sStream.intLastFetchNI;
@@ -28,7 +29,7 @@ function [sFig,sStream] = StreamCore(sFig,sStream,f_updateTextInformation)
 	%get probe variables
 	sChanMap = sStream.sChanMap;
 	sP = DP_GetParamStruct;
-	dblStreamBufferSize = 7.5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval at 7.5 to be safe
+	dblStreamBufferSize = 5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval at 7.5 to be safe
 	intMaxFetchIM = round(dblSampFreqIM*dblStreamBufferSize);
 	intMaxFetchNI = round(dblSampFreqNI*dblStreamBufferSize);
 	
