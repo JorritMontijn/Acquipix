@@ -15,7 +15,7 @@ function RM_main(varargin)
 		sFig.boolIsBusy = true;
 		
 		%% run common stream processing module
-		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@RM_updateTextInformation);
+		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@SC_updateTextInformation);
 		
 		%% retrieve variables
 		%get stim data from stream structure
@@ -69,7 +69,7 @@ function RM_main(varargin)
 			drawnow;
 			
 			%msg
-			RM_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
+			SC_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
 			boolDidSomething = true;
 		end
 		
@@ -166,7 +166,7 @@ function RM_main(varargin)
 			else
 				cellText = {strcat(strBaseString,' -'),''};
 			end
-			RM_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			pause(0.5);
 		end
 		

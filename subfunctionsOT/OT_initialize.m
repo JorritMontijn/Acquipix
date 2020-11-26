@@ -2,13 +2,13 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	%OT_initialize initializes all fields when data paths are set
 	
 	%lock GUI
-	OT_lock(sFig);
+	SC_lock(sFig);
 	drawnow;
 	
 	%msg
 	cellText = {'Initializing...'};
 	
-	OT_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 	%data processing
 	set(sFig.ptrListSelectDataProcessing,'String',sOT.metaData.cellProcess);
 	
@@ -39,7 +39,7 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	
 	%test GPU
 	cellText(end+1) = {'Testing GPU Compute Capability...'};
-	OT_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 	try
 		objGPU=gpuDevice;
 		strCompCap = objGPU.ComputeCapability;
@@ -50,18 +50,18 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	if dblCompCap >= 3
 		sOT.UseGPU = true;
 		cellText(end+1) = {['GPU CC is good (' strCompCap '); GPU processing enabled!']};
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 	else
 		sOT.UseGPU = false;
 		cellText(end+1) = {['GPU CC is bad (' strCompCap '); GPU processing disabled!']};
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 	end
 	
 	%load channel map
 	sOT.sChanMap = load([sOT.metaData.strChanMapPath sOT.metaData.strChanMapFile]);
 	
 	%enable all fields
-	OT_enable(sFig);
+	SC_enable(sFig);
 	
 	%set msg
 	sOT.IsInitialized = true;
@@ -69,6 +69,6 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	cellText(end+1) = {'OT mapper initialized!'};
 	cellText(end+1) = {''};
 	cellText(end+1) = {'Please wait for initial data read...'};
-	OT_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 end
 

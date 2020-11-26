@@ -6,12 +6,6 @@ function sRM = RM_populateStructure(sRM)
 	if ~isfield(sRM,'metaData')
 		sRM.metaData = struct;
 	end
-	%default path locations
-	sRM.metaData.strHostAddressSGL = '127.0.0.1';
-	sRM.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
-	sRM.metaData.strChanMapPath = 'C:\Code\GitRepos\Acquipix\subfunctionsPP\';
-	sRM.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
-	
 	%data processing types
 	sRM.metaData.cellProcess{1} = 'Raw';
 	sRM.metaData.cellProcess{2} = 'Smoothed';

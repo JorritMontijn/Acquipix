@@ -87,7 +87,7 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	%populate figure
 	boolInit = true;
-	sFig = RM_populateFigure(handles,boolInit);
+	sFig = SC_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
@@ -190,16 +190,16 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		%suppress warnings
 		cellText = {};
 		cellText{1} = ['Attempting to connect to host at ' sRM.strHostSGL];
-		RM_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		sWarn = warning('off');
 		sRM.hSGL = SpikeGL(sRM.strHostSGL);
 		warning(sWarn);
-		RM_updateTextInformation('Success!');
+		SC_updateTextInformation('Success!');
 	catch ME
 		%unlock GUI
 		RM_unlock(handles);
 		if strcmp(ME.identifier,'ChkConn:ConnectFail')
-			RM_updateTextInformation({['Cannot connect to host at ' sRM.strHostSGL]});
+			SC_updateTextInformation({['Cannot connect to host at ' sRM.strHostSGL]});
 			return;
 		else
 			%disp error message
@@ -207,7 +207,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 			cellText{1} = '<< ERROR >>';
 			cellText{2} = ME.identifier;
 			cellText{3} = ME.message;
-			RM_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			rethrow(ME);
 		end
 	end
@@ -226,13 +226,13 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		cellText{1} = '<< ERROR >>';
 		cellText{2} = ME.identifier;
 		cellText{3} = ME.message;
-		RM_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		warning('on','CalinsNetMex:connectionClosed');
 		if contains(ME.message,'Run parameters never validated.')
 			%we know what this is; no need to panic
 			cellText{4} = '';
 			cellText{5} = 'Please verify your settings in SpikeGLX';
-			RM_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			return;
 		else
 			rethrow(ME);
@@ -362,7 +362,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	start(objTimer);
 	
 	%update text
-	RM_updateTextInformation({''});
+	SC_updateTextInformation({''});
 	
 end
 function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -376,7 +376,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%clear data and reset to defaults
 	sRM = struct;
 	sRM = RM_populateStructure(sRM);
-	sFig = RM_populateFigure(handles,false,sFig);
+	sFig = SC_populateFigure(handles,false,sFig);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
@@ -388,7 +388,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	start(objTimer);
 	
 	%update text
-	RM_updateTextInformation({''});
+	SC_updateTextInformation({''});
 end
 function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define global
@@ -409,7 +409,7 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 	if IsInitialized
 		%lock gui
 		RM_lock(handles);
-		RM_updateTextInformation({'Data cleared, re-processing data...'});
+		SC_updateTextInformation({'Data cleared, re-processing data...'});
 		
 		%connect to host
 		sRM.strHostSGL = get(sFig.ptrEditHostSGL,'String');
@@ -453,7 +453,7 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMinChan));
 	
 	%update msg
-	RM_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
 	RM_unlock(handles);
@@ -487,7 +487,7 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMaxChan));
 	
 	%update msg
-	RM_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
 	RM_unlock(handles);
@@ -509,7 +509,7 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	else
 		cellText = {sprintf('Changing stim sync channel to %d',intStimSyncChanNI)};
 	end
-	RM_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 	
 	%assign new channel ID
 	sRM.intStimSyncChanNI = intStimSyncChanNI;

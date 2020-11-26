@@ -83,7 +83,7 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	%populate figure
 	boolInit = true;
-	sFig = OT_populateFigure(handles,boolInit);
+	sFig = SC_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
@@ -185,17 +185,17 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		%suppress warnings
 		cellText = {};
 		cellText{1} = ['Attempting to connect to host at ' sOT.strHostSGL];
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		sWarn = warning('off');
 		sOT.hSGL = SpikeGL(sOT.strHostSGL);
 		warning(sWarn);
 		cellText{2} = 'Success!';
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 	catch ME
 		%unlock GUI
 		OT_unlock(handles);
 		if strcmp(ME.identifier,'ChkConn:ConnectFail')
-			OT_updateTextInformation({['Cannot connect to host at ' sOT.strHostSGL]});
+			SC_updateTextInformation({['Cannot connect to host at ' sOT.strHostSGL]});
 			return;
 		else
 			%disp error message
@@ -203,7 +203,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 			cellText{1} = '<< ERROR >>';
 			cellText{2} = ME.identifier;
 			cellText{3} = ME.message;
-			OT_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			rethrow(ME);
 		end
 	end
@@ -222,13 +222,13 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		cellText{1} = '<< ERROR >>';
 		cellText{2} = ME.identifier;
 		cellText{3} = ME.message;
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		warning('on','CalinsNetMex:connectionClosed');
 		if contains(ME.message,'Run parameters never validated.')
 			%we know what this is; no need to panic
 			cellText{4} = '';
 			cellText{5} = 'Please verify your settings in SpikeGLX';
-			OT_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			return;
 		else
 			rethrow(ME);
@@ -236,7 +236,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	end
 	
 	%initialize connection with SGL
-	[sFig,sOT] = OT_initSGL(sFig,sOT);
+	[sFig,sOT] = SC_initSGL(sFig,sOT);
 	
 	%unlock GUI
 	OT_unlock(handles);
@@ -296,7 +296,7 @@ function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	OT_lock(handles);
 	
 	% update maps
-	[sFig,sOT] = OT_initSGL(sFig,sOT);
+	[sFig,sOT] = SC_initSGL(sFig,sOT);
 	
 	%unlock GUI
 	OT_unlock(handles);
@@ -358,7 +358,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	start(objTimer);
 	
 	%update text
-	OT_updateTextInformation({''});
+	SC_updateTextInformation({''});
 	
 end
 function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -384,7 +384,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	start(objTimer);
 	
 	%update text
-	OT_updateTextInformation({''});
+	SC_updateTextInformation({''});
 end
 function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define global
@@ -405,14 +405,14 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 	if IsInitialized
 		%lock gui
 		OT_lock(handles);
-		OT_updateTextInformation({'Data cleared, re-processing data...'});
+		SC_updateTextInformation({'Data cleared, re-processing data...'});
 		
 		%connect to host
 		sOT.strHostSGL = get(sFig.ptrEditHostSGL,'String');
 		sOT.hSGL = SpikeGL(sOT.strHostSGL);
 		
 		%re-establish connection
-		[sFig,sOT] = OT_initSGL(sFig,sOT);
+		[sFig,sOT] = SC_initSGL(sFig,sOT);
 		
 		%reinitialize
 		[sFig,sOT] = OT_initialize(sFig,sOT);
@@ -449,7 +449,7 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMinChan));
 	
 	%update msg
-	OT_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
 	OT_unlock(handles);
@@ -483,7 +483,7 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMaxChan));
 	
 	%update msg
-	OT_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
 	OT_unlock(handles);
@@ -505,7 +505,7 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	else
 		cellText = {sprintf('Changing stim sync channel to %d',intStimSyncChanNI)};
 	end
-	OT_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 	
 	%assign new channel ID
 	sOT.intStimSyncChanNI = intStimSyncChanNI;

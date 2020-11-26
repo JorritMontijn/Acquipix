@@ -5,6 +5,12 @@ function sStream = SC_populateStreamCoreStructure(sStream)
 	%Version 1.0 [2020-11-26]
 	%	Split from RM_populateStructure to standardized module by Jorrit Montijn
 	
+	%default path locations
+	sStream.metaData.strHostAddressSGL = '127.0.0.1';
+	sStream.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
+	sStream.metaData.strChanMapPath = 'C:\Code\GitRepos\Acquipix\subfunctionsPP\';
+	sStream.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
+	
 	%metadata
 	sStream.intStimSyncChanNI = 0;
 	sStream.NumChannels = 0;
