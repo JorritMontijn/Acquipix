@@ -12,13 +12,13 @@ function RM_main(varargin)
 		if ~sRM.IsInitialized,return;end
 		%check if busy
 		if sFig.boolIsBusy,return;end
+		sFig.boolIsBusy = true;
+		boolDidSomething = false;
 		
 		%% run common stream processing module
 		[sFig,sRM] = StreamCore(sFig,sRM,@RM_updateTextInformation);
 		
 		%% retrieve variables
-		sFig.boolIsBusy = true;
-		boolDidSomething = false;
 		
 		%get stim data from stream structure
 		sStimObject = sRM.sStimObject;
@@ -30,7 +30,7 @@ function RM_main(varargin)
 		%stream variables
 		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
 		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
-		intRespTrialN = sRM.intEphysTrialN; %not used, only updated
+		intRespTrialN = sRM.intRespTrialN; %not used, only updated
 		intStimTrialN = sRM.intStimTrialN;
 		dblStimTrialT = sRM.dblStimTrialT; %updated later
 		
