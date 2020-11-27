@@ -17,6 +17,10 @@ function varargout = runOnlineOT(varargin)
 	%		To do: proper signal transformation to envelope
 	%	Version 2.0.0c [2019-12-06]
 	%		Online spike detection, removed LFP/envelope support
+	%	Version 2.0.1 [2020-11-26]
+	%		Transformed main to use StreamCore module
+	%	Version 2.0.2 [2020-11-27]
+	%		Transformed all to use StreamCore module
 	
 	%set tags
 	%#ok<*INUSL>
