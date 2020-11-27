@@ -13,8 +13,7 @@ function sRM = RM_populateStructure(sRM)
 	
 	%metrics
  	sRM.metaData.cellMetric{1} = 'Mean';
- 	sRM.metaData.cellMetric{2} = 'ZETA (under construction)';
-	
+ 	
 	%channel selection
 	sRM.metaData.cellChannels{1} = 'Magic+';
 	sRM.metaData.cellChannels{2} = 'Mean';

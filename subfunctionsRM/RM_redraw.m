@@ -50,13 +50,22 @@ function RM_redraw(varargin)
 		axis(sFig.ptrAxesHandle2,'off');
 	end
 	
-	%% get data & requested parameters
+	%% get requested parameters
+	%data prepro
 	intDataProc = get(sFig.ptrListSelectDataProcessing,'Value');
 	cellDataProcs = get(sFig.ptrListSelectDataProcessing,'String');
 	strDataProc = cellDataProcs{intDataProc}; %type of selection; best, magic, etc
+	%channel
 	intChannel = get(sFig.ptrListSelectChannel,'Value');
 	cellChannels = get(sFig.ptrListSelectChannel,'String');
 	strChannel = cellChannels{intChannel}; %type of selection; best, magic, etc
+	%metrics
+	intMetric = get(sFig.ptrListSelectMetric,'Value');
+	cellMetrics = get(sFig.ptrListSelectMetric,'String');
+	strMetric = cellChannels{intMetric}; %type of selection; best, magic, etc
+	
+
+	%% get data
 	%intTrials = sRM.intRespTrialN;
 	cellStimON = sRM.cellStimON; %[y by x] cell with [chan x rep] matrix
 	%cellBaseON = sRM.cellBaseON; %[y by x] cell with [chan x rep] matrix
