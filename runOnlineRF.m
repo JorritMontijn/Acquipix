@@ -69,7 +69,7 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	global sRM;
 	
 	%set closing function
-	set(hObject,'DeleteFcn','RM_DeleteFcn')
+	set(hObject,'DeleteFcn','SC_DeleteFcn')
 	
 	% set rainbow logo
 	I = imread('LogoRFmapper.jpg');
@@ -90,13 +90,13 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig = SC_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
-	objTimer = timer();
-	objTimer.Period = 1;
-	objTimer.StartDelay = 1;
-	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @RM_main;
-	sFig.objTimer = objTimer;
-	start(objTimer);
+	objMainTimer = timer();
+	objMainTimer.Period = 1;
+	objMainTimer.StartDelay = 1;
+	objMainTimer.ExecutionMode = 'fixedSpacing';
+	objMainTimer.TimerFcn = @RM_main;
+	sFig.objMainTimer = objMainTimer;
+	start(objMainTimer);
 	
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');

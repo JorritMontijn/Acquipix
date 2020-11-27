@@ -65,10 +65,10 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	global sOT;
 	
 	%set closing function
-	set(hObject,'DeleteFcn','OT_DeleteFcn')
+	set(hObject,'DeleteFcn','SC_DeleteFcn')
 	
 	% set rainbow logo
-	I = imread('OT_mapper-01.jpg');
+	I = imread('OT_mapper.jpg');
 	axes(handles.ptrAxesLogo);
 	imshow(I);
 	drawnow;
@@ -86,13 +86,13 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig = SC_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
-	objTimer = timer();
-	objTimer.Period = 1;
-	objTimer.StartDelay = 1;
-	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @OT_main;
-	sFig.objTimer = objTimer;
-	start(objTimer);
+	objMainTimer = timer();
+	objMainTimer.Period = 1;
+	objMainTimer.StartDelay = 1;
+	objMainTimer.ExecutionMode = 'fixedSpacing';
+	objMainTimer.TimerFcn = @OT_main;
+	sFig.objMainTimer = objMainTimer;
+	start(objMainTimer);
 	
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
