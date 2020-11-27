@@ -1,8 +1,8 @@
 %% closing function
-function OT_DeleteFcn(varargin)
+function SC_DeleteFcn(varargin)
 	%get globals
 	global sFig
 	
 	%stop timer
-	stop(sFig.objTimer);
+	stop(sFig.objMainTimer);
 end

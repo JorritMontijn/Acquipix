@@ -5,11 +5,6 @@ function sOT = OT_populateStructure(sOT)
 	if ~isfield(sOT,'metaData')
 		sOT.metaData = struct;
 	end
-	%default path locations
-	sOT.metaData.strHostAddressSGL = '127.0.0.1';
-	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
-	sOT.metaData.strChanMapPath = 'C:\Code\GitRepos\Acquipix\subfunctionsPP\';
-	sOT.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
 	
 	%data processing types
 	sOT.metaData.cellProcess{1} = 'Stimulus';
@@ -25,59 +20,31 @@ function sOT = OT_populateStructure(sOT)
 	sOT.metaData.cellMetric{6} = 'Asym Up-Down';
 	sOT.metaData.cellMetric{7} = 'Asym Vert-Horz';
 	
-	%initialize data stream variables
-	sOT.IsInitialized = false;
-	%ephys
-	sOT.intStimSyncChanNI = 0;
-	sOT.NumChannels = 0;
-	sOT.dblSampFreqIM = 0;
-	sOT.dblSampFreqNI = 0;
-	sOT.dblEphysTimeIM = 0;
-	sOT.dblEphysTimeNI = 0;
-	sOT.intEphysTrialN = 0;
-	sOT.dblEphysTrialT = 0;
-	sOT.intLastFetchNI = 0;
-	sOT.intLastFetchIM = 0;
-	sOT.vecDiodeOnT = [];
-	sOT.vecDiodeOffT = [];
+	%channel selection
+	sOT.metaData.cellChannels{1} = 'Best';
+	sOT.metaData.cellChannels{2} = 'Mean';
+	sOT.metaData.cellChannels{3} = 'Single';
 	
-	%data
-	sOT.boolChannelsCulled = false;
-	sOT.vecTimestampsNI = [];
-	sOT.vecSyncData = [];
-	sOT.dblDataBufferSize = 3;
-	sOT.intDataBufferPos = [];
-	sOT.intDataBufferSize = [];
-	sOT.matDataBufferIM = [];
-	sOT.vecTimestampsIM = [];
-	sOT.dblSubLastUpdate = [];
-	sOT.dblCurrT = [];
-	sOT.vecSubSpikeCh = [];
-	sOT.vecSubSpikeT = [];
-		
-	%stim
+	%% shared core variables
+	sOT = SC_populateStreamCoreStructure(sOT);
+	
+	%% specific parameters
+	%stim stream
+	sOT.dblStimCoverage = 0;
+	sOT.intStimTrial = 0;
+	sOT.sStimObject = [];
+	sOT.vecTimestamps = [];
+	sOT.matRespBase = [];
+	sOT.matRespStim = [];
+	sOT.vecStimTypes = [];
+	sOT.vecStimOriDeg = [];
+	
+	%stim data
+	sOT.intRespTrialN = 0;
 	sOT.dblStimCoverage = 0;
 	sOT.intStimTrialN = 0;
 	sOT.dblStimTrialT = 0;
 	sOT.sStimObject = [];
 	sOT.vecStimOnT = [];
 	sOT.vecStimOffT = [];
-	
-	%resp
-	sOT.intRespTrialN = 0;
-	sOT.matRespBase = [];
-	sOT.matRespStim = [];
-	sOT.vecStimTypes = [];
-	sOT.vecStimOriDeg = [];
-	
-	%ephys selection
-	sOT.intRespTrialN = 0;
-	sOT.intMinChan = 1;
-	sOT.intMaxChan = 384;
-	sOT.vecAllChans = (sOT.intMinChan:(sOT.intMaxChan*2 + 1))-1; %AP, LFP, NI; 0-start
-	sOT.vecSpkChans = (sOT.intMinChan:sOT.intMaxChan)-1; %AP; 0-start
-	sOT.vecIncChans = (sOT.intMinChan:sOT.intMaxChan)-1; %AP, minus culled; 0-start
-	sOT.vecSelectChans = (sOT.intMinChan:sOT.intMaxChan); %AP, selected chans; 1-start
-	sOT.vecActChans = sOT.vecIncChans(ismember(sOT.vecIncChans,sOT.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
-	
 end

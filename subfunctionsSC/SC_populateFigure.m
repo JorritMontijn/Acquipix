@@ -1,5 +1,5 @@
-function sFig = OT_populateFigure(handles,boolInit,sFigIn)
-	%OT_populateFigure Populates global figure structure
+function sFig = SC_populateFigure(handles,boolInit,sFigIn)
+	%RM_populateFigure Populates global figure structure
 	
 	%check for initial run
 	if ~exist('boolInit','var') || isempty(boolInit)

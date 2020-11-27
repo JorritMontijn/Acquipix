@@ -17,6 +17,10 @@ function varargout = runOnlineOT(varargin)
 	%		To do: proper signal transformation to envelope
 	%	Version 2.0.0c [2019-12-06]
 	%		Online spike detection, removed LFP/envelope support
+	%	Version 2.0.1 [2020-11-26]
+	%		Transformed main to use StreamCore module
+	%	Version 2.0.2 [2020-11-27]
+	%		Transformed all to use StreamCore module
 	
 	%set tags
 	%#ok<*INUSL>
@@ -65,10 +69,10 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	global sOT;
 	
 	%set closing function
-	set(hObject,'DeleteFcn','OT_DeleteFcn')
+	set(hObject,'DeleteFcn','SC_DeleteFcn')
 	
 	% set rainbow logo
-	I = imread('OT_mapper-01.jpg');
+	I = imread('OT_mapper.jpg');
 	axes(handles.ptrAxesLogo);
 	imshow(I);
 	drawnow;
@@ -83,16 +87,16 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	
 	%populate figure
 	boolInit = true;
-	sFig = OT_populateFigure(handles,boolInit);
+	sFig = SC_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
-	objTimer = timer();
-	objTimer.Period = 1;
-	objTimer.StartDelay = 1;
-	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @OT_main;
-	sFig.objTimer = objTimer;
-	start(objTimer);
+	objMainTimer = timer();
+	objMainTimer.Period = 1;
+	objMainTimer.StartDelay = 1;
+	objMainTimer.ExecutionMode = 'fixedSpacing';
+	objMainTimer.TimerFcn = @OT_main;
+	sFig.objMainTimer = objMainTimer;
+	start(objMainTimer);
 	
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
@@ -125,13 +129,13 @@ function ptrPanelScatterPlot_SelectionChangedFcn(hObject, eventdata, handles) %#
 	%so no other action is required other than redrawing
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	OT_redraw(1);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 %% change in target figure
 function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
@@ -139,13 +143,13 @@ function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DE
 	%so no other action is required other than redrawing
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	OT_redraw(1);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 %% select which image to display as background
 function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -153,13 +157,13 @@ function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%other action is required other than redrawing
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	OT_redraw(1);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 %% this function initializes everything
 function ptrEditHostSGL_Callback(hObject, eventdata, handles)
@@ -170,7 +174,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	global sOT;
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%clear data
 	set(sFig.ptrTextChanNumIM, 'string', '...');
@@ -185,17 +189,17 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		%suppress warnings
 		cellText = {};
 		cellText{1} = ['Attempting to connect to host at ' sOT.strHostSGL];
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		sWarn = warning('off');
 		sOT.hSGL = SpikeGL(sOT.strHostSGL);
 		warning(sWarn);
 		cellText{2} = 'Success!';
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 	catch ME
 		%unlock GUI
-		OT_unlock(handles);
+		SC_unlock(handles);
 		if strcmp(ME.identifier,'ChkConn:ConnectFail')
-			OT_updateTextInformation({['Cannot connect to host at ' sOT.strHostSGL]});
+			SC_updateTextInformation({['Cannot connect to host at ' sOT.strHostSGL]});
 			return;
 		else
 			%disp error message
@@ -203,7 +207,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 			cellText{1} = '<< ERROR >>';
 			cellText{2} = ME.identifier;
 			cellText{3} = ME.message;
-			OT_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			rethrow(ME);
 		end
 	end
@@ -215,20 +219,20 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		warning('on','CalinsNetMex:connectionClosed');
 	catch ME
 		%unlock GUI
-		OT_unlock(handles);
+		SC_unlock(handles);
 		
 		%disp error message
 		cellText = {};
 		cellText{1} = '<< ERROR >>';
 		cellText{2} = ME.identifier;
 		cellText{3} = ME.message;
-		OT_updateTextInformation(cellText);
+		SC_updateTextInformation(cellText);
 		warning('on','CalinsNetMex:connectionClosed');
 		if contains(ME.message,'Run parameters never validated.')
 			%we know what this is; no need to panic
 			cellText{4} = '';
 			cellText{5} = 'Please verify your settings in SpikeGLX';
-			OT_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			return;
 		else
 			rethrow(ME);
@@ -236,16 +240,16 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	end
 	
 	%initialize connection with SGL
-	[sFig,sOT] = OT_initSGL(sFig,sOT);
+	[sFig,sOT] = SC_initSGL(sFig,sOT);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 	
 	
 	%check if both data path and stim path is set
 	if isfield(sOT,'boolInitSGL') && ~isempty(sOT.boolInitSGL) && sOT.boolInitSGL && ...
 			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
-		[sFig,sOT] = OT_initialize(sFig,sOT);
+		[sFig,sOT] = SC_initialize(sFig,sOT);
 	end
 end
 function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -256,7 +260,7 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	global sOT;
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%switch path
 	try
@@ -269,7 +273,7 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	strSourcePathLog = uigetdir('Select stim log path');
 	%back to old path
 	cd(oldPath);
-	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),OT_unlock(handles);return;end
+	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),SC_unlock(handles);return;end
 	if strcmpi(strSourcePathLog(end),filesep)
 		strSourcePathLog(end) = [];
 	end
@@ -279,12 +283,12 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	set(sFig.ptrTextStimPath, 'string', strSourcePathLog);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 	
 	%check if connection is active and stim path is set
 	if isfield(sOT,'boolInitSGL') && ~isempty(sOT.boolInitSGL) && sOT.boolInitSGL && ...
 			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
-		[sFig,sOT] = OT_initialize(sFig,sOT);
+		[sFig,sOT] = SC_initialize(sFig,sOT);
 	end
 end
 function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -293,33 +297,33 @@ function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sOT;
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
-	[sFig,sOT] = OT_initSGL(sFig,sOT);
+	[sFig,sOT] = SC_initSGL(sFig,sOT);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrListSelectChannel_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
 	OT_redraw(1);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrListSelectDataProcessing_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
 	OT_redraw(1);
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrEditDownsample_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
@@ -345,20 +349,20 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
-	OT_unlock(handles);
+	SC_unlock(handles);
 	
 	%restart timer
-	stop(sFig.objTimer);
+	stop(sFig.objMainTimer);
 	objTimer = timer();
 	objTimer.Period = 1;
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @OT_main;
-	sFig.objTimer = objTimer;
+	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
 	%update text
-	OT_updateTextInformation({''});
+	SC_updateTextInformation({''});
 	
 end
 function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -367,12 +371,12 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sOT;
 	
 	%stop timer
-	stop(sFig.objTimer);
+	stop(sFig.objMainTimer);
 	
 	%clear data and reset to defaults
 	sOT = struct;
 	sOT = OT_populateStructure(sOT);
-	sFig = OT_populateFigure(handles,false,sFig);
+	sFig = SC_populateFigure(handles,false,sFig);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
@@ -380,11 +384,14 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @OT_main;
-	sFig.objTimer = objTimer;
+	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
 	%update text
-	OT_updateTextInformation({''});
+	SC_updateTextInformation({''});
+	
+	%check if default host is online
+	ptrEditHostSGL_Callback([], [], handles);
 end
 function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define global
@@ -404,18 +411,18 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 	%reload data if initialized
 	if IsInitialized
 		%lock gui
-		OT_lock(handles);
-		OT_updateTextInformation({'Data cleared, re-processing data...'});
+		SC_lock(handles);
+		SC_updateTextInformation({'Data cleared, re-processing data...'});
 		
 		%connect to host
 		sOT.strHostSGL = get(sFig.ptrEditHostSGL,'String');
 		sOT.hSGL = SpikeGL(sOT.strHostSGL);
 		
 		%re-establish connection
-		[sFig,sOT] = OT_initSGL(sFig,sOT);
+		[sFig,sOT] = SC_initSGL(sFig,sOT);
 		
 		%reinitialize
-		[sFig,sOT] = OT_initialize(sFig,sOT);
+		[sFig,sOT] = SC_initialize(sFig,sOT);
 		 
 		%run main
 		OT_main();
@@ -427,7 +434,7 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sFig;
 	
 	%lock gui
-	OT_lock(handles);
+	SC_lock(handles);
 		
 	%get data
 	intMinChan = str2double(get(hObject,'String'));
@@ -449,10 +456,10 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMinChan));
 	
 	%update msg
-	OT_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 
 function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -461,7 +468,7 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sFig;
 	
 	%lock gui
-	OT_lock(handles);
+	SC_lock(handles);
 		
 	%get data
 	intMaxChan = str2double(get(hObject,'String'));
@@ -483,17 +490,17 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	set(hObject,'String',num2str(intMaxChan));
 	
 	%update msg
-	OT_updateTextInformation({strMsg});
+	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
-	OT_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
 	global sOT;
 	
 	%lock GUI
-	OT_lock(handles);
+	SC_lock(handles);
 	
 	%get channel
 	intStimSyncChanNI = str2double(get(hObject,'String'));
@@ -505,11 +512,11 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	else
 		cellText = {sprintf('Changing stim sync channel to %d',intStimSyncChanNI)};
 	end
-	OT_updateTextInformation(cellText);
+	SC_updateTextInformation(cellText);
 	
 	%assign new channel ID
 	sOT.intStimSyncChanNI = intStimSyncChanNI;
 	
 	%unlock GUI
-	OT_unlock(handles);
+	SC_unlock(handles);
 end

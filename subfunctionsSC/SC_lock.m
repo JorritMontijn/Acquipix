@@ -1,6 +1,6 @@
-function RM_lock(handles)
-	%UNTITLED Summary of this function goes here
-	%   Detailed explanation goes here
+function SC_lock(handles)
+	%SC_lock Shared Core GUI locker
+	%   SC_lock(handles)
 	%Enable,'off'
 	
 	cellNames = fieldnames(handles);

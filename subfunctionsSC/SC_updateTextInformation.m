@@ -1,10 +1,9 @@
-function RM_updateTextInformation(varargin)
+function SC_updateTextInformation(varargin)
 	%update cell information window
 	global sFig;
-	global sRM;
 	
 	%check if data has been loaded
-	if isempty(sFig) || (isempty(sRM) && nargin == 0)
+	if isempty(sFig)
 		return;
 	else
 		try

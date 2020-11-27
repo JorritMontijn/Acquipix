@@ -12,289 +12,25 @@ function RM_main(varargin)
 		if ~sRM.IsInitialized,return;end
 		%check if busy
 		if sFig.boolIsBusy,return;end
-		%% retrieve variables
 		sFig.boolIsBusy = true;
-		boolDidSomething = false;
 		
-		%get stream variables
-		intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
-		intStimSyncChanNI = sRM.intStimSyncChanNI;
-		intLastFetchNI = sRM.intLastFetchNI;
-		intLastFetchIM = sRM.intLastFetchIM;
-		dblSampFreqNI = sRM.dblSampFreqNI;
-		dblSampFreqIM = sRM.dblSampFreqIM;
-		dblEphysTimeNI = sRM.dblEphysTimeNI;
-		dblEphysTimeIM = sRM.dblEphysTimeIM;
-		dblEphysStepSecs = 5;
-		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
-		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
-		intStimTrialN = sRM.intStimTrialN;
-		dblStimTrialT = sRM.dblStimTrialT;
+		%% run common stream processing module
+		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@SC_updateTextInformation);
 		
-		%get probe variables
-		sChanMap = sRM.sChanMap;
-		sP = DP_GetParamStruct;
-		
-		%update
-		sRM.vecSelectChans = sRM.intMinChan:sRM.intMaxChan;
-		sRM.vecActChans = sRM.vecSpkChans(ismember(sRM.vecSpkChans,sRM.vecSelectChans));
-		
-		%get data variables
+		%% retrieve variables
+		%get stim data from stream structure
 		sStimObject = sRM.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
-		vecOldTimestampsNI = sRM.vecTimestampsNI;
-		vecOldSyncData = sRM.vecSyncData;
-		intDataBufferPos = sRM.intDataBufferPos;
-		intDataBufferSize = sRM.intDataBufferSize;
-		dblDataBufferSize = sRM.dblDataBufferSize;
-		vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
-		vecSpkChans = sRM.vecSpkChans; %AP; 0-start
-		vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
-		vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
-		vecActChans = sRM.vecActChans ; %AP, active channels (selected and unculled); 0-start
 		
-		boolChannelsCulled = sRM.boolChannelsCulled;
-		
-		%get stimulus variables
-		vecOldStimOnT = sRM.vecStimOnT; %on times of all stimuli (NI time prior to stim on)
-		vecOldStimOffT = sRM.vecStimOffT; %off times of all stimuli (NI time after stim off)
-		vecDiodeOnT = sRM.vecDiodeOnT; %on times of all stimuli (diode on time)
-		vecDiodeOffT = sRM.vecDiodeOffT; %off times of all stimuli (diode off time)
-		
-		%get resp variables
-		intRespTrialN = sRM.intRespTrialN;
-		
-		%get data from figure
+		%get stim data from figure structure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
-		%use GPU?
-		boolUseGPU = sRM.UseGPU;
-		
-		% SGL data
-		%set stream IDs
-		vecStreamIM = [0];
-		intStreamIM = vecStreamIM(intUseStreamIMEC);
-		strStreamIM = sprintf( 'GETSCANCOUNT %d', intStreamIM);
-		intStreamNI = -1;
-		strStreamNI = sprintf( 'GETSCANCOUNT %d', intStreamNI);
-		
-		%prep meta data
-		dblSubSampleFactorNI = sRM.dblSubSampleFactorNI;
-		dblSubSampleTo = sRM.dblSubSampleTo;
-		intDownsampleNI = 1;
-		intDownsampleIM = 1;
-		
-		%% get NI I/O box data
-		%get current scan number for NI streams
-		intCurCountNI = GetScanCount(sRM.hSGL, intStreamNI);
-		
-		%check if this is the initial fetch
-		if intLastFetchNI == 0
-			intRetrieveSamplesNI = round(1*dblSampFreqNI); %retrieve last 0.1 seconds
-			intRetrieveSamplesNI = min(intCurCountNI-1,intRetrieveSamplesNI); %ensure we're not requesting data prior to start
-			intStartFetch = intCurCountNI - intRetrieveSamplesNI; %set last fetch to starting position
-			dblLastTimestampNI = intStartFetch;
-		else
-			intStartFetch = intLastFetchNI - round(dblSampFreqNI);
-			intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
-			intRetrieveSamplesNI = intCurCountNI - intStartFetch; %retrieve as many samples as acquired between previous fetch and now, plus 500ms
-			dblLastTimestampNI = vecOldTimestampsNI(end);
-		end
-		
-		
-		%get NI data
-		if intRetrieveSamplesNI > 0
-			%fetch in try-catch block
-			try
-				%fetch "intRetrieveSamplesNI" samples starting at "intFetchStartCountNI"
-				[vecStimSyncDataNI,intStartCountNI] = Fetch(sRM.hSGL, intStreamNI, intStartFetch, intRetrieveSamplesNI, intStimSyncChanNI,intDownsampleNI);
-			catch ME
-				%buffer has likely already been cleared; unable to fetch data
-				cellText = {'<< ERROR >>',ME.identifier,ME.message};
-				RM_updateTextInformation(cellText);
-				return;
-			end
-		end
-		%update NI time
-		dblEphysTimeNI = intCurCountNI/dblSampFreqNI;
-		set(sFig.ptrTextTimeNI,'string',sprintf('%.3f',dblEphysTimeNI));
-		%save to globals
-		sRM.intLastFetchNI = intCurCountNI;
-		sRM.dblEphysTimeNI = dblEphysTimeNI;
-		
-		%process NI data
-		vecTimeNI = ((intStartFetch+1):intDownsampleNI:intCurCountNI)/dblSampFreqNI;
-		intStartT = find(vecTimeNI>(dblLastTimestampNI+dblSubSampleTo),1);
-		if isempty(intStartT),intStartT=1;end
-		vecKeepNI = round(intStartT:dblSubSampleFactorNI:intRetrieveSamplesNI);
-		vecNewTimestampsNI = vecTimeNI(vecKeepNI);
-		vecNewSyncData = sRM.NI2V*single(flat(vecStimSyncDataNI(vecKeepNI))'); %transform to voltage
-		%assign data
-		vecTimestampsNI = cat(2,vecOldTimestampsNI,vecNewTimestampsNI);
-		vecSyncData = cat(2,vecOldSyncData,vecNewSyncData);
-		
-		%keep last 6 seconds
-		indKeepSync = vecSyncData > (vecSyncData(end) - 6);
-		vecUseSyncData = vecSyncData(indKeepSync);
-		vecUseTimestampsNI = vecTimestampsNI(indKeepSync);
-		
-		%find onset and offset of most recent stimulus
-		dblMaxErrorT = 0.1; %discard onsets/offsets if temporal mismatch is more than x seconds
-		[boolVecPhotoDiode,dblCritValPD] = DP_GetUpDown(-vecUseSyncData);
-		vecSignChange = diff(boolVecPhotoDiode);
-		
-		%get onsets
-		intOldOn = numel(vecDiodeOnT);
-		vecOnsets = vecUseTimestampsNI(vecSignChange == 1);
-		[vecDiodeOnT,cellTextOn] = RM_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,[],dblMaxErrorT);
-		if numel(vecDiodeOnT) > intOldOn
-			cellText(end+1) = {['ON, ' cellTextOn{end}]}; %remove 'ON'
-		end
-		
-		%get offsets
-		intOldOff = numel(vecDiodeOffT);
-		vecOffsets = vecUseTimestampsNI(vecSignChange == -1);
-		[vecDiodeOffT,cellTextOff] = RM_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,[],dblMaxErrorT);
-		if numel(vecDiodeOffT) > intOldOff
-			cellText(end+1) = {['OFF, ' cellTextOff{end}]}; %remove 'ON'
-		end
-		
-		%msg
-		RM_updateTextInformation(cellText);
-		
-		%save data to globals
-		sRM.vecTimestampsNI = vecTimestampsNI;
-		sRM.vecSyncData = vecSyncData;
-		sRM.vecDiodeOnT = vecDiodeOnT; %on times of all stimuli (diode on time)
-		sRM.vecDiodeOffT = vecDiodeOffT; %off times of all stimuli (diode off time)
-		sRM.intEphysTrialN = min([numel(vecDiodeOnT) numel(vecDiodeOffT)]);
-		if sRM.intEphysTrialN == 0
-			sRM.dblEphysTrialT = 0;
-		else
-			sRM.dblEphysTrialT = max([vecDiodeOnT(sRM.intEphysTrialN),vecDiodeOffT(sRM.intEphysTrialN)]);
-		end
-		
-		%update figure
-		set(sFig.ptrTextStimNI, 'string',sprintf('%.2f (%d)',sRM.dblEphysTrialT,sRM.intEphysTrialN));
-		
-		%% get IMEC data
-		%get current scan number for NI streams
-		intCurCountIM = GetScanCount(sRM.hSGL, intStreamIM);
-		
-		%check if this is the initial fetch
-		if intLastFetchIM == 0
-			intRetrieveSamplesIM = round(1*dblSampFreqIM); %retrieve last 0.1 seconds
-			intRetrieveSamplesIM = min(intCurCountIM-1,intRetrieveSamplesIM); %ensure we're not requesting data prior to start
-			intStartFetch = intCurCountIM - intRetrieveSamplesIM; %set last fetch to starting position
-		else
-			intStartFetch = intLastFetchIM - round(dblSampFreqIM);
-			intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
-			intRetrieveSamplesIM = intCurCountIM - intStartFetch; %retrieve as many samples as acquired between previous fetch and now, plus 500ms
-		end
-		
-		%get IM data
-		if intRetrieveSamplesIM > 0
-			%fetch in try-catch block
-			try
-				%fetch "intRetrieveSamplesIM" samples starting at "intFetchStartCountIM"
-				[matNewData,intStartCountIM] = Fetch(sRM.hSGL, intStreamIM, intStartFetch, intRetrieveSamplesIM, vecSpkChans,intDownsampleIM);
-				
-				%% CHECK: if channels are missing in vecSpkChans, is matNewData size of vecSpikeChans or of [t x 384]?
-				%% chans vecSpkChans to vecIncChans to select only unculled channels
-			catch ME
-				%buffer has likely already been cleared; unable to fetch data
-				cellText = {'<< ERROR >>',ME.identifier,ME.message};
-				RM_updateTextInformation(cellText);
-				return;
-			end
-		end
-		%update IM time
-		dblEphysTimeIM = intCurCountIM/dblSampFreqIM;
-		set(sFig.ptrTextTimeIM,'string',sprintf('%.3f',dblEphysTimeIM));
-		%save to globals
-		sRM.intLastFetchIM = intCurCountIM;
-		sRM.dblEphysTimeIM = dblEphysTimeIM;
-		
-		%put data in buffer
-		vecNewTimestampsIM = intStartFetch:(intStartFetch+intRetrieveSamplesIM-1);
-		vecAssignBufferPos = modx(intDataBufferPos:(intDataBufferPos+numel(vecNewTimestampsIM)-1),intDataBufferSize);
-		%assign to global
-		sRM.intDataBufferPos = modx(vecAssignBufferPos(end)+1,intDataBufferSize);
-		sRM.vecTimestampsIM(vecAssignBufferPos) = vecNewTimestampsIM;
-		sRM.matDataBufferIM(vecAssignBufferPos,:) = matNewData;
-		sRM.dblSubLastUpdate = sRM.dblSubLastUpdate + range(vecNewTimestampsIM)/dblSampFreqIM;
-		
-		%% update data
-		if sRM.dblSubLastUpdate > 1 %if last subsample update is more than 1 second ago
-			%unroll buffer
-			[vecLinBuffT,vecReorderData] = sort(sRM.vecTimestampsIM,'ascend');
-			vecLinBuffT = vecLinBuffT/dblSampFreqIM;
-			matLinBuffData = sRM.matDataBufferIM(vecReorderData,:); %time by channel
-			vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);
-			
-			%message
-			cellText = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
-			RM_updateTextInformation(cellText);
-			
-			%retrieve which data to use, subsample & assign
-			if isempty(sRM.dblCurrT)
-				dblCurrT = max(vecLinBuffT) - 5;
-			else
-				dblCurrT = sRM.dblCurrT;
-			end
-			indKeepIM = vecLinBuffT>dblCurrT & vecLinBuffT<(max(vecLinBuffT) - 1);
-			matSubNewData = matLinBuffData(indKeepIM,:)';
-			vecSubNewTime = vecLinBuffT(indKeepIM);
-			
-			%% detect spikes
-			%detect spikes on all channels
-			[gVecSubNewSpikeCh,gVecSubNewSpikeT,dblSubNewTotT] = DP_DetectSpikes(matSubNewData, sP);
-			sRM.dblCurrT = sRM.dblCurrT + dblSubNewTotT;
-			vecSubNewSpikeCh = gather(gVecSubNewSpikeCh);
-			vecSubNewSpikeT = gather(gVecSubNewSpikeT);
-			%clear gpuArrays
-			gVecSubNewSpikeT = [];
-			gVecSubNewSpikeCh = [];
-			
-			% assign data
-			intStartT = uint32(vecSubNewTime(1)*1000);
-			if numel(vecSubNewSpikeCh) > 0
-				sRM.vecSubSpikeCh = cat(1,sRM.vecSubSpikeCh,vecSubNewSpikeCh(:));
-				sRM.vecSubSpikeT = cat(1,sRM.vecSubSpikeT,vecSubNewSpikeT(:) + intStartT);
-			end
-			
-			%msg
-			RM_updateTextInformation(sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
-			boolDidSomething = true;
-			
-			%% check if channels are culled yet & if first repetition is finished
-			if 0%boolChannelsCulled && sRM.dblStimCoverage > 100 && numel(sRM.vecSubSpikeCh) > 10000
-				%msg
-				RM_updateTextInformation(sprintf('Time for channel cull! Using %d spikes...',numel(sRM.vecSubSpikeCh)));
-				
-				%when initial run is complete, calc channel cull
-				vecUseChannelsFilt = DP_CullChannels(sRM.vecSubSpikeCh,sRM.vecSubSpikeT,dblSubNewTotT,sP,sChanMap);
-				
-				%update vecSpkChans & boolChannelsCulled
-				sRM.vecSpkChans = sRM.vecSpkChans(vecUseChannelsFilt);
-				sRM.boolChannelsCulled = true;
-				
-				%remove channels from sRM.matDataBufferIM
-				vecRemovedChans = ~ismember(1:size(matSubNewData,1),vecUseChannelsFilt);
-				sRM.matDataBufferIM(:,vecRemovedChans) = [];
-				
-				%remove channels from vecSpikeCh and vecSpikeT
-				vecRemovedSpikes = ~ismember(sRM.vecSubSpikeCh,vecUseChannelsFilt);
-				sRM.vecSubSpikeCh(vecRemovedSpikes) = [];
-				sRM.vecSubSpikeT(vecRemovedSpikes) = [];
-				%update channel ID of remaining channels
-				[dummy,vecNewCh]=find(sRM.vecSubSpikeCh==vecUseChannelsFilt');
-				sRM.vecSubSpikeCh = vecNewCh(:);
-				
-				%msg
-				RM_updateTextInformation(sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
-			end
-		end
+		%stream variables
+		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
+		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
+		intRespTrialN = sRM.intRespTrialN; %not used, only updated
+		intStimTrialN = sRM.intStimTrialN;
+		dblStimTrialT = sRM.dblStimTrialT; %updated later
 		
 		%% retrieve & update stim log data
 		%get stimulus object files
@@ -333,7 +69,7 @@ function RM_main(varargin)
 			drawnow;
 			
 			%msg
-			RM_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
+			SC_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
 			boolDidSomething = true;
 		end
 		
@@ -430,17 +166,17 @@ function RM_main(varargin)
 			else
 				cellText = {strcat(strBaseString,' -'),''};
 			end
-			RM_updateTextInformation(cellText);
+			SC_updateTextInformation(cellText);
 			pause(0.5);
 		end
 		
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		RM_unlock(sFig);
+		SC_unlock(sFig);
 	catch ME
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		RM_unlock(sFig);
+		SC_unlock(sFig);
 		
 		%send error
 		dispErr(ME);
