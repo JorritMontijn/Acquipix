@@ -1,6 +1,6 @@
-function [vecRefinedStimT,cellText,vecDiffT] = OT_getStimT(vecRefinedStimT,vecPresStimT,vecSignalChangeT,cellText,dblMaxErrorT)
-	%OT_getStimT Refines presentation times by diode signal changes
-	%	[vecRefinedStimT,cellText,vecDiffT] = OT_getStimT(vecRefinedStimT,vecPresStimT,vecSignalChangeT,cellText,dblMaxErrorT)
+function [vecRefinedStimT,cellText,vecDiffT] = SC_getStimT(vecRefinedStimT,vecPresStimT,vecSignalChangeT,cellText,dblMaxErrorT)
+	%SC_getStimT Refines presentation times by diode signal changes
+	%	[vecRefinedStimT,cellText,vecDiffT] = SC_getStimT(vecRefinedStimT,vecPresStimT,vecSignalChangeT,cellText,dblMaxErrorT)
 	%
 	%vecPresStimT is the default: these times are known to be correct within at least ~100ms
 	%vecSignalChangeT is more precise, but may miss some signal changes

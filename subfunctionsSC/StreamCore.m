@@ -150,7 +150,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	%get onsets
 	intOldOn = numel(vecDiodeOnT);
 	vecOnsets = vecUseTimestampsNI(vecSignChange == 1);
-	[vecDiodeOnT,cellTextOn] = RM_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,[],dblMaxErrorT);
+	[vecDiodeOnT,cellTextOn] = SC_getStimT(vecDiodeOnT,vecOldStimOnT,vecOnsets,[],dblMaxErrorT);
 	if numel(vecDiodeOnT) > intOldOn
 		cellText(end+1) = {['ON, ' cellTextOn{end}]}; %remove 'ON'
 	end
@@ -158,7 +158,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	%get offsets
 	intOldOff = numel(vecDiodeOffT);
 	vecOffsets = vecUseTimestampsNI(vecSignChange == -1);
-	[vecDiodeOffT,cellTextOff] = RM_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,[],dblMaxErrorT);
+	[vecDiodeOffT,cellTextOff] = SC_getStimT(vecDiodeOffT,vecOldStimOffT,vecOffsets,[],dblMaxErrorT);
 	if numel(vecDiodeOffT) > intOldOff
 		cellText(end+1) = {['OFF, ' cellTextOff{end}]}; %remove 'ON'
 	end

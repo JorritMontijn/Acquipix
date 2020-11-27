@@ -9,28 +9,28 @@ function OT_main(varargin)
 		cellText = {};
 		
 		%check initialization
-		if ~sRM.IsInitialized,return;end
+		if ~sOT.IsInitialized,return;end
 		%check if busy
 		if sFig.boolIsBusy,return;end
 		sFig.boolIsBusy = true;
 		
 		%% run common stream processing module
-		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@RM_updateTextInformation);
+		[sFig,sOT,boolDidSomething] = StreamCore(sFig,sOT,@SC_updateTextInformation);
 		
 		%% retrieve variables
 		%get stim data from stream structure
-		sStimObject = sRM.sStimObject;
+		sStimObject = sOT.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
 		
 		%get stim data from figure structure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
 		%stream variables
-		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
-		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
-		intRespTrialN = sRM.intRespTrialN; %not used, only updated
-		intStimTrialN = sRM.intStimTrialN;
-		dblStimTrialT = sRM.dblStimTrialT; %updated later
+		intEphysTrialN = sOT.intEphysTrialN; %not used, only updated
+		dblEphysTrialT = sOT.dblEphysTrialT; %not used, only updated
+		intRespTrialN = sOT.intRespTrialN; %not used, only updated
+		intStimTrialN = sOT.intStimTrialN;
+		dblStimTrialT = sOT.dblStimTrialT; %updated later
 		
 		%% retrieve & update stim log data
 		%get stimulus object files
@@ -173,11 +173,11 @@ function OT_main(varargin)
 		
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		OT_unlock(sFig);
+		SC_unlock(sFig);
 	catch ME
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		OT_unlock(sFig);
+		SC_unlock(sFig);
 		
 		%send error
 		dispErr(ME);

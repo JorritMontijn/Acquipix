@@ -20,6 +20,11 @@ function sOT = OT_populateStructure(sOT)
 	sOT.metaData.cellMetric{6} = 'Asym Up-Down';
 	sOT.metaData.cellMetric{7} = 'Asym Vert-Horz';
 	
+	%channel selection
+	sOT.metaData.cellChannels{1} = 'Best';
+	sOT.metaData.cellChannels{2} = 'Mean';
+	sOT.metaData.cellChannels{3} = 'Single';
+	
 	%% shared core variables
 	sOT = SC_populateStreamCoreStructure(sOT);
 	

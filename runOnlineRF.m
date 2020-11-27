@@ -130,13 +130,13 @@ function ptrPanelScatterPlot_SelectionChangedFcn(hObject, eventdata, handles) %#
 	%so no other action is required other than redrawing
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	RM_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 %% change in target figure
 function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
@@ -144,13 +144,13 @@ function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DE
 	%so no other action is required other than redrawing
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	RM_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 %% select which image to display as background
 function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -158,13 +158,13 @@ function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%other action is required other than redrawing
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%redraw
 	RM_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 %% this function initializes everything
 function ptrEditHostSGL_Callback(hObject, eventdata, handles)
@@ -175,7 +175,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	global sRM;
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%clear data
 	set(sFig.ptrTextChanNumIM, 'string', '...');
@@ -197,7 +197,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		SC_updateTextInformation('Success!');
 	catch ME
 		%unlock GUI
-		RM_unlock(handles);
+		SC_unlock(handles);
 		if strcmp(ME.identifier,'ChkConn:ConnectFail')
 			SC_updateTextInformation({['Cannot connect to host at ' sRM.strHostSGL]});
 			return;
@@ -219,7 +219,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 		warning('on','CalinsNetMex:connectionClosed');
 	catch ME
 		%unlock GUI
-		RM_unlock(handles);
+		SC_unlock(handles);
 		
 		%disp error message
 		cellText = {};
@@ -240,16 +240,16 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	end
 	
 	%initialize connection with SGL
-	[sFig,sRM] = RM_initSGL(sFig,sRM);
+	[sFig,sRM] = SC_initSGL(sFig,sRM);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 	
 	
 	%check if both data path and stim path is set
 	if isfield(sRM,'boolInitSGL') && ~isempty(sRM.boolInitSGL) && sRM.boolInitSGL && ...
 			isfield(sRM,'strSourcePathLog') && ~isempty(sRM.strSourcePathLog)
-		[sFig,sRM] = RM_initialize(sFig,sRM);
+		[sFig,sRM] = SC_initialize(sFig,sRM);
 	end
 end
 function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -260,7 +260,7 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	global sRM;
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%switch path
 	try
@@ -273,7 +273,7 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	strSourcePathLog = uigetdir('Select stim log path');
 	%back to old path
 	cd(oldPath);
-	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),RM_unlock(handles);return;end
+	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),SC_unlock(handles);return;end
 	if strcmpi(strSourcePathLog(end),filesep)
 		strSourcePathLog(end) = [];
 	end
@@ -283,12 +283,12 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	set(sFig.ptrTextStimPath, 'string', strSourcePathLog);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 	
 	%check if connection is active and stim path is set
 	if isfield(sRM,'boolInitSGL') && ~isempty(sRM.boolInitSGL) && sRM.boolInitSGL && ...
 			isfield(sRM,'strSourcePathLog') && ~isempty(sRM.strSourcePathLog)
-		[sFig,sRM] = RM_initialize(sFig,sRM);
+		[sFig,sRM] = SC_initialize(sFig,sRM);
 	end
 end
 function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -297,33 +297,33 @@ function ptrListSelectProbe_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sRM;
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
-	[sFig,sRM] = RM_initSGL(sFig,sRM);
+	[sFig,sRM] = SC_initSGL(sFig,sRM);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrListSelectChannel_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
 	RM_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrListSelectDataProcessing_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	% update maps
 	RM_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrEditDownsample_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
@@ -349,16 +349,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
-	RM_unlock(handles);
+	SC_unlock(handles);
 	
 	%restart timer
-	stop(sFig.objTimer);
+	stop(sFig.objMainTimer);
 	objTimer = timer();
 	objTimer.Period = 1;
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @RM_main;
-	sFig.objTimer = objTimer;
+	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
 	%update text
@@ -371,7 +371,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sRM;
 	
 	%stop timer
-	stop(sFig.objTimer);
+	stop(sFig.objMainTimer);
 	
 	%clear data and reset to defaults
 	sRM = struct;
@@ -384,11 +384,14 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @RM_main;
-	sFig.objTimer = objTimer;
+	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
 	%update text
 	SC_updateTextInformation({''});
+	
+	%check if default host is online
+	ptrEditHostSGL_Callback([], [], handles);
 end
 function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define global
@@ -408,7 +411,7 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 	%reload data if initialized
 	if IsInitialized
 		%lock gui
-		RM_lock(handles);
+		SC_lock(handles);
 		SC_updateTextInformation({'Data cleared, re-processing data...'});
 		
 		%connect to host
@@ -416,10 +419,10 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 		sRM.hSGL = SpikeGL(sRM.strHostSGL);
 		
 		%re-establish connection
-		[sFig,sRM] = RM_initSGL(sFig,sRM);
+		[sFig,sRM] = SC_initSGL(sFig,sRM);
 		
 		%reinitialize
-		[sFig,sRM] = RM_initialize(sFig,sRM);
+		[sFig,sRM] = SC_initialize(sFig,sRM);
 		 
 		%run main
 		RM_main();
@@ -431,7 +434,7 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sFig;
 	
 	%lock gui
-	RM_lock(handles);
+	SC_lock(handles);
 		
 	%get data
 	intMinChan = str2double(get(hObject,'String'));
@@ -456,7 +459,7 @@ function ptrEditChannelMin_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 
 function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -465,7 +468,7 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	global sFig;
 	
 	%lock gui
-	RM_lock(handles);
+	SC_lock(handles);
 		
 	%get data
 	intMaxChan = str2double(get(hObject,'String'));
@@ -490,14 +493,14 @@ function ptrEditChannelMax_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	SC_updateTextInformation({strMsg});
 		
 	%unlock gui
-	RM_unlock(handles);
+	SC_unlock(handles);
 end
 function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
 	global sRM;
 	
 	%lock GUI
-	RM_lock(handles);
+	SC_lock(handles);
 	
 	%get channel
 	intStimSyncChanNI = str2double(get(hObject,'String'));
@@ -515,5 +518,5 @@ function ptrEditStimSyncNI_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	sRM.intStimSyncChanNI = intStimSyncChanNI;
 	
 	%unlock GUI
-	RM_unlock(handles);
+	SC_unlock(handles);
 end

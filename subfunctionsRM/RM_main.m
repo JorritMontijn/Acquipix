@@ -172,11 +172,11 @@ function RM_main(varargin)
 		
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		RM_unlock(sFig);
+		SC_unlock(sFig);
 	catch ME
 		%unlock busy & GUI
 		sFig.boolIsBusy = false;
-		RM_unlock(sFig);
+		SC_unlock(sFig);
 		
 		%send error
 		dispErr(ME);
