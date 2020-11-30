@@ -86,10 +86,9 @@ function OT_main(varargin)
 			%get data
 			vecSpikeT = sOT.vecSubSpikeT; %time in ms (uint32)
 			vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16); 1-start
-			vecStimOnT = sOT.vecDiodeOnT; %on times of all stimuli (diode on time)
-			vecStimDurT = sOT.vecStimOffT - sOT.vecStimOnT; %stim duration (reliable NI timestamps difference)
+			vecStimOnT = sOT.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+			vecStimDurT = sOT.vecStimOffT(1:intTrials) - sOT.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
 			vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
-			
 			%get selected channels
 			vecUseSpkChans = sOT.vecSpkChans;
 			intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));

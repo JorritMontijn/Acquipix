@@ -138,7 +138,7 @@ function RM_redraw(varargin)
 	%% draw image
 	%select channel
 	if strcmp(strChannel,'Magic+')
-		matPlot = mean(bsxfun(@mtimes,matMeanR(vecBest),reshape(vecRelMax(vecBest),[1 1 intMagic])),3);
+		matPlot = mean(bsxfun(@mtimes,matMeanR(:,:,vecBest),reshape(vecRelMax(vecBest),[1 1 intMagic])),3);
 		strChannel = strcat(strChannel,sprintf(' on Ch%d-%d (%d/%d used)',vecSelectChans(1)-1,vecSelectChans(end)-1,numel(vecSelectChans),intChMax));
 	elseif strcmp(strChannel,'Mean')
 		matPlot = mean(matMeanR(:,:,vecSelectChans),3);

@@ -86,8 +86,8 @@ function RM_main(varargin)
 			%get data
 			vecSpikeT = sRM.vecSubSpikeT; %time in ms (uint32)
 			vecSpikeCh = sRM.vecSubSpikeCh; %channel id (uint16); 1-start
-			vecStimOnT = sRM.vecDiodeOnT; %on times of all stimuli (diode on time)
-			vecStimDurT = sRM.vecStimOffT - sRM.vecStimOnT; %stim duration (reliable NI timestamps difference)
+			vecStimOnT = sRM.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+			vecStimDurT = sRM.vecStimOffT(1:intTrials) - sRM.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
 			vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
 			
 			%get selected channels

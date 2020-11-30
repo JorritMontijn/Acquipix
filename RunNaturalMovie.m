@@ -127,7 +127,11 @@ sStimParams.vecStimulusSize_deg = 0;%circular window in degrees [35]
 sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
-sStimParams.intUseScreen = 0; %which screen to use
+if structEP.debug == 1
+	sStimParams.intUseScreen = 0; %which screen to use
+else
+	sStimParams.intUseScreen = 2; %which screen to use
+end
 sStimParams.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
 sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
@@ -137,7 +141,7 @@ sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 
 
 %stimulus control variables
 sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParams.intUseGPU = 0;
+sStimParams.intUseGPU = 1;
 sStimParams.intAntiAlias = 0;
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
@@ -462,7 +466,7 @@ try
 			%next stim
 			dblTime = dblNextFlip - dblStimStartFlip + dblStimFrameDur/2;
 			tStamp = mod(eps+dblTime,dblStimDurSecs);
-			intFrame = min([numel(vecTex) vecSceneFrameIDs(1+round(tStamp * sThisStimObject.FrameRate))]);
+			intFrame = min([numel(vecTex) vecSceneFrameIDs(min([numel(vecSceneFrameIDs) (1+round(tStamp * sThisStimObject.FrameRate))]))]);
 			Screen('DrawTexture',ptrWindow,vecTex(intFrame));
 			Screen('DrawingFinished', ptrWindow);
 		end

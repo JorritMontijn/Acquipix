@@ -199,7 +199,7 @@ function OT_redraw(varargin)
 	hold(sFig.ptrAxesHandle,'off');
 	
 	%clean up figure
-	ylabel(sFig.ptrAxesHandle,'MUA (a.u.)');
+	ylabel(sFig.ptrAxesHandle,'Spike events (Hz)');
 	xlabel(sFig.ptrAxesHandle,'Stimulus Orientation (deg)');
 	fixfig(sFig.ptrAxesHandle,false);
 	title(sFig.ptrAxesHandle,strTitle,'FontSize',10);

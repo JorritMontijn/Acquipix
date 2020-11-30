@@ -28,16 +28,16 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	dblSampFreqIM = sStream.dblSampFreqIM;
 	dblEphysTimeNI = sStream.dblEphysTimeNI;
 	dblEphysTimeIM = sStream.dblEphysTimeIM;
-	dblEphysStepSecs = 5;
+	dblSyncBufferSize = 30; %seconds
 	intEphysTrialN = sStream.intEphysTrialN; %not used, only updated
 	dblEphysTrialT = sStream.dblEphysTrialT; %not used, only updated
 	
 	%get probe variables
 	sChanMap = sStream.sChanMap;
 	sP = DP_GetParamStruct;
-	dblStreamBufferSize = 5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval lower to be safe
-	intMaxFetchIM = round(dblSampFreqIM*dblStreamBufferSize);
-	intMaxFetchNI = round(dblSampFreqNI*dblStreamBufferSize);
+	dblStreamBufferSizeSGL = 5; %stream buffer size should be 8 seconds, but we'll set the maximum retrieval lower to be safe
+	intMaxFetchIM = round(dblSampFreqIM*dblStreamBufferSizeSGL);
+	intMaxFetchNI = round(dblSampFreqNI*dblStreamBufferSizeSGL);
 	
 	%update
 	sStream.vecSelectChans = sStream.intMinChan:sStream.intMaxChan;
@@ -137,8 +137,8 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	vecTimestampsNI = cat(2,vecOldTimestampsNI,vecNewTimestampsNI);
 	vecSyncData = cat(2,vecOldSyncData,vecNewSyncData);
 	
-	%keep last 6 seconds
-	indKeepSync = vecSyncData > (vecSyncData(end) - 6);
+	%keep last dblSpikeBufferSize seconds
+	indKeepSync = vecSyncData > (vecSyncData(end) - dblSyncBufferSize);
 	vecUseSyncData = vecSyncData(indKeepSync);
 	vecUseTimestampsNI = vecTimestampsNI(indKeepSync);
 	

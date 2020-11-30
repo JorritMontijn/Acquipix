@@ -63,7 +63,7 @@ function NM_redraw(varargin)
 	%intTrials = sNM.intRespTrialN;
 	matRespNM = sNM.matRespNM; %[bin x rep x chan] matrix
 	vecBinCenters = sNM.vecBinCenters;
-	[intBins,intReps,intChans] = size(matRespNM);
+	[intBins,intReps,intChMax] = size(matRespNM);
 	
 	%% get channel selection vectors
 	vecAllChans = sNM.vecAllChans; %AP, LFP, NI; 0-start
@@ -72,13 +72,23 @@ function NM_redraw(varargin)
 	vecSelectChans = sNM.vecSelectChans; %AP, selected chans; 1-start
 	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans-1)); %AP, selected chans; 0-start
 	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
+	intUseChN = numel(vecSelectChans);
 			
 	%% calculate best
+	if contains(strMetric,'ANOVA')
+		%this is what we'll do anyway
+	elseif contains(strMetric,getGreek('delta'))
+		%ignore; to do
+	else
+		%should not be possible
+	end
+	
 	vecP=ones(1,intSpkChNum);
 	for intCh=vecSelectChans
 		vecP(intCh) = anova1(matRespNM(:,:,intCh)',[],'off');
 	end
 	vecZ = norminv(1-vecP/2);
+	vecZ(isnan(vecZ)) = 0;
 	
 	intMagic = 10;
 	[vecBestZ,vecBestIdx]=findmax(vecZ,intMagic);
@@ -127,10 +137,11 @@ function NM_redraw(varargin)
 	end
 	
 	%clean up figure
-	title(sFig.ptrAxesHandle,[strDataProc '; ' strChannel]);
+	ylabel(sFig.ptrAxesHandle,'Spike events (Hz)');
+	xlabel(sFig.ptrAxesHandle,'Time after start (s)');
 	%fixfig(sFig.ptrAxesHandle,false);
-	grid(sFig.ptrAxesHandle,'off');
-	axis(sFig.ptrAxesHandle,'off');
+	title(sFig.ptrAxesHandle,[strDataProc '; ' strChannel],'FontSize',10);
+	
 	if intMakeScatterPlot == 1
 		fixfig(sFig.ptrAxesHandle2,false);
 		title(sFig.ptrAxesHandle2,'Z-score');

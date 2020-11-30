@@ -3,7 +3,6 @@ function NM_main(varargin)
 	%get globals
 	global sFig;
 	global sNM;
-	sNM = 1;
 	
 	try
 		%% check if busy
@@ -60,7 +59,6 @@ function NM_main(varargin)
 			sNM.dblStimTrialT = dblStimTrialT;
 			sNM.vecStimOnT = vecNewStimOnT;
 			sNM.vecStimOffT = vecNewStimOffT;
-			sNM.FlickerFreq = sStimObject(end).FlickerFreq;
 			
 			%update fig
 			set(sFig.ptrTextStimTrialT, 'string',sprintf('%.2f',dblStimTrialT));
@@ -81,8 +79,8 @@ function NM_main(varargin)
 			%get data
 			vecSpikeT = sNM.vecSubSpikeT; %time in ms (uint32)
 			vecSpikeCh = sNM.vecSubSpikeCh; %channel id (uint16); 1-start
-			vecStimOnT = sNM.vecDiodeOnT; %on times of all stimuli (diode on time)
-			vecStimDurT = sNM.vecStimOffT - sNM.vecStimOnT; %stim duration (reliable NI timestamps difference)
+			vecStimOnT = sNM.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+			vecStimDurT = sNM.vecStimOffT(1:intTrials) - sNM.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
 			vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
 			
 			%get selected channels
@@ -111,6 +109,7 @@ function NM_main(varargin)
 				
 				%subselect spikes
 				vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
+				
 				%if ePhys data is not available yet, break
 				if isempty(vecStimSpikes)
 					continue;
@@ -122,7 +121,7 @@ function NM_main(varargin)
 				vecRunCh = find(ismember(vecSpkChans+1,vecSubCh));
 				for intCh=vecRunCh(:)'
 					%bin
-					vecChSpikeT = vecSubT(vecSubCh==intCh);
+					vecChSpikeT = double(vecSubT(vecSubCh==intCh))/1000;
 					matResp_temp(:,intRep,intCh) = histcounts(vecChSpikeT,vecBinEdges+dblStartStim);
 				end
 			end

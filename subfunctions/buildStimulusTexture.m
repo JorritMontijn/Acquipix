@@ -77,7 +77,7 @@ function [vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimPar
 		%load movie
 		strSceneFile = strcat(strSceneDir,filesep,strFile);
 		objVideo = VideoReader(strSceneFile);
-		intFrames = objVideo.NumFrames;
+		intFrames = objVideo.NumberOfFrames;
 		intHeight = objVideo.Height;
 		intWidth = objVideo.Width;
 		dblDuration = objVideo.Duration;
