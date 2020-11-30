@@ -9,9 +9,11 @@ close all;
 dblLightMultiplier = 0.8;
 boolUseSGL = true;
 boolUseNI = true;
+boolDebug = false;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
 strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
+strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 if ~exist(strTexDir,'dir'),mkdir(strTexDir);end
@@ -73,7 +75,7 @@ catch ME
 end
 
 %% check if temporary directory exists, clean or make
-strTempDir = 'X:\JorritMontijn\TempObjects';
+strTempDir = [strTempMasterPath 'TempObjects'];
 if exist(strTempDir,'dir')
 	warning('off','backtrace')
 	warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
@@ -106,7 +108,7 @@ intUseDaqDevice = 1; %set to 0 to skip I/O
 structEP.strFile = mfilename;
 
 %screen params
-structEP.debug = 1;
+structEP.debug = boolDebug;
 
 %% stimulus params
 %visual space parameters
@@ -125,7 +127,7 @@ sStimParams.vecStimulusSize_deg = 0;%circular window in degrees [35]
 sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
-sStimParams.intUseScreen = 2; %which screen to use
+sStimParams.intUseScreen = 0; %which screen to use
 sStimParams.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
 sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
@@ -135,7 +137,7 @@ sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 
 
 %stimulus control variables
 sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParams.intUseGPU = 1;
+sStimParams.intUseGPU = 0;
 sStimParams.intAntiAlias = 0;
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
@@ -143,7 +145,8 @@ sStimParams.vecContrasts = [100];
 sStimParams.vecLuminances = [100];
 sStimParams.vecScenes = [1]; %1: condor flight school
 sStimParams.strScene = 'CondorFlightSchool'; %description
-		
+sStimParams.varDispRate = 'Screen'; %'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
+
 %build single-repetition list
 [sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParams);
 
@@ -156,33 +159,13 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 20;
+%note: stimulus duration is assigned automatically
+structEP.intNumRepeats = 100;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0;
-structEP.dblSecsStimDur = 20;
 structEP.dblSecsBlankPost = 0;
 structEP.dblSecsBlankAtEnd = 3;
-
-%% create presentation vectors
 structEP.intStimTypes = numel(sStimObject);
-structEP.vecTrialStimTypes = [];
-for intRep = 1:structEP.intNumRepeats
-	%randomized order
-	structEP.vecTrialStimTypes = [structEP.vecTrialStimTypes randperm(structEP.intStimTypes)];
-end
-structEP.intTrialNum = numel(structEP.vecTrialStimTypes);
-
-initialBlank = structEP.dblSecsBlankAtStart;
-trialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost;
-endBlank = structEP.dblSecsBlankAtEnd;
-totalLength = initialBlank + trialDur * structEP.intTrialNum + endBlank;
-totalDurSecs = 	structEP.dblSecsBlankAtStart + structEP.intTrialNum * (structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost) + structEP.dblSecsBlankAtEnd;
-
-structEP.vecTrialStartSecs = initialBlank:trialDur:(totalLength-endBlank-1);
-structEP.vecTrialStimOnSecs = structEP.vecTrialStartSecs + structEP.dblSecsBlankPre;
-structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsStimDur;
-structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
-
 
 %% initialize NI I/O box
 if boolUseNI
@@ -221,7 +204,11 @@ try
 	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
 	if ~boolUseSGL,Screen('Preference', 'SkipSyncTests', 1);end
-	[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+	if structEP.debug == 1
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,[0 0 640 640]);
+	else
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+	end
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
 	sStimParams.vecRect = vecRect;
@@ -254,6 +241,28 @@ try
 	end
 	fprintf('   Done\n');
 	
+	%% read stimulus duration & create presentation vectors
+	structEP.dblSecsStimDur = numel(vecSceneFrameIDs)/intStimFrameRate;
+	%pres vecs
+	structEP.vecTrialStimTypes = [];
+	for intRep = 1:structEP.intNumRepeats
+		%randomized order
+		structEP.vecTrialStimTypes = [structEP.vecTrialStimTypes randperm(structEP.intStimTypes)];
+	end
+	structEP.intTrialNum = numel(structEP.vecTrialStimTypes);
+	
+	initialBlank = structEP.dblSecsBlankAtStart;
+	trialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost;
+	endBlank = structEP.dblSecsBlankAtEnd;
+	totalLength = initialBlank + trialDur * structEP.intTrialNum + endBlank;
+	totalDurSecs = 	structEP.dblSecsBlankAtStart + structEP.intTrialNum * (structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost) + structEP.dblSecsBlankAtEnd;
+	
+	structEP.vecTrialStartSecs = initialBlank:trialDur:(totalLength-endBlank-1);
+	structEP.vecTrialStimOnSecs = structEP.vecTrialStartSecs + structEP.dblSecsBlankPre;
+	structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsStimDur;
+	structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
+
+
 	%% attempt to pre-load textures
 	if boolPreLoadTextures
 		fprintf('\nAttempting texture pre-loading...');
@@ -307,16 +316,17 @@ try
 	%show trial summary
 	fprintf('Finished preparation at [%s], will present %d repetitions of %d stimuli (est. dur: %.1fs)\n\n   Waiting for start signal\n',...
 		getTime,structEP.intNumRepeats,structEP.intStimTypes,totalDurSecs);
-	
-	%wait for signal
-	opts = struct;
-	opts.Default = 'Start';
-	opts.Interpreter = 'tex';
-	strAns = questdlg('Would you like to start the stimulation?', ...
-		'Start Stimulation', ...
-		'Start','Cancel',opts);
-	if ~strcmp(strAns,opts.Default)
-		error([mfilename ':RunCancelled'],'Cancelling');
+	if ~boolDebug
+		%wait for signal
+		opts = struct;
+		opts.Default = 'Start';
+		opts.Interpreter = 'tex';
+		strAns = questdlg('Would you like to start the stimulation?', ...
+			'Start Stimulation', ...
+			'Start','Cancel',opts);
+		if ~strcmp(strAns,opts.Default)
+			error([mfilename ':RunCancelled'],'Cancelling');
+		end
 	end
 	
 	%set timers
@@ -408,18 +418,31 @@ try
 		if boolUseNI,startBackground(objDAQOut);end
 		
 		%% show stimulus
-		dblStimStartFlip = dblLastFlip;
 		dblNextFlip = 0;
 		intFlipCounter = 0;
 		vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
 		vecStimFrames = nan(size(vecStimFlips));
 		boolFirstFlip = false;
 		refTimeLocal = tic;
-		while toc(refTimeLocal) < (dblStimDurSecs - dblStimFrameDur)
+		dblStimStartFlip = dblLastFlip;
+		while (dblLastFlip-dblStimStartFlip) < (dblStimDurSecs - dblStimFrameDur)
 			%send trigger for stim start
 			if ~boolFirstFlip
 				%set switch
 				boolFirstFlip = 1;
+				
+				%first stim
+				intFrame = vecSceneFrameIDs(1);
+				Screen('DrawTexture',ptrWindow,vecTex(intFrame));
+				Screen('DrawingFinished', ptrWindow);
+			
+				%first flip
+				dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
+				dblStimStartFlip = dblLastFlip;
+				dblNextFlip = dblLastFlip + dblStimFrameDur/2;
+				intFlipCounter = intFlipCounter + 1;
+				vecStimFlips(intFlipCounter) = dblLastFlip;
+				vecStimFrames(intFlipCounter) = intFrame;
 				
 				%log NI timestamp
 				if boolUseSGL
@@ -427,21 +450,21 @@ try
 				else
 					dblStimOnNI = nan;
 				end
+			else
+				%flip
+				dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
+				dblNextFlip = dblLastFlip + dblStimFrameDur/2;
+				intFlipCounter = intFlipCounter + 1;
+				vecStimFlips(intFlipCounter) = dblLastFlip;
+				vecStimFrames(intFlipCounter) = intFrame;
 			end
 			
-			%draw stimulus
-			dblTime = toc(refTimeLocal);
+			%next stim
+			dblTime = dblNextFlip - dblStimStartFlip + dblStimFrameDur/2;
 			tStamp = mod(eps+dblTime,dblStimDurSecs);
-			intFrame = vecSceneFrameIDs(ceil(tStamp * sThisStimObject.FrameRate));
+			intFrame = min([numel(vecTex) vecSceneFrameIDs(1+round(tStamp * sThisStimObject.FrameRate))]);
 			Screen('DrawTexture',ptrWindow,vecTex(intFrame));
 			Screen('DrawingFinished', ptrWindow);
-			
-			%flip
-			dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
-			dblNextFlip = dblLastFlip + dblStimFrameDur/2;
-			intFlipCounter = intFlipCounter + 1;
-			vecStimFlips(intFlipCounter) = dblLastFlip;
-			vecStimFrames(intFlipCounter) = intFrame;
 		end
 		vecStimFlips(isnan(vecStimFlips)) = [];
 		vecStimFrames(isnan(vecStimFrames)) = [];
@@ -456,14 +479,17 @@ try
 		else
 			dblStimOffNI = nan;
 		end
-			
+		
 		%% save stimulus object
 		try
 			%add timestamps
-			if boolUseSGL
-				sThisStimObject.dblStimOnNI = dblStimOnNI;
-				sThisStimObject.dblStimOffNI = dblStimOffNI;
-			end
+			sThisStimObject.ActStimType = intStimType;
+			sThisStimObject.ActStartSecs = dblTrialStartFlip;
+			sThisStimObject.ActOnSecs = dblStimOnFlip;
+			sThisStimObject.ActOffSecs = dblStimOffFlip;
+			sThisStimObject.ActOnNI = dblStimOnNI;
+			sThisStimObject.ActOffNI = dblStimOffNI;
+			
 			%save object
 			sObject = sThisStimObject;
 			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
@@ -471,15 +497,7 @@ try
 			warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
 		end
 		
-		%% wait post-blanking
-		dblTrialDur = dblLastFlip - dblTrialStartFlip;
-		while dblTrialDur < (dblEndSecs - dblStartSecs - 2*dblStimFrameDur)
-			%do nothing
-			Screen('FillRect',ptrWindow, sStimParams.intBackground);
-			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
-			dblTrialDur = dblLastFlip - dblTrialStartFlip;
-		end
-		
+		%% save data
 		%new stim-based output
 		intStimNumber = intThisTrial;
 		structEP.TrialNumber(intStimNumber) = intThisTrial;
@@ -504,7 +522,9 @@ try
 		end
 		
 		%show trial summary
-		fprintf('Completed trial %d of %d at time=%.3fs (stim dur=%.3fs); stimulus was %.1f degrees; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,sThisStimObject.Scene,strProps);
+		fprintf('Completed trial %d of %d (S%d) at time=%.3fs (stim dur=%.3fs); last frame was %d/%d; %d frames skipped; %s\n',...
+			intThisTrial,structEP.intTrialNum,sThisStimObject.Scene,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,...
+			vecStimFrames(end),vecSceneFrameIDs(end),(numel(vecSceneFrameIDs) - numel(unique(vecStimFrames))),strProps);
 	end
 	
 	%% save data
@@ -536,7 +556,9 @@ try
 	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
 	%end recording
-	CloseSGL(hSGL);
+	if boolUseSGL
+		CloseSGL(hSGL);
+	end
 	
 	%close Daq IO
 	if intUseDaqDevice > 0

@@ -129,13 +129,16 @@ function RM_redraw(varargin)
 		vecRelMax(intCh) = max(flat(matRelR(:,:,intCh)));
 	end
 	vecRelMax(isnan(vecRelMax)) = 0;
-	[dblRelMax,intBest]=max(vecRelMax);
+	intMagic = 10;
+	[vecBestRelMax,vecBest]=findmax(vecRelMax,intMagic);
 	intUnculledChannels = numel(vecActChans);
+	dblRelMax = vecBestRelMax(1);
+	intBest = vecBest(1);
 	
 	%% draw image
 	%select channel
 	if strcmp(strChannel,'Magic+')
-		matPlot = mean(bsxfun(@mtimes,matMeanR,reshape(vecRelMax,[1 1 intChMax])),3);
+		matPlot = mean(bsxfun(@mtimes,matMeanR(vecBest),reshape(vecRelMax(vecBest),[1 1 intMagic])),3);
 		strChannel = strcat(strChannel,sprintf(' on Ch%d-%d (%d/%d used)',vecSelectChans(1)-1,vecSelectChans(end)-1,numel(vecSelectChans),intChMax));
 	elseif strcmp(strChannel,'Mean')
 		matPlot = mean(matMeanR(:,:,vecSelectChans),3);
@@ -149,7 +152,7 @@ function RM_redraw(varargin)
 		matPlot = matMeanR(:,:,intChannelNumber);
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intChannelNumber-1,intUseChN,intChMax));
 	else
-		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
+		SC_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;
 	end
 	strVersion=version();

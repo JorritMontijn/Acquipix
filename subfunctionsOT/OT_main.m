@@ -82,12 +82,13 @@ function OT_main(varargin)
 			%update variables
 			vecOriDegs = cell2mat({sStimObject(:).Orientation});
 			[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
-			
+				
 			%get data
 			vecSpikeT = sOT.vecSubSpikeT; %time in ms (uint32)
-			vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16)
+			vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16); 1-start
 			vecStimOnT = sOT.vecDiodeOnT; %on times of all stimuli (diode on time)
-			vecStimOffT = sOT.vecDiodeOffT; %off times of all stimuli (diode off time)
+			vecStimDurT = sOT.vecStimOffT - sOT.vecStimOnT; %stim duration (reliable NI timestamps difference)
+			vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
 			
 			%get selected channels
 			vecUseSpkChans = sOT.vecSpkChans;

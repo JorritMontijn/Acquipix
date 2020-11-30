@@ -77,10 +77,11 @@ function [vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimPar
 		%load movie
 		strSceneFile = strcat(strSceneDir,filesep,strFile);
 		objVideo = VideoReader(strSceneFile);
-		intFrames = objVideo.NumberOfFrames;
+		intFrames = objVideo.NumFrames;
 		intHeight = objVideo.Height;
 		intWidth = objVideo.Width;
 		dblDuration = objVideo.Duration;
+		%dblFrameRate = objVideo.FrameRate;
 		dblFrameRate = objVideo.FrameRate;
 		fprintf('Loading %s\n   [%dx%d pixels; %d frames (%.3fHz), total duration %.3fs]\n',strFile,intWidth,intHeight,intFrames,dblFrameRate,dblDuration);
 	
@@ -96,13 +97,22 @@ function [vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimPar
 		sSceneObject.ScreenHeight_cm = sStimParams.dblScreenHeight_cm;
 		sSceneObject.ScreenWidth_cm = sStimParams.dblScreenWidth_cm;
 		sSceneObject.ScreenDistance_cm = sStimParams.dblScreenHeight_cm;
-	
-		sSceneObject.ScreenFrames = round(sStimObject.FrameRate*dblDuration);
+		
+		sSceneObject.DispRate = sStimObject.DispRate;
+		sSceneObject.SceneFrames = intFrames;
 		sSceneObject.ScreenFrameRate = sStimObject.FrameRate;
+		
+		if strcmpi(sSceneObject.DispRate,'Screen')
+			sSceneObject.SceneFrameRate = sSceneObject.ScreenFrameRate;
+		elseif strcmpi(sSceneObject.DispRate,'Source')
+			sSceneObject.SceneFrameRate = dblFrameRate;
+		else
+			error([mfilename ':DispRateError'],'DispRate can only be "Screen" or "Source"');
+		end
+		sSceneObject.ScreenFrames = round(sSceneObject.SceneFrames*(sSceneObject.ScreenFrameRate/sSceneObject.SceneFrameRate));
+		
 		sSceneObject.ScenePixX = intWidth;
 		sSceneObject.ScenePixY = intHeight;
-		sSceneObject.SceneFrames = intFrames;
-		sSceneObject.SceneFrameRate = dblFrameRate;
 		sSceneObject.StimPosX_deg = sStimObject.StimPosX_deg;
 		sSceneObject.StimPosY_deg = sStimObject.StimPosY_deg;
 		sSceneObject.StimulusSize_deg = sStimObject.StimulusSize_deg;

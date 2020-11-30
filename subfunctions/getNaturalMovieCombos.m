@@ -38,6 +38,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimPa
 		'vecContrasts',[100];... %contrast [0-100]
 		'vecLuminances',[100];... %luminance [0-100]
 		'vecScenes',[1];...%scene [1]
+		'varDispRate','Source';...%'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
 	};
 	
 	%% assign supplied or default values
@@ -147,6 +148,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimPa
 				sStimObject(intStim).SubjectPosY_cm = sStimParams.dblSubjectPosY_cm;
 				sStimObject(intStim).AntiAlias = sStimParams.intAntiAlias;
 				sStimObject(intStim).UseGPU = sStimParams.intUseGPU;
+				sStimObject(intStim).DispRate = sStimParams.varDispRate;
 			end
 		else
 			strParam = cellParamNames{intParam}; %remove "vec"

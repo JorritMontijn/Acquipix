@@ -170,7 +170,7 @@ function OT_redraw(varargin)
 		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,vecActChans(intChNr)));
 		vecUseResp = matUseResp(intChNr,:);
 	else
-		OT_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
+		SC_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
 		return;
 	end
 	%add tuning metrics to title
