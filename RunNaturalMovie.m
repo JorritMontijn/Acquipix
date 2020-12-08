@@ -208,11 +208,14 @@ try
 	KbName('UnifyKeyNames');
 	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
-	if ~boolUseSGL,Screen('Preference', 'SkipSyncTests', 1);end
-	if structEP.debug == 1
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,[0 0 640 640]);
-	else
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+	if structEP.debug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
+	try
+		Screen('Preference', 'SkipSyncTests', 0);
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
+	catch ME
+		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
+		Screen('Preference', 'SkipSyncTests', 1);
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
 	end
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;

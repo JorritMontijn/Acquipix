@@ -12,10 +12,10 @@
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
 boolUseSGL = true;
 boolUseNI = true;
-intDebug = 0;
+boolDebug = false;
 intUseMask = 0;
-dblLightMultiplier = 0.8; %strength of infrared LEDs
-dblSyncLightMultiplier = 0.5;
+dblLightMultiplier = 1; %strength of infrared LEDs
+dblSyncLightMultiplier = 1;
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -119,7 +119,7 @@ intUseDaqDevice = 1; %set to 0 to skip I/O
 structEP.strFile = mfilename;
 
 %screen params
-structEP.debug = intDebug;
+structEP.debug = boolDebug;
 
 %% stimulus params
 %visual space parameters
@@ -132,7 +132,12 @@ sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
 sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %screen variables
-sStimParamsSettings.intUseScreen = 2; %which screen to use
+%screen variables
+if structEP.debug == 1
+	sStimParamsSettings.intUseScreen = 0; %which screen to use
+else
+	sStimParamsSettings.intUseScreen = 2; %which screen to use
+end
 sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
 sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
@@ -231,13 +236,14 @@ try
 	KbName('UnifyKeyNames');
 	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
+	if structEP.debug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
 	try
 		Screen('Preference', 'SkipSyncTests', 0);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
 	catch ME
 		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
 		Screen('Preference', 'SkipSyncTests', 1);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
 	end
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;

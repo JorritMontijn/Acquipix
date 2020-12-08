@@ -11,6 +11,7 @@ function RM_redraw(varargin)
 		return;
 	end
 	%check if busy
+	if ~sRM.IsInitialized,return;end
 	if sFig.boolIsDrawing,return;end
 	sFig.boolIsDrawing = true;
 	
@@ -19,39 +20,6 @@ function RM_redraw(varargin)
 	
 	%check whether to make scatter plot
 	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
-	
-	% Draw the image if requested
-	if intNewFigure == 0
-		%check if figure is still there
-		try
-			ptrOldFig = get(sFig.ptrWindowHandle);
-		catch %#ok<CTCH>
-			ptrOldFig = [];
-		end
-		
-		%make new figure
-		if isempty(ptrOldFig)
-			%close figure if old one still present
-			if ~isempty(ptrOldFig)
-				close(sFig.ptrWindowHandle);
-			end
-			
-			% create figure
-			sFig.ptrWindowHandle = figure;
-			sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
-			sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
-			axis(sFig.ptrAxesHandle2,'off');
-		else
-			%set active figure
-			%figure(sFig.ptrWindowHandle);
-		end
-	else
-		% create figure
-		sFig.ptrWindowHandle = figure;
-		sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
-		sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
-		axis(sFig.ptrAxesHandle2,'off');
-	end
 	
 	%% update trial-average data matrix
 	sStimObject = sRM.sStimObject;
@@ -126,6 +94,45 @@ function RM_redraw(varargin)
 		sRM.cellBaseON = cellBaseON; %[y by x] cell with [chan x rep] matrix
 		sRM.cellStimOFF = cellStimOFF; %[y by x] cell with [chan x rep] matrix
 		sRM.cellBaseOFF = cellBaseOFF; %[y by x] cell with [chan x rep] matrix
+	end
+	
+	%% check if data is available
+	if ~isfield(sRM,'cellStimON') || isempty(sRM.cellStimON)
+		sFig.boolIsDrawing = false;
+		return;
+	end
+	
+	%% draw the image if requested
+	if intNewFigure == 0
+		%check if figure is still there
+		try
+			ptrOldFig = get(sFig.ptrWindowHandle);
+		catch %#ok<CTCH>
+			ptrOldFig = [];
+		end
+		
+		%make new figure
+		if isempty(ptrOldFig)
+			%close figure if old one still present
+			if ~isempty(ptrOldFig)
+				close(sFig.ptrWindowHandle);
+			end
+			
+			% create figure
+			sFig.ptrWindowHandle = figure;
+			sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
+			sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
+			axis(sFig.ptrAxesHandle2,'off');
+		else
+			%set active figure
+			%figure(sFig.ptrWindowHandle);
+		end
+	else
+		% create figure
+		sFig.ptrWindowHandle = figure;
+		sFig.ptrAxesHandle = subplot(2,4,[1 2 3 5 6 7]);
+		sFig.ptrAxesHandle2 = subplot(2,5,[5 10]);
+		axis(sFig.ptrAxesHandle2,'off');
 	end
 	
 	%% get requested parameters
@@ -231,6 +238,7 @@ function RM_redraw(varargin)
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intChannelNumber-1,intUseChN,intChMax));
 	else
 		SC_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
+		sFig.boolIsDrawing = false;
 		return;
 	end
 	strVersion=version();
