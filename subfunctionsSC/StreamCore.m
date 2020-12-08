@@ -244,6 +244,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	if sStream.dblSubLastUpdate > 1 %if last subsample update is more than 1 second ago
 		%unroll buffer
 		[vecLinBuffT,vecReorderData] = sort(sStream.vecTimestampsIM,'ascend');
+		%% IS THIS USING ALL DATA?!
 		vecLinBuffT = vecLinBuffT/dblSampFreqIM;
 		matLinBuffData = sStream.matDataBufferIM(vecReorderData,:); %time by channel
 		vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);

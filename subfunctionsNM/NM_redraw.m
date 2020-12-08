@@ -64,6 +64,7 @@ function NM_redraw(varargin)
 	matRespNM = sNM.matRespNM; %[bin x rep x chan] matrix
 	vecBinCenters = sNM.vecBinCenters;
 	[intBins,intReps,intChMax] = size(matRespNM);
+	matBinCenters = repmat(vecBinCenters,[1 intReps]);
 	
 	%% get channel selection vectors
 	vecAllChans = sNM.vecAllChans; %AP, LFP, NI; 0-start
@@ -123,13 +124,20 @@ function NM_redraw(varargin)
 	strVersion=version();
 	boolGood = str2double(strVersion(1)) > 8;
 	if boolGood
+		cla(sFig.ptrAxesHandle);
+		scatter(sFig.ptrAxesHandle,matBinCenters(:),matPlot(:),'kx');
+		hold(sFig.ptrAxesHandle,'on');
 		errorbar(sFig.ptrAxesHandle,vecBinCenters,vecM,vecE);
+		hold(sFig.ptrAxesHandle,'off');
 		if intMakeScatterPlot == 1
 			scatter(sFig.ptrAxesHandle2,vecZ,vecSpkChans,'kx');
 		end
 	else
 		axes(sFig.ptrAxesHandle);
+		scatter(matBinCenters,matPlot);
+		hold on
 		errorbar(vecBinCenters,vecM,vecE);
+		hold off
 		if intMakeScatterPlot == 1
 			axes(sFig.ptrAxesHandle2);
 			scatter(vecZ,vecSpkChans,'kx');

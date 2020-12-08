@@ -6,7 +6,8 @@ clear all;
 close all;
 
 %% define paths
-dblLightMultiplier = 0.8;
+dblLightMultiplier = 0.8; %strength of infrared LEDs
+dblSyncLightMultiplier = 0.5;
 boolUseSGL = true;
 boolUseNI = true;
 boolDebug = false;
@@ -191,7 +192,7 @@ if boolUseNI
 	
 	%turns leds on
 	stop(objDAQOut);
-	outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+	outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
 	outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
 	queueOutputData(objDAQOut,[outputData1 outputData2]);
 	prepare(objDAQOut);
@@ -360,7 +361,7 @@ try
 		%fill DAQ with data
 		if boolUseNI
 			stop(objDAQOut);
-			outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+			outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
 			outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
 			queueOutputData(objDAQOut,[outputData1 outputData2]);
 			prepare(objDAQOut);
