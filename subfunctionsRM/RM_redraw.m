@@ -10,6 +10,9 @@ function RM_redraw(varargin)
 	if isempty(sRM) || isempty(sFig)
 		return;
 	end
+	%check if busy
+	if sFig.boolIsDrawing,return;end
+	sFig.boolIsDrawing = true;
 	
 	%check whether to plot in new figure
 	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
@@ -50,6 +53,81 @@ function RM_redraw(varargin)
 		axis(sFig.ptrAxesHandle2,'off');
 	end
 	
+	%% update trial-average data matrix
+	sStimObject = sRM.sStimObject;
+	intTrials = min([sRM.intEphysTrialN sRM.intStimTrialN]);
+	if intTrials > sRM.intRespTrialN
+		%% calc RF estimate
+		%ON, OFF, ON-base OFF-base
+		cellStimON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
+		cellBaseON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
+		cellStimOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
+		cellBaseOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
+		
+		%get data
+		vecSpikeT = sRM.vecSubSpikeT; %time in ms (uint32)
+		vecSpikeCh = sRM.vecSubSpikeCh; %channel id (uint16); 1-start
+		vecStimOnT = sRM.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+		vecStimDurT = sRM.vecStimOffT(1:intTrials) - sRM.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
+		vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
+		
+		%get selected channels
+		vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
+		vecSpkChans = sRM.vecSpkChans; %AP; 0-start
+		vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
+		vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
+		vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+		intSpkChNum = numel(vecSpkChans); %number of original spiking channels
+		
+		%% go through objects and assign to matrices
+		for intTrial=1:intTrials
+			%get repetitions of locations
+			vecLinLocOn = sStimObject(intTrial).LinLocOn;
+			vecLinLocOff = sStimObject(intTrial).LinLocOff;
+			matLinLoc = sStimObject(intTrial).LinLoc;
+			
+			%get data
+			if intTrial==1
+				dblStartTrial = vecStimOnT(intTrial)-median(vecStimOffT-vecStimOnT)+0.1;
+			else
+				dblStartTrial = vecStimOffT(intTrial-1)+0.1;
+			end
+			dblStartStim = vecStimOnT(intTrial);
+			dblStopStim = vecStimOffT(intTrial);
+			vecBaseSpikes = find(vecSpikeT>uint32(dblStartTrial*1000) & vecSpikeT<uint32(dblStartStim*1000));
+			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
+			%if ePhys data is not available yet, break
+			if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
+				continue;
+			end
+			
+			%base resp
+			vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
+			vecBaseResp((end+1):intSpkChNum) = 0;
+			
+			%stim resp
+			vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
+			vecStimResp((end+1):intSpkChNum) = 0;
+			%assign data
+			for intLocOn=vecLinLocOn(:)'
+				cellBaseON{matLinLoc==intLocOn}(:,end+1) = vecBaseResp;
+				cellStimON{matLinLoc==intLocOn}(:,end+1) = vecStimResp;
+			end
+			for intLocOff=vecLinLocOff(:)'
+				cellBaseOFF{matLinLoc==intLocOff}(:,end+1) = vecBaseResp;
+				cellStimOFF{matLinLoc==intLocOff}(:,end+1) = vecStimResp;
+			end
+		end
+		
+		%% save data to globals
+		sRM.intRespTrialN = intTrials;
+		sRM.vecSelectChans = vecSelectChans;
+		sRM.cellStimON = cellStimON; %[y by x] cell with [chan x rep] matrix
+		sRM.cellBaseON = cellBaseON; %[y by x] cell with [chan x rep] matrix
+		sRM.cellStimOFF = cellStimOFF; %[y by x] cell with [chan x rep] matrix
+		sRM.cellBaseOFF = cellBaseOFF; %[y by x] cell with [chan x rep] matrix
+	end
+	
 	%% get requested parameters
 	%data prepro
 	intDataProc = get(sFig.ptrListSelectDataProcessing,'Value');
@@ -64,7 +142,7 @@ function RM_redraw(varargin)
 	cellMetrics = get(sFig.ptrListSelectMetric,'String');
 	strMetric = cellChannels{intMetric}; %type of selection; best, magic, etc
 	
-
+	
 	%% get data
 	%intTrials = sRM.intRespTrialN;
 	cellStimON = sRM.cellStimON; %[y by x] cell with [chan x rep] matrix
@@ -80,14 +158,14 @@ function RM_redraw(varargin)
 	vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
 	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans-1)); %AP, selected chans; 0-start
 	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
-			
+	
 	%% prep data
 	%fill empty entries with zeros
 	[intNumCh,intNonEmptyIdx] = max(flat(cellfun(@size,cellStimON,cellfill(1,size(cellStimON)))));
-	cellStimON(cellfun(@isempty,cellStimON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
-	%cellBaseON(cellfun(@isempty,cellBaseON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
-	cellStimOFF(cellfun(@isempty,cellStimOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
-	%cellBaseOFF(cellfun(@isempty,cellBaseOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})}; 
+	cellStimON(cellfun(@isempty,cellStimON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})};
+	%cellBaseON(cellfun(@isempty,cellBaseON)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})};
+	cellStimOFF(cellfun(@isempty,cellStimOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})};
+	%cellBaseOFF(cellfun(@isempty,cellBaseOFF)) = {zeros(intNumCh,1,'like',cellStimON{intNonEmptyIdx})};
 	
 	%get mean/sd responses; [y by x by ch]
 	vecSize = size(cellStimON); %[y by x]
@@ -146,7 +224,7 @@ function RM_redraw(varargin)
 	elseif strcmp(strChannel,'Best')
 		matPlot = matMeanR(:,:,intBest);
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intBest-1,intUseChN,intChMax));
-
+		
 	elseif strcmp(strChannel,'Single')
 		intChannelNumber = vecSelectChans(1);
 		matPlot = matMeanR(:,:,intChannelNumber);
@@ -183,4 +261,8 @@ function RM_redraw(varargin)
 		grid(sFig.ptrAxesHandle2,'off');
 	end
 	drawnow;
+	
+	%unset busy
+	sFig.boolIsDrawing = false;
+	
 end

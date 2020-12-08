@@ -112,47 +112,47 @@ structEP.debug = boolDebug;
 
 %% stimulus params
 %visual space parameters
-sStimParams = struct;
-sStimParams.strStimType = 'NaturalMovie';
-sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParams.dblSubjectPosY_cm = 0; %-3.5 cm; relative to center of screen
-sStimParams.dblScreenDistance_cm = 30;%14; % cm; measured
-sStimParams.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
+sStimParamsSettings = struct;
+sStimParamsSettings.strStimType = 'NaturalMovie';
+sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
+sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
+sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
+sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParams.vecStimPosX_deg = 0; % deg; relative to subject
-sStimParams.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParams.vecSceneSize_deg = 40;%stimulus will be assumed to be this size
-sStimParams.vecStimulusSize_deg = 0;%circular window in degrees [35]
-sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
+sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
+sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
+sStimParamsSettings.vecSceneSize_deg = 40;%stimulus will be assumed to be this size
+sStimParamsSettings.vecStimulusSize_deg = 0;%circular window in degrees [35]
+sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
 if structEP.debug == 1
-	sStimParams.intUseScreen = 0; %which screen to use
+	sStimParamsSettings.intUseScreen = 0; %which screen to use
 else
-	sStimParams.intUseScreen = 2; %which screen to use
+	sStimParamsSettings.intUseScreen = 2; %which screen to use
 end
-sStimParams.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
-sStimParams.dblCornerSize = 1/30; % fraction of screen width
-sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
-sStimParams.dblScreenHeight_cm = 29; % cm; measured [29]
-sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
-sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
+sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
+sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
+sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
+sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
 
 %stimulus control variables
-sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParams.intUseGPU = 1;
-sStimParams.intAntiAlias = 0;
-sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
-sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
-sStimParams.vecContrasts = [100];
-sStimParams.vecLuminances = [100];
-sStimParams.vecScenes = [1]; %1: condor flight school
-sStimParams.strScene = 'CondorFlightSchool'; %description
-sStimParams.varDispRate = 'Screen'; %'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
+sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
+sStimParamsSettings.intUseGPU = 1;
+sStimParamsSettings.intAntiAlias = 0;
+sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
+sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
+sStimParamsSettings.vecContrasts = [100];
+sStimParamsSettings.vecLuminances = [100];
+sStimParamsSettings.vecScenes = [1]; %1: condor flight school
+sStimParamsSettings.strScene = 'CondorFlightSchool'; %description
+sStimParamsSettings.varDispRate = 'Screen'; %'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
 
 %build single-repetition list
-[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParams);
+[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsSettings);
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))

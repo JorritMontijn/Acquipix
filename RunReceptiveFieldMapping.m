@@ -160,6 +160,15 @@ sStimParamsSettings.dblContrast = 100; %contrast; [0-100]
 sStimParamsSettings.dblFlickerFreq = 0; %Hz
 dblInversionDurSecs = (1/sStimParamsSettings.dblFlickerFreq)/2; %Hz
 
+%% trial timing variables
+structEP.dblSecsBlankAtStart = 3;
+structEP.dblSecsBlankPre = 0.3;
+structEP.dblSecsStimDur = 0.6;
+structEP.dblSecsBlankPost = 0.1;
+structEP.dblSecsBlankAtEnd = 3;
+dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
+
+%% prepare stimulus
 %get retinal map
 matMapDegsXYD = buildRetinalSpaceMap(sStimParamsSettings);
 
@@ -183,14 +192,6 @@ end
 if sStimParams.intUseGPU > 0
    objGPU = gpuDevice(sStimParams.intUseGPU);
 end
-
-%% trial timing variables
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.3;
-structEP.dblSecsStimDur = 0.6;
-structEP.dblSecsBlankPost = 0.1;
-structEP.dblSecsBlankAtEnd = 3;
-dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
 
 
 %% initialize NI I/O box

@@ -98,6 +98,16 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig.objMainTimer = objMainTimer;
 	start(objMainTimer);
 	
+	% set timer to update plots
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @RM_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
+	
+
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
 	set(sFig.ptrEditDownsample,'UserData','lock');
@@ -351,7 +361,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	sFig.boolIsBusy = false;
 	SC_unlock(handles);
 	
-	%restart timer
+	%restart main timer
 	stop(sFig.objMainTimer);
 	objTimer = timer();
 	objTimer.Period = 1;
@@ -359,6 +369,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @RM_main;
 	sFig.objMainTimer = objTimer;
+	start(objTimer);
+	
+	%restart draw timer
+	stop(sFig.objMainTimer);
+	objTimer = timer();
+	objTimer.Period = 1;
+	objTimer.StartDelay = 1;
+	objTimer.ExecutionMode = 'fixedSpacing';
+	objTimer.TimerFcn = @RM_redraw;
+	sFig.objDrawTimer = objTimer;
 	start(objTimer);
 	
 	%update text
@@ -372,6 +392,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%stop timer
 	stop(sFig.objMainTimer);
+	stop(sFig.objDrawTimer);
 	
 	%clear data and reset to defaults
 	sRM = struct;
@@ -384,6 +405,15 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
 	objTimer.TimerFcn = @RM_main;
+	sFig.objMainTimer = objTimer;
+	start(objTimer);
+	
+	% set timer to redraw
+	objTimer = timer();
+	objTimer.Period = 1;
+	objTimer.StartDelay = 1;
+	objTimer.ExecutionMode = 'fixedSpacing';
+	objTimer.TimerFcn = @RM_redraw;
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	

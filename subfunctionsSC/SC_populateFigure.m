@@ -1,5 +1,5 @@
 function sFig = SC_populateFigure(handles,boolInit,sFigIn)
-	%RM_populateFigure Populates global figure structure
+	%SC_populateFigure Populates global figure structure
 	
 	%check for initial run
 	if ~exist('boolInit','var') || isempty(boolInit)
@@ -41,4 +41,5 @@ function sFig = SC_populateFigure(handles,boolInit,sFigIn)
 	sFig.ptrWindowHandle = [];
 	sFig.ptrAxesHandle = [];
 	sFig.boolIsBusy = false;
+	sFig.boolIsDrawing = false;
 end

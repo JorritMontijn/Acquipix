@@ -3,6 +3,7 @@ function SC_DeleteFcn(varargin)
 	%get globals
 	global sFig
 	
-	%stop timer
+	%stop timers
 	stop(sFig.objMainTimer);
+	stop(sFig.objDrawTimer);
 end

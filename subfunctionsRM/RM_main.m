@@ -73,84 +73,7 @@ function RM_main(varargin)
 			boolDidSomething = true;
 		end
 		
-		%% update trial-average data matrix
-		intTrials = min([intEphysTrialN intStimTrialN]);
-		if intTrials > intRespTrialN
-			%% calc RF estimate
-			%ON, OFF, ON-base OFF-base
-			cellStimON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-			cellBaseON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-			cellStimOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-			cellBaseOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-			
-			%get data
-			vecSpikeT = sRM.vecSubSpikeT; %time in ms (uint32)
-			vecSpikeCh = sRM.vecSubSpikeCh; %channel id (uint16); 1-start
-			vecStimOnT = sRM.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
-			vecStimDurT = sRM.vecStimOffT(1:intTrials) - sRM.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
-			vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
-			
-			%get selected channels
-			vecAllChans = sRM.vecAllChans; %AP, LFP, NI; 0-start
-			vecSpkChans = sRM.vecSpkChans; %AP; 0-start
-			vecIncChans = sRM.vecIncChans; %AP, minus culled; 0-start
-			vecSelectChans = sRM.vecSelectChans; %AP, selected chans; 1-start
-			vecActChans = sRM.vecIncChans(ismember(sRM.vecIncChans,sRM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
-			intSpkChNum = numel(vecSpkChans); %number of original spiking channels
-			
-			%% go through objects and assign to matrices
-			for intTrial=1:intTrials
-				%get repetitions of locations
-				vecLinLocOn = sStimObject(intTrial).LinLocOn;
-				vecLinLocOff = sStimObject(intTrial).LinLocOff;
-				matLinLoc = sStimObject(intTrial).LinLoc;
-				
-				%get data
-				if intTrial==1
-					dblStartTrial = vecStimOnT(intTrial)-median(vecStimOffT-vecStimOnT)+0.1;
-				else
-					dblStartTrial = vecStimOffT(intTrial-1)+0.1;
-				end
-				dblStartStim = vecStimOnT(intTrial);
-				dblStopStim = vecStimOffT(intTrial);
-				vecBaseSpikes = find(vecSpikeT>uint32(dblStartTrial*1000) & vecSpikeT<uint32(dblStartStim*1000));
-				vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
-				%if ePhys data is not available yet, break
-				if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
-					continue;
-				end
-				
-				%base resp
-				vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
-				vecBaseResp((end+1):intSpkChNum) = 0;
-				
-				%stim resp
-				vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
-				vecStimResp((end+1):intSpkChNum) = 0;
-				%assign data
-				for intLocOn=vecLinLocOn(:)'
-					cellBaseON{matLinLoc==intLocOn}(:,end+1) = vecBaseResp;
-					cellStimON{matLinLoc==intLocOn}(:,end+1) = vecStimResp;
-				end
-				for intLocOff=vecLinLocOff(:)'
-					cellBaseOFF{matLinLoc==intLocOff}(:,end+1) = vecBaseResp;
-					cellStimOFF{matLinLoc==intLocOff}(:,end+1) = vecStimResp;
-				end
-			end
-			
-			%% save data to globals
-			sRM.intRespTrialN = intTrials;
-			sRM.vecSelectChans = vecSelectChans;
-			sRM.cellStimON = cellStimON; %[y by x] cell with [chan x rep] matrix
-			sRM.cellBaseON = cellBaseON; %[y by x] cell with [chan x rep] matrix
-			sRM.cellStimOFF = cellStimOFF; %[y by x] cell with [chan x rep] matrix
-			sRM.cellBaseOFF = cellBaseOFF; %[y by x] cell with [chan x rep] matrix
-			
-			
-			%% update maps
-			RM_redraw(0);
-			boolDidSomething = true;
-		elseif ~boolDidSomething
+		if ~boolDidSomething
 			%% show waiting bar
 			cellOldText = get(sFig.ptrTextInformation, 'string');
 			strBaseString = 'No new data';
@@ -167,7 +90,7 @@ function RM_main(varargin)
 			else
 				cellText = {strcat(strBaseString,' -'),''};
 			end
-			SC_updateTextInformation(cellText);
+			set(sFig.ptrTextInformation, 'string', cellText );
 			pause(0.5);
 		end
 		

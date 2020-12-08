@@ -167,12 +167,22 @@ elseif intStimSet == 3
 	sStimParamsSettings.vecOrientationNoise = 0; %noise in degrees
 end
 
+%% trial timing variables
+if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
+structEP.intNumRepeats = intNumRepeats;
+structEP.dblSecsBlankAtStart = 3;
+structEP.dblSecsBlankPre = 0.4;
+structEP.dblSecsStimDur = 1;
+structEP.dblSecsBlankPost = 0.1;
+structEP.dblSecsBlankAtEnd = 3;
+
+%% prepare stimuli
 %get stimuli
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
 if intStimSet == 2
-for intObject=1:numel(sStimObject)
-	sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
-end
+	for intObject=1:numel(sStimObject)
+		sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
+	end
 end
 
 %get noise stimuli
@@ -196,17 +206,8 @@ if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
 	parpool(sStimParams.intUseParPool * [1 1]);
 end
 if sStimParams.intUseGPU > 0
-   objGPU = gpuDevice(sStimParams.intUseGPU);
+	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
-
-%% trial timing variables
-if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
-structEP.intNumRepeats = intNumRepeats;
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.4;
-structEP.dblSecsStimDur = 1;
-structEP.dblSecsBlankPost = 0.1;
-structEP.dblSecsBlankAtEnd = 3;
 
 %% create presentation vectors
 structEP.intStimTypes = numel(sStimObject);
@@ -531,7 +532,7 @@ try
 		else
 			dblStimOffNI = nan;
 		end
-				
+		
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);
 		clear vecTex;
