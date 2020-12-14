@@ -112,7 +112,7 @@ structEP.strFile = mfilename;
 structEP.debug = boolDebug;
 
 %% stimulus params
-if ~exist(sStimParamsSettings,'var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'NaturalMovie')
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'NaturalMovie')
 %visual space parameters
 sStimParamsSettings = struct;
 sStimParamsSettings.strStimType = 'NaturalMovie';

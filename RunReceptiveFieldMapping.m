@@ -122,7 +122,7 @@ structEP.strFile = mfilename;
 structEP.debug = boolDebug;
 
 %% stimulus params
-if ~exist(sStimParamsSettings,'var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'SquareGrating')
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'SquareGrating')
 %visual space parameters
 sStimParamsSettings = struct;
 sStimParamsSettings.strStimType = 'SparseCheckers'; %{'SparseCheckers','FlickerCheckers'};
