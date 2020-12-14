@@ -32,7 +32,7 @@ if intStimSet == 1
 	intTrialNum = 40;%count
 	dblPulseWait = 2;%secs, at least ~0.2s
 	vecPulseITI = 1./[1 2 5 10 20 50];%secs
-	dblPulseDur = 50/1000;%secs
+	dblPulseDur = 20/1000;%secs
 	vecPulseDur = dblPulseDur*ones(size(vecPulseITI));%secs
 	dblPulseWaitSignal = dblPulseWait/2;
 	dblPulseWaitPause = dblPulseWait - dblPulseWaitSignal;

@@ -15,7 +15,7 @@ boolUseNI = true;
 boolDebug = false;
 intUseMask = 0;
 dblLightMultiplier = 1; %strength of infrared LEDs
-dblSyncLightMultiplier = 1;
+dblSyncLightMultiplier = 0.5;
 
 %% define paths
 strThisPath = mfilename('fullpath');

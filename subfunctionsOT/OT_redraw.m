@@ -166,7 +166,7 @@ function OT_redraw(varargin)
 		intChNr = 0;
 		vecUseResp = mean(matUseResp,1);
 	elseif strcmp(strChannel,'Single')
-		intChNr = sOT.intMinChan;
+		intChNr = 1;%sOT.intMinChan;
 		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,vecActChans(intChNr)));
 		vecUseResp = matUseResp(intChNr,:);
 	else

@@ -9,10 +9,10 @@ close all;
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = true;
 boolUseNI = true;
-boolDebug = true;
+boolDebug = false;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
-dblLightMultiplier = 0.8; %strength of infrared LEDs
+dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
 
 %% define paths

@@ -6,7 +6,7 @@ clear all;
 close all;
 
 %% define paths
-dblLightMultiplier = 0.8; %strength of infrared LEDs
+dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
 boolUseSGL = true;
 boolUseNI = true;

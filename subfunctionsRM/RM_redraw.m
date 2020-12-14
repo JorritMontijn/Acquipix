@@ -233,7 +233,7 @@ function RM_redraw(varargin)
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intBest-1,intUseChN,intChMax));
 		
 	elseif strcmp(strChannel,'Single')
-		intChannelNumber = vecSelectChans(1);
+		intChannelNumber = vecActChans(1);%vecSelectChans(1);
 		matPlot = matMeanR(:,:,intChannelNumber);
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intChannelNumber-1,intUseChN,intChMax));
 	else
