@@ -122,6 +122,7 @@ structEP.strFile = mfilename;
 structEP.debug = boolDebug;
 
 %% stimulus params
+if ~exist(sStimParamsSettings,'var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'SquareGrating')
 %visual space parameters
 sStimParamsSettings = struct;
 sStimParamsSettings.strStimType = 'SparseCheckers'; %{'SparseCheckers','FlickerCheckers'};
@@ -132,18 +133,13 @@ sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
 sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %screen variables
-%screen variables
-if structEP.debug == 1
-	sStimParamsSettings.intUseScreen = 0; %which screen to use
-else
-	sStimParamsSettings.intUseScreen = 2; %which screen to use
-end
 sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
 sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
 sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
 sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
 sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+sStimParamsSettings.intUseScreen = 2; %which screen to use
 
 %get screen size from PTB
 intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
@@ -164,6 +160,12 @@ sStimParamsSettings.dblBackground = 0.5; %background intensity (dbl, [0 1])
 sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.dblBackground)*255);
 sStimParamsSettings.dblContrast = 100; %contrast; [0-100]
 sStimParamsSettings.dblFlickerFreq = 0; %Hz
+end
+if structEP.debug == 1
+	intUseScreen = 0;
+else
+	intUseScreen = sStimParamsSettings.intUseScreen;
+end
 dblInversionDurSecs = (1/sStimParamsSettings.dblFlickerFreq)/2; %Hz
 
 %% trial timing variables
@@ -234,16 +236,15 @@ try
 	%open window
 	AssertOpenGL;
 	KbName('UnifyKeyNames');
-	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
 	if structEP.debug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
 	try
 		Screen('Preference', 'SkipSyncTests', 0);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
+		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
 	catch ME
 		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
 		Screen('Preference', 'SkipSyncTests', 1);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
+		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
 	end
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
@@ -252,8 +253,11 @@ try
 	sStimParams.intScreenHeight_pix = vecRect(4)-vecRect(2);
 	
 	%% MAXIMIZE PRIORITY
-	%priorityLevel=MaxPriority(ptrWindow);
-	%Priority(priorityLevel);
+	intOldPriority = 0;
+	if structEP.debug == 0
+		intPriorityLevel=MaxPriority(ptrWindow);
+		intOldPriority = Priority(intPriorityLevel);
+	end
 	
 	%% get refresh rate
 	dblStimFrameRate=Screen('FrameRate', ptrWindow);

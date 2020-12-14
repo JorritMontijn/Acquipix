@@ -73,23 +73,23 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		%ptrPanelStimParams = figure('Position',[0 0 500 intParams*30]);
 		
 		%%
-		vecGuiSizeNorm = sFigRE.ptrMainGUI.Position;
+		%get main GUI size and define subpanel size
 		ptrMainGUI.Units = 'pixels';
-		vecGuiSize = sFigRE.ptrMainGUI.Position;
+		vecGuiSize = ptrMainGUI.Position;
 		ptrMainGUI.Units = 'normalized';
 		dblPanelHeight = 0.2;
 		dblPanelY = 0.1;
 		
+		%calculate the total size of the subpanel content
 		dblTotSize = (intParams+1)*30;
 		dblRelSize = (dblTotSize/(vecGuiSize(end)*dblPanelHeight))+dblPanelHeight;
-		sFigRE.dblMaxOffset = 1;
 		
-		ptrPanelStimParamsParent = uipanel('Parent',sFigRE.ptrMainGUI);
+		%create the panels
+		ptrPanelStimParamsParent = uipanel('Parent',ptrMainGUI);
 		set(ptrPanelStimParamsParent,'Position',[0.01 dblPanelY 0.94 dblPanelHeight]);
 		ptrPanelStimParams = uipanel('Parent',ptrPanelStimParamsParent);
-		set(ptrPanelStimParams,'Position',[0 0 1 dblRelSize]);%dblPanelHeight*2
-		%ptrPanelStimParams.Units = 'pixels';
-		ptrSlider = uicontrol('Style','Slider','Parent',sFigRE.ptrMainGUI,...
+		set(ptrPanelStimParams,'Position',[0 0 1 dblRelSize]);
+		ptrSlider = uicontrol('Style','Slider','Parent',ptrMainGUI,...
 			'Units','normalized','Position',[0.94 dblPanelY 0.05 dblPanelHeight],...
 			'Value',1,'Callback',{@slider_callback1,ptrPanelStimParams});
 		
