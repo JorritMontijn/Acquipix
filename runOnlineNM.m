@@ -344,6 +344,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
+	sFig.boolIsDrawing = false;
 	SC_unlock(handles);
 	
 	%restart timer
@@ -355,6 +356,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.TimerFcn = @NM_main;
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
+	
+	%restart timer
+	stop(sFig.objDrawTimer);
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @NM_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
 	
 	%update text
 	SC_updateTextInformation({''});

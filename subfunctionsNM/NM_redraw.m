@@ -21,16 +21,70 @@ function NM_redraw(varargin)
 	%check whether to make scatter plot
 	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
 	
-		
-	%% update data matrix
-	sStimObject = sRM.sStimObject;
-	intTrials = min([sRM.intEphysTrialN sRM.intStimTrialN]);
-	if intTrials > sRM.intRespTrialN
 	
+	%% update data matrix
+	sStimObject = sNM.sStimObject;
+	intTrials = min([ sNM.intEphysTrialN  sNM.intStimTrialN]);
+	if intTrials >  sNM.intRespTrialN
+		%% calc NM response
+		%get data
+		vecSpikeT = sNM.vecSubSpikeT; %time in ms (uint32)
+		vecSpikeCh = sNM.vecSubSpikeCh; %channel id (uint16); 1-start
+		vecStimOnT = sNM.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+		vecStimDurT = sNM.vecStimOffT(1:intTrials) - sNM.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
+		vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
+		
+		%get selected channels
+		vecAllChans = sNM.vecAllChans; %AP, LFP, NI; 0-start
+		vecSpkChans = sNM.vecSpkChans; %AP; 0-start
+		vecIncChans = sNM.vecIncChans; %AP, minus culled; 0-start
+		vecSelectChans = sNM.vecSelectChans; %AP, selected chans; 1-start
+		vecActChans = sNM.vecIncChans(ismember(sNM.vecIncChans,sNM.vecSelectChans)); %AP, active channels (selected and unculled); 0-start
+		intSpkChNum = numel(vecSpkChans); %number of original spiking channels
+		
+		%% build binning vector
+		dblBinSize = 0.100;
+		vecBinEdges = 0:dblBinSize:vecStimDurT(1);
+		vecBinCenters = vecBinEdges(2:end) + dblBinSize/2;
+		intBins = numel(vecBinCenters);
+		
+		%% go through objects and assign to matrices
+		vecRunTrials = (sNM.intRespTrialN+1):intTrials;
+		matResp_temp = zeros(intBins,numel(vecRunTrials),intSpkChNum);%[bin x rep x chan] matrix
+		intRep = 0;
+		for intTrial=vecRunTrials
+			%get data
+			intRep = intRep + 1;
+			dblStartStim = vecStimOnT(intTrial);
+			dblStopStim = vecStimOffT(intTrial);
+			
+			%subselect spikes
+			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
+			
+			%if ePhys data is not available yet, break
+			if isempty(vecStimSpikes)
+				continue;
+			end
+			vecSubT = vecSpikeT(vecStimSpikes);
+			vecSubCh = vecSpikeCh(vecStimSpikes);
+			
+			%find which channels to run
+			vecRunCh = find(ismember(vecSpkChans+1,vecSubCh));
+			for intCh=vecRunCh(:)'
+				%bin
+				vecChSpikeT = double(vecSubT(vecSubCh==intCh))/1000;
+				matResp_temp(:,intRep,intCh) = histcounts(vecChSpikeT,vecBinEdges+dblStartStim);
+			end
+		end
+		
+		%% save data to globals
+		sNM.intRespTrialN = intTrials;
+		sNM.vecBinCenters = vecBinCenters;
+		sNM.matRespNM(:,vecRunTrials,:) = matResp_temp./dblBinSize; %[bin x rep x chan] matrix
 	end
 	
 	%% check if data is available
-	if ~isfield(sRM,'cellStimON') || isempty(sRM.cellStimON)
+	if ~isfield(sNM,'matRespNM') || isempty(sNM.matRespNM)
 		sFig.boolIsDrawing = false;
 		return;
 	end
@@ -92,7 +146,7 @@ function NM_redraw(varargin)
 	vecActChans = vecSpkChans(ismember(vecSpkChans,vecSelectChans-1)); %AP, selected chans; 0-start
 	intSpkChNum = numel(vecSpkChans); %number of original spiking channels
 	intUseChN = numel(vecSelectChans);
-			
+	
 	%% calculate best
 	if contains(strMetric,'ANOVA')
 		%this is what we'll do anyway
@@ -125,7 +179,7 @@ function NM_redraw(varargin)
 	elseif strcmp(strChannel,'Best')
 		matPlot = matRespNM(:,:,intBest);
 		strChannel = strcat(strChannel,sprintf('=Ch%d (%d/%d used)',intBest-1,intUseChN,intChMax));
-
+		
 	elseif strcmp(strChannel,'Single')
 		intChannelNumber = vecSelectChans(1);
 		matPlot = matRespNM(:,:,intChannelNumber);
@@ -175,4 +229,9 @@ function NM_redraw(varargin)
 		grid(sFig.ptrAxesHandle2,'off');
 	end
 	drawnow;
+	
+	
+	%unset busy
+	sFig.boolIsDrawing = false;
+	
 end

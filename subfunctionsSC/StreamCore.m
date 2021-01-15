@@ -266,7 +266,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		vecSubNewTime = vecLinBuffT(indKeepIM);
 		
 		%message
-		cellText = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecSubNewTime),max(vecSubNewTime))};
+		cellText = {'',sprintf('Processing %.3fs of new SGL data [%.3fs - %.3fs] ...',max(vecSubNewTime)-min(vecSubNewTime)-dblUseOverlapT,min(vecSubNewTime)+dblUseOverlapT,max(vecSubNewTime))};
 		feval(f_updateTextInformation,cellText);
 		
 		%% detect spikes
@@ -274,6 +274,10 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		[gVecSubNewSpikeCh,gVecSubNewSpikeT,dblSubNewTotT] = DP_DetectSpikes(matSubNewData, sP);
 		vecSubNewSpikeCh = gather(gVecSubNewSpikeCh);
 		vecSubNewSpikeT = gather(gVecSubNewSpikeT);
+		%remove spikes in overlap
+		indRemSp = vecSubNewSpikeT < (uint32(dblUseOverlapT*1000)-1);
+		vecSubNewSpikeT(indRemSp) = [];
+		vecSubNewSpikeCh(indRemSp) = [];
 		%clear gpuArrays
 		gVecSubNewSpikeT = [];
 		gVecSubNewSpikeCh = [];

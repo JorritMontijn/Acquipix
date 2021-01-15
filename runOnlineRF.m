@@ -359,6 +359,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
+	sFig.boolIsDrawing = false;
 	SC_unlock(handles);
 	
 	%restart main timer

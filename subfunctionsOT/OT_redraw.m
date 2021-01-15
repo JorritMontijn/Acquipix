@@ -96,7 +96,7 @@ function OT_redraw(varargin)
 	end
 	
 	%% check if data is available
-	if ~isfield(sRM,'cellStimON') || isempty(sRM.cellStimON)
+	if ~isfield(sOT,'matRespStim') || isempty(sOT.matRespStim)
 		sFig.boolIsDrawing = false;
 		return;
 	end
@@ -229,7 +229,7 @@ function OT_redraw(varargin)
 		vecRho_bc = nan;
 		vecOPI = nan;
 		vecOSI = nan;
-		dispErr(ME);
+		%dispErr(ME);
 	end
 	
 	%% select metric
@@ -298,4 +298,9 @@ function OT_redraw(varargin)
 	title(sFig.ptrAxesHandle,strTitle,'FontSize',10);
 	
 	drawnow;
+	
+	
+	%unset busy
+	sFig.boolIsDrawing = false;
+	
 end
