@@ -6,9 +6,102 @@ function OT_redraw(varargin)
 	global sOT;
 	global sFig;
 	
+	%% check if data has been loaded
+	if isempty(sOT) || isempty(sFig)
+		return;
+	end
+	%check if busy
+	if ~sOT.IsInitialized,return;end
+	if sFig.boolIsDrawing,return;end
+	sFig.boolIsDrawing = true;
+	
 	%check whether to plot in new figure
 	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
 	
+	%check whether to make scatter plot
+	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
+	
+	%% update trial-average data matrix
+	sStimObject = sOT.sStimObject;
+	intTrials = min([sOT.intEphysTrialN sOT.intStimTrialN]);
+	if intTrials > sOT.intRespTrialN
+		%% calc RF estimate
+		%update variables
+		vecOriDegs = cell2mat({sStimObject(:).Orientation});
+		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
+		
+		%get data
+		vecSpikeT = sOT.vecSubSpikeT; %time in ms (uint32)
+		vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16); 1-start
+		vecStimOnT = sOT.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+		vecStimDurT = sOT.vecStimOffT(1:intTrials) - sOT.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
+		vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
+		%get selected channels
+		vecUseSpkChans = sOT.vecSpkChans;
+		intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
+		intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
+		vecSelectChans = intMinChan:intMaxChan;
+		intUseCh = numel(vecUseSpkChans);
+		%fprintf('intUseCh=%d; selectchans=%d-%d\n',intUseCh,intMinChan,intMaxChan);
+		
+		%base, stim
+		matRespBase = nan(intUseCh,intTrials);
+		matRespStim = nan(intUseCh,intTrials);
+		vecStimTypes = nan(1,intTrials);
+		vecStimOriDeg = nan(1,intTrials);
+		%go through objects and assign to matrices
+		for intTrial=1:intTrials
+			%get orientation
+			intStimType = vecTrialIdx(intTrial);
+			
+			%get data
+			if intTrial==1
+				dblStartTrial = vecStimOnT(intTrial)-median(vecStimOffT-vecStimOnT)+0.1;
+			else
+				dblStartTrial = vecStimOffT(intTrial-1)+0.1;
+			end
+			dblStartStim = vecStimOnT(intTrial);
+			dblStopStim = vecStimOffT(intTrial);
+			vecBaseSpikes = find(vecSpikeT>uint32(dblStartTrial*1000) & vecSpikeT<uint32(dblStartStim*1000));
+			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
+			%if ePhys data is not available yet, break
+			if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
+				continue;
+			end
+			
+			%base resp
+			vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
+			vecBaseResp(end+1:intUseCh) = 0;
+			%stim resp
+			vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
+			vecStimResp(end+1:intUseCh) = 0;
+			
+			%size(matData)
+			%min(vecBaseBins)
+			%max(vecBaseBins)
+			%assign data
+			matRespBase(:,intTrial) = vecBaseResp;
+			matRespStim(:,intTrial) = vecStimResp;
+			vecStimTypes(intTrial) = intStimType;
+			vecStimOriDeg(intTrial) = vecOriDegs(intTrial);
+		end
+		
+		%% save data to globals
+		sOT.intRespTrialN = intTrials;
+		sOT.vecSelectChans = vecSelectChans;
+		sOT.matRespBase = matRespBase(vecSelectChans,:); %[chan x rep] matrix
+		sOT.matRespStim = matRespStim(vecSelectChans,:); %[chan x rep] matrix
+		sOT.vecStimTypes = vecStimTypes; %
+		sOT.vecStimOriDeg = vecStimOriDeg; %
+	end
+	
+	%% check if data is available
+	if ~isfield(sOT,'matRespStim') || isempty(sOT.matRespStim)
+		sFig.boolIsDrawing = false;
+		return;
+	end
+	
+	%% check figure props
 	%check if data has been loaded
 	if isempty(sOT) || isempty(sFig)
 		return;
@@ -136,7 +229,7 @@ function OT_redraw(varargin)
 		vecRho_bc = nan;
 		vecOPI = nan;
 		vecOSI = nan;
-		dispErr(ME);
+		%dispErr(ME);
 	end
 	
 	%% select metric
@@ -166,11 +259,11 @@ function OT_redraw(varargin)
 		intChNr = 0;
 		vecUseResp = mean(matUseResp,1);
 	elseif strcmp(strChannel,'Single')
-		intChNr = sOT.intMinChan;
+		intChNr = 1;%sOT.intMinChan;
 		strChannel = strcat(strChannel,sprintf(': %d/%d (Ch%d)',intChNr,intUnculledChannels,vecActChans(intChNr)));
 		vecUseResp = matUseResp(intChNr,:);
 	else
-		OT_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
+		SC_updateTextInformation({sprintf('Selection "%s" not recognized',strChannel)});
 		return;
 	end
 	%add tuning metrics to title
@@ -182,7 +275,7 @@ function OT_redraw(varargin)
 		strTitle = ' Mean';
 	end
 	
-	%% plot 
+	%% plot
 	vecPlotRespMean = nan(1,intNumStimTypes);
 	vecPlotRespErr = nan(1,intNumStimTypes);
 	for intStimType=1:intNumStimTypes
@@ -199,10 +292,15 @@ function OT_redraw(varargin)
 	hold(sFig.ptrAxesHandle,'off');
 	
 	%clean up figure
-	ylabel(sFig.ptrAxesHandle,'MUA (a.u.)');
+	ylabel(sFig.ptrAxesHandle,'Spike events (Hz)');
 	xlabel(sFig.ptrAxesHandle,'Stimulus Orientation (deg)');
 	fixfig(sFig.ptrAxesHandle,false);
 	title(sFig.ptrAxesHandle,strTitle,'FontSize',10);
 	
 	drawnow;
+	
+	
+	%unset busy
+	sFig.boolIsDrawing = false;
+	
 end

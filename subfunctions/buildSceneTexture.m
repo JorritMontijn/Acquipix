@@ -101,18 +101,27 @@ function [vecSceneFrames,matMovieRGB] = buildSceneTexture(sSceneObject,matMapDeg
 	end
 	
 	%% build frames
-	vecSceneFrames = ceil(((1:intScreenFrames)/dblScreenFrameRate)*dblSceneFrameRate);
+	vecSceneFrames = round(linspace(1,intSceneFrames,intScreenFrames));
 	matMovieRGB = zeros(intScreenHeight_pix,intScreenWidth_pix,3,intSceneFrames,'uint8');
 	%run
 	hTic = tic;
 	for intSceneFrame=1:intSceneFrames
 		%% get original image
-		matSceneFrame = gpuArray(double(read(objVideo, intSceneFrame)));
+		if intUseGPU > 0
+			matSceneFrame = gpuArray(double(read(objVideo, intSceneFrame)));
+		else
+			matSceneFrame = double(read(objVideo, intSceneFrame));
+		end
 		matSceneFrame = ((matSceneFrame - dblMovBG) * dblContFact) + dblMovBG;
 		matSceneFrame = matSceneFrame(end:-1:1,:,:);
 		
 		%% build new image
-		matWarpedIm = zeros(intNewSizeY,intNewSizeX,3,'gpuArray');
+		if intUseGPU > 0
+			matWarpedIm = zeros(intNewSizeY,intNewSizeX,3,'gpuArray');
+		else
+			matWarpedIm = zeros(intNewSizeY,intNewSizeX,3);
+		end
+		
 		for intColor=1:3
 			matWarpedIm(:,:,intColor) = interp2(matSceneX_deg,matSceneY_deg,matSceneFrame(:,:,intColor),matMapX_deg,matMapY_deg,'linear');
 		end

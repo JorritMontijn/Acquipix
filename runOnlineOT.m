@@ -21,6 +21,9 @@ function varargout = runOnlineOT(varargin)
 	%		Transformed main to use StreamCore module
 	%	Version 2.0.2 [2020-11-27]
 	%		Transformed all to use StreamCore module
+	%	Version 2.0.3 [2021-01-15]
+	%		Small bug fixes & transfer to parallel processing of data
+	%		streaming and analysis
 	
 	%set tags
 	%#ok<*INUSL>
@@ -97,6 +100,15 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	objMainTimer.TimerFcn = @OT_main;
 	sFig.objMainTimer = objMainTimer;
 	start(objMainTimer);
+	
+	% set timer to update plots
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @OT_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
 	
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
@@ -349,6 +361,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
+	sFig.boolIsDrawing = false;
 	SC_unlock(handles);
 	
 	%restart timer
@@ -361,6 +374,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
+	%restart draw timer
+	stop(sFig.objDrawTimer);
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @OT_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
+	
 	%update text
 	SC_updateTextInformation({''});
 	
@@ -372,6 +395,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%stop timer
 	stop(sFig.objMainTimer);
+	stop(sFig.objDrawTimer);
 	
 	%clear data and reset to defaults
 	sOT = struct;
@@ -386,6 +410,15 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.TimerFcn = @OT_main;
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
+	
+	% set timer to query whether there is a data update every second
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @OT_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
 	
 	%update text
 	SC_updateTextInformation({''});

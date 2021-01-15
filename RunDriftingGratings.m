@@ -9,10 +9,11 @@ close all;
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = true;
 boolUseNI = true;
-intDebug = 0;
+boolDebug = false;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
-dblLightMultiplier = 0.8; %strength of infrared LEDs
+dblLightMultiplier = 1; %strength of infrared LEDs
+dblSyncLightMultiplier = 0.5;
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -25,7 +26,7 @@ strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures s
 %% query user input for recording name
 strRecording = input('Recording name (e.g., MouseX): ', 's');
 c = clock;
-strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
+strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
@@ -115,9 +116,10 @@ intUseDaqDevice = 1; %set to 0 to skip I/O
 structEP.strFile = mfilename;
 
 %screen params
-structEP.debug = intDebug;
+structEP.debug = boolDebug;
 
 %% stimulus params
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'SquareGrating')
 %visual space parameters
 sStimParamsSettings = struct;
 sStimParamsSettings.strStimType = 'SquareGrating';
@@ -133,13 +135,13 @@ sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in de
 sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
-sStimParamsSettings.intUseScreen = 2; %which screen to use
 sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
 sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
 sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
 sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
 sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+sStimParamsSettings.intUseScreen = 2; %which screen to use
 
 %stimulus control variables
 sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
@@ -166,13 +168,29 @@ elseif intStimSet == 3
 	sStimParamsSettings.vecOrientations = [0 45 90 135]; %orientation (0 is drifting rightward)
 	sStimParamsSettings.vecOrientationNoise = 0; %noise in degrees
 end
+end
+if structEP.debug == 1
+	intUseScreen = 0;
+else
+	intUseScreen = sStimParamsSettings.intUseScreen;
+end
 
+%% trial timing variables
+if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
+structEP.intNumRepeats = intNumRepeats;
+structEP.dblSecsBlankAtStart = 3;
+structEP.dblSecsBlankPre = 0.4;
+structEP.dblSecsStimDur = 1;
+structEP.dblSecsBlankPost = 0.1;
+structEP.dblSecsBlankAtEnd = 3;
+
+%% prepare stimuli
 %get stimuli
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
 if intStimSet == 2
-for intObject=1:numel(sStimObject)
-	sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
-end
+	for intObject=1:numel(sStimObject)
+		sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
+	end
 end
 
 %get noise stimuli
@@ -196,17 +214,8 @@ if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
 	parpool(sStimParams.intUseParPool * [1 1]);
 end
 if sStimParams.intUseGPU > 0
-   objGPU = gpuDevice(sStimParams.intUseGPU);
+	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
-
-%% trial timing variables
-if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
-structEP.intNumRepeats = intNumRepeats;
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.4;
-structEP.dblSecsStimDur = 1;
-structEP.dblSecsBlankPost = 0.1;
-structEP.dblSecsBlankAtEnd = 3;
 
 %% create presentation vectors
 structEP.intStimTypes = numel(sStimObject);
@@ -248,8 +257,9 @@ if boolUseNI
 	
 	%turns leds on
 	stop(objDAQOut);
-	outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+	%outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
 	outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
+	outputData1 = 0*dblSyncLightMultiplier*linspace(3, 3, 250)';
 	queueOutputData(objDAQOut,[outputData1 outputData2]);
 	prepare(objDAQOut);
 	pause(0.1);
@@ -262,15 +272,15 @@ try
 	%open window
 	AssertOpenGL;
 	KbName('UnifyKeyNames');
-	intScreen = sStimParams.intUseScreen;
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
+	if structEP.debug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
 	try
 		Screen('Preference', 'SkipSyncTests', 0);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
 	catch ME
 		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
 		Screen('Preference', 'SkipSyncTests', 1);
-		[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
+		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
 	end
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
@@ -279,8 +289,11 @@ try
 	sStimParams.intScreenHeight_pix = vecRect(4)-vecRect(2);
 	
 	%% MAXIMIZE PRIORITY
-	%priorityLevel=MaxPriority(ptrWindow);
-	%Priority(priorityLevel);
+	intOldPriority = 0;
+	if structEP.debug == 0
+		intPriorityLevel=MaxPriority(ptrWindow);
+		intOldPriority = Priority(intPriorityLevel);
+	end
 	
 	%% get refresh rate
 	dblStimFrameRate=Screen('FrameRate', ptrWindow);
@@ -417,7 +430,7 @@ try
 		%fill DAQ with data
 		if boolUseNI
 			stop(objDAQOut);
-			outputData1 = dblLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+			outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
 			outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
 			queueOutputData(objDAQOut,[outputData1 outputData2]);
 			prepare(objDAQOut);
@@ -531,7 +544,7 @@ try
 		else
 			dblStimOffNI = nan;
 		end
-				
+		
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);
 		clear vecTex;

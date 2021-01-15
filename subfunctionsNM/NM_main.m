@@ -1,36 +1,36 @@
-function RM_main(varargin)
-	%% RM_main Main RF mapper function called every second to check for updates
+function NM_main(varargin)
+	%% NM_main Main natural movie mapper function called every second to check for updates
 	%get globals
 	global sFig;
-	global sRM;
+	global sNM;
 	
 	try
 		%% check if busy
 		cellText = {};
 		
 		%check initialization
-		if ~sRM.IsInitialized,return;end
+		if ~sNM.IsInitialized,return;end
 		%check if busy
 		if sFig.boolIsBusy,return;end
 		sFig.boolIsBusy = true;
 		
 		%% run common stream processing module
-		[sFig,sRM,boolDidSomething] = StreamCore(sFig,sRM,@SC_updateTextInformation);
+		[sFig,sNM,boolDidSomething] = StreamCore(sFig,sNM,@SC_updateTextInformation);
 		
 		%% retrieve variables
 		%get stim data from stream structure
-		sStimObject = sRM.sStimObject;
+		sStimObject = sNM.sStimObject;
 		if isempty(sStimObject),clear sStimObject;end
 		
 		%get stim data from figure structure
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
 		%stream variables
-		intEphysTrialN = sRM.intEphysTrialN; %not used, only updated
-		dblEphysTrialT = sRM.dblEphysTrialT; %not used, only updated
-		intRespTrialN = sRM.intRespTrialN; %not used, only updated
-		intStimTrialN = sRM.intStimTrialN;
-		dblStimTrialT = sRM.dblStimTrialT; %updated later
+		intEphysTrialN = sNM.intEphysTrialN; %not used, only updated
+		dblEphysTrialT = sNM.dblEphysTrialT; %not used, only updated
+		intRespTrialN = sNM.intRespTrialN; %not used, only updated
+		intStimTrialN = sNM.intStimTrialN;
+		dblStimTrialT = sNM.dblStimTrialT; %updated later
 		
 		%% retrieve & update stim log data
 		%get stimulus object files
@@ -50,21 +50,20 @@ function RM_main(varargin)
 			vecNewStimOffT = cell2mat({sStimObject(:).ActOffNI});
 			dblStimTrialT = max(cat(2,vecNewStimOnT,vecNewStimOffT));
 			intStimTrialN = vecNewObjectIDs(1);
-			dblStimCoverage = 100*sum(sStimObject(end).UsedLinLocOff(:))/numel(sStimObject(end).UsedLinLocOff);
+			dblStimCoverage = numel(sStimObject);
 			
 			%save vars
-			sRM.sStimObject = sStimObject;
-			sRM.dblStimCoverage = dblStimCoverage;
-			sRM.intStimTrialN = intStimTrialN;
-			sRM.dblStimTrialT = dblStimTrialT;
-			sRM.vecStimOnT = vecNewStimOnT;
-			sRM.vecStimOffT = vecNewStimOffT;
-			sRM.FlickerFreq = sStimObject(end).FlickerFreq;
+			sNM.sStimObject = sStimObject;
+			sNM.dblStimCoverage = dblStimCoverage;
+			sNM.intStimTrialN = intStimTrialN;
+			sNM.dblStimTrialT = dblStimTrialT;
+			sNM.vecStimOnT = vecNewStimOnT;
+			sNM.vecStimOffT = vecNewStimOffT;
 			
 			%update fig
 			set(sFig.ptrTextStimTrialT, 'string',sprintf('%.2f',dblStimTrialT));
 			set(sFig.ptrTextStimTrialN, 'string',sprintf('%d',intStimTrialN));
-			set(sFig.ptrTextStimCoverage, 'string',sprintf('%.2f',dblStimCoverage));
+			set(sFig.ptrTextStimCoverage, 'string',sprintf('%d',dblStimCoverage));
 			set(sFig.ptrTextStimType, 'string',sStimObject(intLoadObject).StimType);
 			drawnow;
 			
@@ -72,6 +71,7 @@ function RM_main(varargin)
 			SC_updateTextInformation(sprintf('Loaded %d stimulus objects',numel(vecNewObjectIDs)));
 			boolDidSomething = true;
 		end
+		
 		
 		if ~boolDidSomething
 			%% show waiting bar
@@ -90,7 +90,7 @@ function RM_main(varargin)
 			else
 				cellText = {strcat(strBaseString,' -'),''};
 			end
-			set(sFig.ptrTextInformation, 'string', cellText );
+			SC_updateTextInformation(cellText);
 			pause(0.5);
 		end
 		
