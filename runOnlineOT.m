@@ -98,6 +98,15 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig.objMainTimer = objMainTimer;
 	start(objMainTimer);
 	
+	% set timer to update plots
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @OT_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
+	
 	%lock 
 	set(sFig.ptrEditHighpassFreq,'UserData','lock');
 	set(sFig.ptrEditDownsample,'UserData','lock');

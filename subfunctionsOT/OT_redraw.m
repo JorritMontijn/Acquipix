@@ -6,9 +6,22 @@ function OT_redraw(varargin)
 	global sOT;
 	global sFig;
 	
+	%% check if data has been loaded
+	if isempty(sOT) || isempty(sFig)
+		return;
+	end
+	%check if busy
+	if ~sOT.IsInitialized,return;end
+	if sFig.boolIsDrawing,return;end
+	sFig.boolIsDrawing = true;
+	
 	%check whether to plot in new figure
 	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
 	
+	%check whether to make scatter plot
+	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
+	
+	%% check figure props
 	%check if data has been loaded
 	if isempty(sOT) || isempty(sFig)
 		return;

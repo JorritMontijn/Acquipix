@@ -26,7 +26,7 @@ strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures s
 %% query user input for recording name
 strRecording = input('Recording name (e.g., MouseX): ', 's');
 c = clock;
-strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
+strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL

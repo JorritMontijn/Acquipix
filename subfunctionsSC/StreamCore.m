@@ -11,6 +11,8 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	%
 	%Version 1.0 [2020-11-26]
 	%	Split from RM_main/OT_main to standardized module by Jorrit Montijn
+	%Version 1.1 [2021-01-15]
+	%	Bug fixes and stability upgrades [by JM]
 	
 	%check update function
 	if nargin < 3 || isempty(f_updateTextInformation)
@@ -18,7 +20,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	end
 	
 	%get stream variables
-	boolDidSomething = false;
+	boolDidSomething = true;
 	cellText = {};
 	intUseStreamIMEC = get(sFig.ptrListSelectProbe,'Value');
 	intStimSyncChanNI = sStream.intStimSyncChanNI;
@@ -78,17 +80,17 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	intDownsampleIM = 1;
 	
 	%% get NI I/O box data
-	%get current scan number for NI streams
+	%get current scan number for IM streams
 	intCurCountNI = GetScanCount(sStream.hSGL, intStreamNI);
 	
 	%check if this is the initial fetch
-	if intLastFetchNI == 0
+	if intLastFetchNI == 0 || (intLastFetchNI < (intCurCountNI - intMaxFetchNI))
 		intRetrieveSamplesNI = round(1*dblSampFreqNI); %retrieve last 0.1 seconds
 		intRetrieveSamplesNI = min(intCurCountNI-1,intRetrieveSamplesNI); %ensure we're not requesting data prior to start
 		intStartFetch = intCurCountNI - intRetrieveSamplesNI; %set last fetch to starting position
 		dblLastTimestampNI = intStartFetch;
 	else
-		intStartFetch = intLastFetchNI - round(dblSampFreqNI);
+		intStartFetch = intLastFetchNI;% - round(dblSampFreqNI);
 		intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
 		intRetrieveSamplesNI = intCurCountNI - intStartFetch; %retrieve as many samples as acquired between previous fetch and now, plus 500ms
 		dblLastTimestampNI = vecOldTimestampsNI(end);
@@ -99,7 +101,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		%crop Fetch
 		intRetrieveSamplesNI = intMaxFetchNI;
 		%send warning
-		feval(f_updateTextInformation,sprintf('<< WARNING >> Requested NI Fetch was %.1fs, max query is %.1fs',...
+		feval(f_updateTextInformation,sprintf('<< WARNING >> Requested NIEC Fetch was %.1fs, max query is %.1fs',...
 			intRetrieveSamplesNI/dblSampFreqNI,intMaxFetchNI/dblSampFreqNI));
 		
 		%crop Fetch
@@ -119,6 +121,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 			return;
 		end
 	end
+	
 	%update NI time
 	dblEphysTimeNI = intCurCountNI/dblSampFreqNI;
 	set(sFig.ptrTextTimeNI,'string',sprintf('%.3f',dblEphysTimeNI));
@@ -182,16 +185,16 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	set(sFig.ptrTextStimNI, 'string',sprintf('%.2f (%d)',sStream.dblEphysTrialT,sStream.intEphysTrialN));
 	
 	%% get IMEC data
-	%get current scan number for NI streams
+	%get current scan number for IM streams
 	intCurCountIM = GetScanCount(sStream.hSGL, intStreamIM);
 	
 	%check if this is the initial fetch
-	if intLastFetchIM == 0
+	if intLastFetchIM == 0 || (intLastFetchIM < (intCurCountIM - intMaxFetchIM))
 		intRetrieveSamplesIM = round(1*dblSampFreqIM); %retrieve last 0.1 seconds
 		intRetrieveSamplesIM = min(intCurCountIM-1,intRetrieveSamplesIM); %ensure we're not requesting data prior to start
 		intStartFetch = intCurCountIM - intRetrieveSamplesIM; %set last fetch to starting position
 	else
-		intStartFetch = intLastFetchIM - round(dblSampFreqIM);
+		intStartFetch = intLastFetchIM;% - round(dblSampFreqIM);
 		intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
 		intRetrieveSamplesIM = intCurCountIM - intStartFetch; %retrieve as many samples as acquired between previous fetch and now, plus 500ms
 	end
@@ -214,7 +217,8 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		try
 			%fetch "intRetrieveSamplesIM" samples starting at "intFetchStartCountIM"
 			[matNewData,intStartCountIM] = Fetch(sStream.hSGL, intStreamIM, intStartFetch, intRetrieveSamplesIM, vecSpkChans,intDownsampleIM);
-			
+			%fprintf('Last Fetch=%d, CurCount=%d, Start=%d, End=%d, Samp#=%d; retrieved=[%d x %d], start at %d [%s]\n',...
+			%	intLastFetchIM,intCurCountIM,intStartFetch,intStartFetch+intRetrieveSamplesIM,intRetrieveSamplesIM,size(matNewData,1),size(matNewData,2),intStartCountIM,getTime);
 			%% CHECK: if channels are missing in vecSpkChans, is matNewData size of vecSpikeChans or of [t x 384]?
 			%% chans vecSpkChans to vecIncChans to select only unculled channels
 		catch ME
@@ -241,32 +245,33 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	sStream.dblSubLastUpdate = sStream.dblSubLastUpdate + range(vecNewTimestampsIM)/dblSampFreqIM;
 	
 	%% update data
-	if sStream.dblSubLastUpdate > 1 %if last subsample update is more than 1 second ago
+	dblUseOverlapT = 0.1;
+	if sStream.dblSubLastUpdate > dblUseOverlapT %if last subsample update is more than 1 second ago
+		%reset counter
+		sStream.dblSubLastUpdate = 0;
+		
 		%unroll buffer
 		[vecLinBuffT,vecReorderData] = sort(sStream.vecTimestampsIM,'ascend');
-		%% IS THIS USING ALL DATA?!
 		vecLinBuffT = vecLinBuffT/dblSampFreqIM;
 		matLinBuffData = sStream.matDataBufferIM(vecReorderData,:); %time by channel
-		vecUseBuffData = vecLinBuffT < (max(vecLinBuffT) - 1);
-		
-		%message
-		cellText = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecLinBuffT(vecUseBuffData)),max(vecLinBuffT(vecUseBuffData)))};
-		feval(f_updateTextInformation,cellText);
 		
 		%retrieve which data to use, subsample & assign
-		if isempty(sStream.dblCurrT)
+		dblCurrT = sStream.dblCurrT; %last update
+		if isempty(dblCurrT)
 			dblCurrT = max(vecLinBuffT) - 5;
-		else
-			dblCurrT = sStream.dblCurrT;
+			sStream.dblCurrT = dblCurrT;
 		end
-		indKeepIM = vecLinBuffT>dblCurrT & vecLinBuffT<(max(vecLinBuffT) - 1);
+		indKeepIM = vecLinBuffT>(dblCurrT - dblUseOverlapT);
 		matSubNewData = matLinBuffData(indKeepIM,:)';
 		vecSubNewTime = vecLinBuffT(indKeepIM);
+		
+		%message
+		cellText = {'',sprintf('Processing new SGL data [%.3fs - %.3fs] ...',min(vecSubNewTime),max(vecSubNewTime))};
+		feval(f_updateTextInformation,cellText);
 		
 		%% detect spikes
 		%detect spikes on all channels
 		[gVecSubNewSpikeCh,gVecSubNewSpikeT,dblSubNewTotT] = DP_DetectSpikes(matSubNewData, sP);
-		sStream.dblCurrT = sStream.dblCurrT + dblSubNewTotT;
 		vecSubNewSpikeCh = gather(gVecSubNewSpikeCh);
 		vecSubNewSpikeT = gather(gVecSubNewSpikeT);
 		%clear gpuArrays
@@ -275,43 +280,15 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		
 		% assign data
 		intStartT = uint32(vecSubNewTime(1)*1000);
+		sStream.dblCurrT = vecSubNewTime(end);
 		if numel(vecSubNewSpikeCh) > 0
 			sStream.vecSubSpikeCh = cat(1,sStream.vecSubSpikeCh,vecSubNewSpikeCh(:));
-			sStream.vecSubSpikeT = cat(1,sStream.vecSubSpikeT,vecSubNewSpikeT(:) + intStartT);
+			sStream.vecSubSpikeT = cat(1,sStream.vecSubSpikeT,vecSubNewSpikeT(:) + intStartT); %in ms
 		end
 		
 		%msg
 		feval(f_updateTextInformation,sprintf('  %d new spikes.',numel(vecSubNewSpikeCh)));
 		boolDidSomething = true;
-		
-		%% check if channels are culled yet & if first repetition is finished
-		if 0%boolChannelsCulled && sRM.dblStimCoverage > 100 && numel(sRM.vecSubSpikeCh) > 10000
-			%msg
-			feval(f_updateTextInformation,sprintf('Time for channel cull! Using %d spikes...',numel(sRM.vecSubSpikeCh)));
-			
-			%when initial run is complete, calc channel cull
-			vecUseChannelsFilt = DP_CullChannels(sRM.vecSubSpikeCh,sRM.vecSubSpikeT,dblSubNewTotT,sP,sChanMap);
-			
-			%update vecSpkChans & boolChannelsCulled
-			sRM.vecSpkChans = sRM.vecSpkChans(vecUseChannelsFilt);
-			sRM.boolChannelsCulled = true;
-			
-			%remove channels from sRM.matDataBufferIM
-			vecRemovedChans = ~ismember(1:size(matSubNewData,1),vecUseChannelsFilt);
-			sRM.matDataBufferIM(:,vecRemovedChans) = [];
-			
-			%remove channels from vecSpikeCh and vecSpikeT
-			vecRemovedSpikes = ~ismember(sRM.vecSubSpikeCh,vecUseChannelsFilt);
-			sRM.vecSubSpikeCh(vecRemovedSpikes) = [];
-			sRM.vecSubSpikeT(vecRemovedSpikes) = [];
-			%update channel ID of remaining channels
-			[dummy,vecNewCh]=find(sRM.vecSubSpikeCh==vecUseChannelsFilt');
-			sRM.vecSubSpikeCh = vecNewCh(:);
-			
-			%msg
-			feval(f_updateTextInformation,sprintf('   Completed! %d channels removed.',sum(vecRemovedChans)));
-		end
 	end
-	
 end
 

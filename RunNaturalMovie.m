@@ -168,7 +168,7 @@ end
 
 %% trial timing variables
 %note: stimulus duration is assigned automatically
-structEP.intNumRepeats = 100;
+structEP.intNumRepeats = 20;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0;
 structEP.dblSecsBlankPost = 0;
