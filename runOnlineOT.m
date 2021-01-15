@@ -370,6 +370,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
 	
+	%restart draw timer
+	stop(sFig.objDrawTimer);
+	objTimer = timer();
+	objTimer.Period = 1;
+	objTimer.StartDelay = 1;
+	objTimer.ExecutionMode = 'fixedSpacing';
+	objTimer.TimerFcn = @RM_redraw;
+	sFig.objDrawTimer = objTimer;
+	start(objTimer);
+	
 	%update text
 	SC_updateTextInformation({''});
 	
@@ -381,6 +391,7 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%stop timer
 	stop(sFig.objMainTimer);
+	stop(sFig.objDrawTimer);
 	
 	%clear data and reset to defaults
 	sOT = struct;
@@ -395,6 +406,15 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.TimerFcn = @OT_main;
 	sFig.objMainTimer = objTimer;
 	start(objTimer);
+	
+	% set timer to query whether there is a data update every second
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @OT_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
 	
 	%update text
 	SC_updateTextInformation({''});

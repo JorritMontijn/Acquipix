@@ -409,13 +409,13 @@ function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	start(objTimer);
 	
 	% set timer to redraw
-	objTimer = timer();
-	objTimer.Period = 1;
-	objTimer.StartDelay = 1;
-	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @RM_redraw;
-	sFig.objMainTimer = objTimer;
-	start(objTimer);
+	objDrawTimer = timer();
+	objDrawTimer.Period = 1;
+	objDrawTimer.StartDelay = 1;
+	objDrawTimer.ExecutionMode = 'fixedSpacing';
+	objDrawTimer.TimerFcn = @RM_redraw;
+	sFig.objDrawTimer = objDrawTimer;
+	start(objDrawTimer);
 	
 	%update text
 	SC_updateTextInformation({''});

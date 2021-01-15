@@ -1,15 +1,19 @@
 function NM_redraw(varargin)
 	%DC_redraw Sets and redraws windows
 	%   DC_redraw([redrawImage=true])
+	
 	%get structures
 	global sNM;
 	global sFig;
 	
-	
-	%check if data has been loaded
+	%% check if data has been loaded
 	if isempty(sNM) || isempty(sFig)
 		return;
 	end
+	%check if busy
+	if ~sNM.IsInitialized,return;end
+	if sFig.boolIsDrawing,return;end
+	sFig.boolIsDrawing = true;
 	
 	%check whether to plot in new figure
 	intNewFigure = get(sFig.ptrButtonNewFig,'Value');
@@ -17,7 +21,21 @@ function NM_redraw(varargin)
 	%check whether to make scatter plot
 	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
 	
-	% Draw the image if requested
+		
+	%% update data matrix
+	sStimObject = sRM.sStimObject;
+	intTrials = min([sRM.intEphysTrialN sRM.intStimTrialN]);
+	if intTrials > sRM.intRespTrialN
+	
+	end
+	
+	%% check if data is available
+	if ~isfield(sRM,'cellStimON') || isempty(sRM.cellStimON)
+		sFig.boolIsDrawing = false;
+		return;
+	end
+	
+	%% Draw the image if requested
 	if intNewFigure == 0
 		%check if figure is still there
 		try

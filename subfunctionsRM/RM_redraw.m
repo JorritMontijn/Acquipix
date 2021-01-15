@@ -1,12 +1,12 @@
 function RM_redraw(varargin)
 	%DC_redraw Sets and redraws windows
 	%   DC_redraw([redrawImage=true])
+	
 	%get structures
 	global sRM;
 	global sFig;
 	
-	
-	%check if data has been loaded
+	%% check if data has been loaded
 	if isempty(sRM) || isempty(sFig)
 		return;
 	end

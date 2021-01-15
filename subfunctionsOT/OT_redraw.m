@@ -21,6 +21,86 @@ function OT_redraw(varargin)
 	%check whether to make scatter plot
 	intMakeScatterPlot = get(sFig.ptrButtonScatterYes,'Value');
 	
+	%% update trial-average data matrix
+	sStimObject = sOT.sStimObject;
+	intTrials = min([sOT.intEphysTrialN sOT.intStimTrialN]);
+	if intTrials > sOT.intRespTrialN
+		%% calc RF estimate
+		%update variables
+		vecOriDegs = cell2mat({sStimObject(:).Orientation});
+		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
+		
+		%get data
+		vecSpikeT = sOT.vecSubSpikeT; %time in ms (uint32)
+		vecSpikeCh = sOT.vecSubSpikeCh; %channel id (uint16); 1-start
+		vecStimOnT = sOT.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
+		vecStimDurT = sOT.vecStimOffT(1:intTrials) - sOT.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
+		vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
+		%get selected channels
+		vecUseSpkChans = sOT.vecSpkChans;
+		intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
+		intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
+		vecSelectChans = intMinChan:intMaxChan;
+		intUseCh = numel(vecUseSpkChans);
+		%fprintf('intUseCh=%d; selectchans=%d-%d\n',intUseCh,intMinChan,intMaxChan);
+		
+		%base, stim
+		matRespBase = nan(intUseCh,intTrials);
+		matRespStim = nan(intUseCh,intTrials);
+		vecStimTypes = nan(1,intTrials);
+		vecStimOriDeg = nan(1,intTrials);
+		%go through objects and assign to matrices
+		for intTrial=1:intTrials
+			%get orientation
+			intStimType = vecTrialIdx(intTrial);
+			
+			%get data
+			if intTrial==1
+				dblStartTrial = vecStimOnT(intTrial)-median(vecStimOffT-vecStimOnT)+0.1;
+			else
+				dblStartTrial = vecStimOffT(intTrial-1)+0.1;
+			end
+			dblStartStim = vecStimOnT(intTrial);
+			dblStopStim = vecStimOffT(intTrial);
+			vecBaseSpikes = find(vecSpikeT>uint32(dblStartTrial*1000) & vecSpikeT<uint32(dblStartStim*1000));
+			vecStimSpikes = find(vecSpikeT>uint32(dblStartStim*1000) & vecSpikeT<uint32(dblStopStim*1000));
+			%if ePhys data is not available yet, break
+			if isempty(vecBaseSpikes) || isempty(vecStimSpikes)
+				continue;
+			end
+			
+			%base resp
+			vecBaseResp = accumarray(vecSpikeCh(vecBaseSpikes),1) ./ (dblStartStim - dblStartTrial);
+			vecBaseResp(end+1:intUseCh) = 0;
+			%stim resp
+			vecStimResp = accumarray(vecSpikeCh(vecStimSpikes),1) ./ (dblStopStim - dblStartStim);
+			vecStimResp(end+1:intUseCh) = 0;
+			
+			%size(matData)
+			%min(vecBaseBins)
+			%max(vecBaseBins)
+			%assign data
+			matRespBase(:,intTrial) = vecBaseResp;
+			matRespStim(:,intTrial) = vecStimResp;
+			vecStimTypes(intTrial) = intStimType;
+			vecStimOriDeg(intTrial) = vecOriDegs(intTrial);
+		end
+		
+		%% save data to globals
+		sOT.intRespTrialN = intTrials;
+		sOT.vecSelectChans = vecSelectChans;
+		sOT.matRespBase = matRespBase(vecSelectChans,:); %[chan x rep] matrix
+		sOT.matRespStim = matRespStim(vecSelectChans,:); %[chan x rep] matrix
+		sOT.vecStimTypes = vecStimTypes; %
+		sOT.vecStimOriDeg = vecStimOriDeg; %
+	end
+	
+	%% check if data is available
+	if ~isfield(sRM,'cellStimON') || isempty(sRM.cellStimON)
+		sFig.boolIsDrawing = false;
+		return;
+	end
+	
 	%% check figure props
 	%check if data has been loaded
 	if isempty(sOT) || isempty(sFig)
@@ -195,7 +275,7 @@ function OT_redraw(varargin)
 		strTitle = ' Mean';
 	end
 	
-	%% plot 
+	%% plot
 	vecPlotRespMean = nan(1,intNumStimTypes);
 	vecPlotRespErr = nan(1,intNumStimTypes);
 	for intStimType=1:intNumStimTypes
