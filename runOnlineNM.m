@@ -4,8 +4,11 @@ function varargout = runOnlineNM(varargin)
 	%
 	%	Version 0.1 [2020-11-27]
 	%		Split from RF/OT mappers for natural movies
-	%	Version 1.0 [2020-11-30]
+	%	Version 1.0.0 [2020-11-30]
 	%		Finished & tested; NM mapper based on z-score ANOVAs
+	%	Version 1.0.1 [2021-01-15]
+	%		Small bug fixes & transfer to parallel processing of data
+	%		streaming and analysis
 	
 	%set tags
 	%#ok<*INUSL>

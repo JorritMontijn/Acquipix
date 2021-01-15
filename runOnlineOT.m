@@ -21,6 +21,9 @@ function varargout = runOnlineOT(varargin)
 	%		Transformed main to use StreamCore module
 	%	Version 2.0.2 [2020-11-27]
 	%		Transformed all to use StreamCore module
+	%	Version 2.0.3 [2021-01-15]
+	%		Small bug fixes & transfer to parallel processing of data
+	%		streaming and analysis
 	
 	%set tags
 	%#ok<*INUSL>

@@ -12,7 +12,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	%Version 1.0 [2020-11-26]
 	%	Split from RM_main/OT_main to standardized module by Jorrit Montijn
 	%Version 1.1 [2021-01-15]
-	%	Bug fixes and stability upgrades [by JM]
+	%	Major bug fixes and stability upgrades [by JM]
 	
 	%check update function
 	if nargin < 3 || isempty(f_updateTextInformation)

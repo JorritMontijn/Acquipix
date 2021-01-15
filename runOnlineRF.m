@@ -20,6 +20,9 @@ function varargout = runOnlineRF(varargin)
 	%		Added scatter plot of RF per channel
 	%	Version 2.0.2 [2020-11-26]
 	%		Transformed all to use StreamCore module
+	%	Version 2.0.3 [2021-01-15]
+	%		Small bug fixes & transfer to parallel processing of data
+	%		streaming and analysis
 	
 	%set tags
 	%#ok<*INUSL>
