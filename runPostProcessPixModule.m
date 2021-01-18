@@ -411,7 +411,8 @@ for intRunPrePro=[1]
 			
 			%get responsiveness
 			[dblZETA,vecLatencies,sZETA] = getZeta(vecSpikeTimes,matStimOnOff,nanmedian(diff(cellStim{intStim}.structEP.vecStimOnTime)),50,0,0);
-			if isempty(sZETA),continue;end
+			%sZETA=[];
+            if isempty(sZETA),continue;end
 			ZetaP(intStim) = sZETA.dblP;
 			MeanP(intStim) = sZETA.dblMeanP;
 		end
@@ -532,7 +533,7 @@ for intRunPrePro=[1]
 	sJson.setup = 'Neuropixels';
 	sJson.stimulus = 'VisStimAcquipix';
 	sJson.condition = 'none';
-	sJson.id = strjoin({strRecIdx,strMouse,strExperiment,strThisRecIdx},'_');
+	sJson.id = strjoin({strRecIdx,strMouse,strExperiment},'_');
 	
 	%additional fields
 	sJson.experiment = strExperiment;

@@ -1,7 +1,7 @@
-function [vecBregmaLoc,vecProbeAreaEdges,vecProbeAreaCenters,cellProbeAreaLabels,vecProbeAreaIdx] = getAtlasAreas(vecBregmaCoords,matAnnotationVolume,tabAnnotationNames)
+function [vecBregmaLoc,vecProbeAreaEdges,vecProbeAreaCenters,cellProbeAreaLabels,vecProbeAreaIdx] = getAtlasAreas(vecBregmaCoords,matAnnotationVolume,tabAnnotationNames,strPathAllenCCF)
 	%getAtlasAreas Retrieve atlas brain areas for probe location
 	%  [vecBregmaLoc,vecProbeAreaEdges,vecProbeAreaCenters,cellProbeAreaLabels,vecProbeAreaIdx] = ...
-	%		getAtlasAreas(vecBregmaCoords,matAnnotationVolume,tabAnnotationNames)
+	%		getAtlasAreas(vecBregmaCoords,matAnnotationVolume,tabAnnotationNames,strPathAllenCCF)
 	%
 	%input:
 	%	- vecBregmaCoords [1 x 5]: Bregma coordinates in microns/degrees:
@@ -20,9 +20,11 @@ function [vecBregmaLoc,vecProbeAreaEdges,vecProbeAreaCenters,cellProbeAreaLabels
 	%1.0 - March 20 2019
 	%	Created by Jorrit Montijn
 		
-	%% check inputs
-	if nargin < 3
-		strPathAllenCCF = 'D:\Downloads\AllenCCF\';
+    %% check inputs
+    if ~exist('strPathAllenCCF','var') || isempty(strPathAllenCCF)
+            strPathAllenCCF = 'D:\Downloads\AllenCCF\';
+    end
+    if ~exist('matAnnotationVolume','var') || isempty(matAnnotationVolume) || ~exist('tabAnnotationNames','var') || isempty(tabAnnotationNames)
 		%matTemplateVolume = readNPY(strcat(strPathAllenCCF,'template_volume_10um.npy')); % grey-scale "background signal intensity"
 		matAnnotationVolume = readNPY(strcat(strPathAllenCCF,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
 		tabAnnotationNames = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
