@@ -1,5 +1,5 @@
 %% Slice Histology Alignment, Registration, and Probe Track analysis (SHARP-Track)
-strPathAllenCCF = 'F:\Data\Processed\AllenCCF\';
+strPathAllenCCF = 'C:\Users\jamann\Documents\AllenCCF_Data\';
 tv = readNPY(strcat(strPathAllenCCF,'template_volume_10um.npy')); % grey-scale "background signal intensity"
 av = readNPY(strcat(strPathAllenCCF,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
 st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
