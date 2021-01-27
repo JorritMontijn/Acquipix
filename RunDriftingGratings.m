@@ -2,14 +2,13 @@
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-clear all;
-close all;
+clearvars -except sStimPresets sStimParamsSettings;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
-boolUseSGL = true;
-boolUseNI = true;
-boolDebug = false;
+boolUseSGL = false;
+boolUseNI = false;
+boolDebug = true;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
 dblLightMultiplier = 1; %strength of infrared LEDs
@@ -22,9 +21,12 @@ strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 
-
 %% query user input for recording name
-strRecording = input('Recording name (e.g., MouseX): ', 's');
+if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
+	strRecording = sStimParamsSettings.strRecording;
+else
+	strRecording = input('Recording name (e.g., MouseX): ', 's');
+end
 c = clock;
 strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 
@@ -120,54 +122,45 @@ structEP.debug = boolDebug;
 
 %% stimulus params
 if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'SquareGrating')
-%visual space parameters
-sStimParamsSettings = struct;
-sStimParamsSettings.strStimType = 'SquareGrating';
-sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
-sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
-sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
-
-%receptive field size&location parameters
-sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in degrees [35]
-sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
-
-%screen variables
-sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
-sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
-sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
-sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
-sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
-sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
-sStimParamsSettings.intUseScreen = 2; %which screen to use
-
-%stimulus control variables
-sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParamsSettings.intUseGPU = 1;
-sStimParamsSettings.intAntiAlias = 0;
-sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
-sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
-sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
-sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
-sStimParamsSettings.vecSpatialFrequencies = 0.05; %Spat Frequency in cyc/deg 0.08
-sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
-%orientations&noise
-if intStimSet == 1
-	intNumRepeats = 20;
-	sStimParamsSettings.vecOrientations = [0:15:359]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = zeros(size(sStimParamsSettings.vecOrientations)); %noise in degrees
-elseif intStimSet == 2
-	intNumRepeats = 400;
-	sStimParamsSettings.vecOrientations = [0 5 90 95]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = [0 2 0 2]; %noise in degrees
-elseif intStimSet == 3
-	intNumRepeats = 16;
-	sStimParamsSettings.vecStimulusSize_deg = [4 6 9 14 21 32 48 72];%circular window in degrees [35]
-	sStimParamsSettings.vecOrientations = [0 45 90 135]; %orientation (0 is drifting rightward)
-	sStimParamsSettings.vecOrientationNoise = 0; %noise in degrees
-end
+	%visual space parameters
+	sStimParamsSettings = struct;
+	sStimParamsSettings.strStimType = 'SquareGrating';
+	sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
+	sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
+	sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
+	sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
+	
+	%receptive field size&location parameters
+	sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
+	sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
+	sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in degrees [35]
+	sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
+	
+	%screen variables
+	sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+	sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
+	sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
+	sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
+	sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+	sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+	sStimParamsSettings.intUseScreen = 2; %which screen to use
+	
+	%stimulus control variables
+	sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
+	sStimParamsSettings.intUseGPU = 1;
+	sStimParamsSettings.intAntiAlias = 0;
+	sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
+	sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
+	sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
+	sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
+	sStimParamsSettings.vecSpatialFrequencies = 0.05; %Spat Frequency in cyc/deg 0.08
+	sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
+else
+	% evaluate and assign pre-defined values to structure
+	cellFields = fieldnames(sStimParamsSettings);
+	for intField=1:numel(cellFields)
+		sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+	end
 end
 if structEP.debug == 1
 	intUseScreen = 0;
@@ -175,19 +168,20 @@ else
 	intUseScreen = sStimParamsSettings.intUseScreen;
 end
 
-%% trial timing variables
-if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
-structEP.intNumRepeats = intNumRepeats;
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.4;
-structEP.dblSecsStimDur = 1;
-structEP.dblSecsBlankPost = 0.1;
-structEP.dblSecsBlankAtEnd = 3;
+%% stim presets
+%load preset
+sStimPresets = loadStimPreset(intStimSet,mfilename);
+% evaluate and assign pre-defined values to structure
+cellFieldsSP = fieldnames(sStimPresets);
+for intField=1:numel(cellFieldsSP)
+	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+end
 
 %% prepare stimuli
 %get stimuli
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
-if intStimSet == 2
+if isfield(sStimPresets,'boolGenNoise') && sStimPresets.boolGenNoise
 	for intObject=1:numel(sStimObject)
 		sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
 	end

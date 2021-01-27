@@ -4,9 +4,9 @@
 %10 repetitions = 11 minutes
 %80 trials in total
 
-%% suppress m-lint warnings
+%% suppress m-lint warnings & clear all variables except RunExperiment inputs
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-
+clearvars -except sStimPresets sStimParamsSettings;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
@@ -25,11 +25,14 @@ strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 
-
 %% query user input for recording name
-strRecording = input('Recording name (e.g., MouseX): ', 's');
+if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
+	strRecording = sStimParamsSettings.strRecording;
+else
+	strRecording = input('Recording name (e.g., MouseX): ', 's');
+end
 c = clock;
-strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
+strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
@@ -168,13 +171,26 @@ else
 end
 dblInversionDurSecs = (1/sStimParamsSettings.dblFlickerFreq)/2; %Hz
 
-%% trial timing variables
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0.3;
-structEP.dblSecsStimDur = 0.6;
-structEP.dblSecsBlankPost = 0.1;
-structEP.dblSecsBlankAtEnd = 3;
+%% stim presets
+%load preset
+sStimPresets = loadStimPreset(intStimSet,mfilename);
+% evaluate and assign pre-defined values to structure
+cellFieldsSP = fieldnames(sStimPresets);
+for intField=1:numel(cellFieldsSP)
+	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+end
 dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
+
+% trial timing variables
+%{
+sStimPresets = struct;
+sStimPresets.dblSecsBlankAtStart = 3;
+sStimPresets.dblSecsBlankPre = 0.3;
+sStimPresets.dblSecsStimDur = 0.6;
+sStimPresets.dblSecsBlankPost = 0.1;
+sStimPresets.dblSecsBlankAtEnd = 3;
+%}
 
 %% prepare stimulus
 %get retinal map

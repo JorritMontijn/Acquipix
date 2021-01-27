@@ -50,7 +50,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		strField = cellFieldDefaults{intDefaultField,1};
 		varDefaultValue = cellFieldDefaults{intDefaultField,2};
 		%check if supplied version exists
-		if isfield(sStimParams,strField)
+		if isfield(sStimParams,strField) && ~isempty(sStimParams.(strField))
 			sStimParamsChecked.(strField) = sStimParams.(strField);
 		else
 			sStimParamsChecked.(strField) = varDefaultValue;

@@ -2,8 +2,7 @@
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-clear all;
-close all;
+clearvars -except sStimPresets sStimParamsSettings;
 
 %% define paths
 dblLightMultiplier = 1; %strength of infrared LEDs
@@ -20,9 +19,13 @@ strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures s
 if ~exist(strTexDir,'dir'),mkdir(strTexDir);end
 
 %% query user input for recording name
-strRecording = input('Recording name (e.g., MouseX): ', 's');
+if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
+	strRecording = sStimParamsSettings.strRecording;
+else
+	strRecording = input('Recording name (e.g., MouseX): ', 's');
+end
 c = clock;
-strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename);
+strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
@@ -166,14 +169,27 @@ if sStimParams.intUseGPU > 0
 	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
 
-%% trial timing variables
-%note: stimulus duration is assigned automatically
-structEP.intNumRepeats = 20;
-structEP.dblSecsBlankAtStart = 3;
-structEP.dblSecsBlankPre = 0;
-structEP.dblSecsBlankPost = 0;
-structEP.dblSecsBlankAtEnd = 3;
+%% stim presets
+%load preset
+sStimPresets = loadStimPreset(intStimSet,mfilename);
+% evaluate and assign pre-defined values to structure
+cellFieldsSP = fieldnames(sStimPresets);
+for intField=1:numel(cellFieldsSP)
+	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+end
 structEP.intStimTypes = numel(sStimObject);
+%note: stimulus duration is assigned automatically
+
+% trial timing variables
+%{
+sStimPresets = struct;
+sStimPresets.intNumRepeats = 20;
+sStimPresets.dblSecsBlankAtStart = 3;
+sStimPresets.dblSecsBlankPre = 0;
+sStimPresets.dblSecsBlankPost = 0;
+sStimPresets.dblSecsBlankAtEnd = 3;
+%}
 
 %% initialize NI I/O box
 if boolUseNI
