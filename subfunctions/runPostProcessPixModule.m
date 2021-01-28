@@ -23,11 +23,12 @@ for intRunPrePro=[1]
     
     %% set & generate paths
     strThisPath = mfilename('fullpath');
-    strThisPath = strThisPath(1:(end-numel(mfilename)));
+    cellThisPath = strsplit(strThisPath,filesep);
+    strChanMapPath = strjoin(cellThisPath(1:(end-2)),filesep);
     strDataPath = strjoin(cellPath(1:3),filesep);
     strPathDataTarget = [strDataTarget filesep strExperiment filesep];
     if ~exist(strPathDataTarget,'dir'),mkdir(strPathDataTarget);end
-    strChanMapFile = strcat(strThisPath,'subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat');
+    strChanMapFile = strcat(strChanMapPath,filesep,'subfunctionsPP',filesep,'neuropixPhase3B2_kilosortChanMap.mat');
     
     %% load eye-tracking
     strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
@@ -185,12 +186,19 @@ for intRunPrePro=[1]
         fprintf('>Log file "%s" [%s]\n',sFiles(vecReorderStimFiles(intLogFile)).name,getTime)
         cellStim{intLogFile} = load(fullfile(strPathStimLogs,sFiles(vecReorderStimFiles(intLogFile)).name));
         strStimType = cellStim{intLogFile}.structEP.strFile;
-        if ~boolUseVisSync,continue;end
-        
-        intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
+        %intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
         if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
             vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI - intFirstSample/dblSampRateNI;
             vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI - intFirstSample/dblSampRateNI;
+        elseif ~boolUseVisSync && isfield(cellStim{intLogFile}.structEP,'vecStimOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.vecStimOnNI))
+            vecStimActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI - intFirstSample/dblSampRateNI;
+            vecStimActOffNI = cellStim{intLogFile}.structEP.vecStimOnNI - intFirstSample/dblSampRateNI;
+            % save to cell array
+            cellStim{intLogFile}.structEP.FirstSample = intFirstSample;
+            cellStim{intLogFile}.structEP.vecStimOnTime = vecStimActOnNI;
+            cellStim{intLogFile}.structEP.vecStimOffTime = vecStimActOffNI;
+            cellStim{intLogFile}.structEP.SampRateNI = dblSampRateNI;
+            continue;
         else
             %approximate timings
             vecStimOn = vecStimOnScreenPD/dblSampRateNI;
