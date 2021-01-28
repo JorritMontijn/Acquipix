@@ -5,10 +5,11 @@
 clearvars -except sStimPresets sStimParamsSettings;
 
 %% define paths
+intStimSet = 1;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
-boolUseSGL = true;
-boolUseNI = true;
+boolUseSGL = false;
+boolUseNI = false;
 boolDebug = false;
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
@@ -60,6 +61,10 @@ try
 	strOldPath = cd(strTexDir);
 	cd(strOldPath);
 	if isa(strFilename,'char') && ~isempty(strFilename)
+		%append filename
+		if ~contains(strFilename,mfilename)
+			strFilename = strcat(strFilename,'_',mfilename);
+		end
 		%make directory
 		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
 		if ~exist(strOutputDir,'dir')
@@ -72,11 +77,10 @@ try
 		end
 	end
 catch ME
-	dispErr(ME);
-	if boolUseSGL
-		CloseSGL(hSGL);
-	end
+	if boolUseSGL,CloseSGL(hSGL);end
+	rethrow(ME)
 end
+
 
 %% check if temporary directory exists, clean or make
 strTempDir = [strTempMasterPath 'TempObjects'];
@@ -159,7 +163,8 @@ else
 end
 
 %build single-repetition list
-[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsSettings);
+sStimParamsCombosReduced = rmfield(sStimParamsSettings,{'strRecording'});
+[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsCombosReduced);
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
@@ -170,13 +175,18 @@ if sStimParams.intUseGPU > 0
 end
 
 %% stim presets
-%load preset
-sStimPresets = loadStimPreset(intStimSet,mfilename);
+%load presets
+if ~exist('sStimPresets','var')
+	sStimPresets = loadStimPreset(intStimSet,mfilename);
+end
 % evaluate and assign pre-defined values to structure
 cellFieldsSP = fieldnames(sStimPresets);
 for intField=1:numel(cellFieldsSP)
-	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
-	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	try
+		structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	catch
+		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
+	end
 end
 structEP.intStimTypes = numel(sStimObject);
 %note: stimulus duration is assigned automatically

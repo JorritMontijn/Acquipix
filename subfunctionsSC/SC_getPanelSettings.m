@@ -17,6 +17,9 @@ function sPanelSettings = SC_getPanelSettings(ptrPanel)
 					sPanelSettings.(strField) = strVal;
 				end
 			end
+			if isempty(sPanelSettings.(strField))
+				sPanelSettings.(strField) = strVal;
+			end
 		end
 	end
 end

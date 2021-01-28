@@ -253,7 +253,7 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		warning('off','catstruct:DuplicatesFound');
 		sStimStruct = catstruct(sStimParams,sStimPresets);
 		warning('on','catstruct:DuplicatesFound');
-		[strEstTotDur,sStimParams,sStimObject] = RE_evaluateStimPresets(sStimStruct,strStimType);
+		[strEstTotDur,sStimParamsEvaluated,sStimObject] = RE_evaluateStimPresets(sStimStruct,strStimType);
 	
 		%update text
 		set(sFigRE.ptrTextEstDur,...

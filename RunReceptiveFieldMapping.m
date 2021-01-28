@@ -10,10 +10,9 @@ clearvars -except sStimPresets sStimParamsSettings;
 
 %% define variables
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = true;
-boolUseNI = true;
+boolUseSGL = false;
+boolUseNI = false;
 boolDebug = false;
-intUseMask = 0;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
 
@@ -67,6 +66,10 @@ try
 	strOldPath = cd(strTexDir);
 	cd(strOldPath);
 	if isa(strFilename,'char') && ~isempty(strFilename)
+		%append filename
+		if ~contains(strFilename,mfilename)
+			strFilename = strcat(strFilename,'_',mfilename);
+		end
 		%make directory
 		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
 		if ~exist(strOutputDir,'dir')
@@ -78,8 +81,9 @@ try
 			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
 		end
 	end
-catch
+catch ME
 	if boolUseSGL,CloseSGL(hSGL);end
+	rethrow(ME)
 end
 
 %% check if temporary directory exists, clean or make
@@ -133,7 +137,7 @@ sStimParamsSettings.strLinLoc = 'LinLoc matrix is upside down; top of screen are
 sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
 sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
 sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
-sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
+sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %screen variables
 sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
@@ -163,6 +167,20 @@ sStimParamsSettings.dblBackground = 0.5; %background intensity (dbl, [0 1])
 sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.dblBackground)*255);
 sStimParamsSettings.dblContrast = 100; %contrast; [0-100]
 sStimParamsSettings.dblFlickerFreq = 0; %Hz
+else
+	%get screen size from PTB
+	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
+	vecRect=Screen('Rect', sStimParamsSettings.intUseScreen);
+	
+	% evaluate and assign pre-defined values to structure
+	cellFields = fieldnames(sStimParamsSettings);
+	for intField=1:numel(cellFields)
+		try
+			sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+		catch
+			sStimParamsSettings.(cellFields{intField}) = sStimParamsSettings.(cellFields{intField});
+		end
+	end
 end
 if structEP.debug == 1
 	intUseScreen = 0;
@@ -172,14 +190,16 @@ end
 dblInversionDurSecs = (1/sStimParamsSettings.dblFlickerFreq)/2; %Hz
 
 %% stim presets
-%load preset
-sStimPresets = loadStimPreset(intStimSet,mfilename);
 % evaluate and assign pre-defined values to structure
 cellFieldsSP = fieldnames(sStimPresets);
 for intField=1:numel(cellFieldsSP)
-	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
-	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	try
+		structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	catch
+		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
+	end
 end
+
 dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
 
 % trial timing variables
@@ -197,7 +217,8 @@ sStimPresets.dblSecsBlankAtEnd = 3;
 matMapDegsXYD = buildRetinalSpaceMap(sStimParamsSettings);
 
 %prepare checker-board stimuli for incremental on-the-fly stimulus creation
-[sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = getSparseCheckerCombos(sStimParamsSettings,matMapDegsXYD);
+sStimParamsCombosReduced = rmfield(sStimParamsSettings,{'strRecording'});
+[sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = getSparseCheckerCombos(sStimParamsCombosReduced,matMapDegsXYD);
 
 %add timestamps to object
 sStimObject.TrialNumber = [];

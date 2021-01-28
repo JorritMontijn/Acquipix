@@ -27,7 +27,7 @@ function [cellProps,cellVals,cellComments] = RE_getParams(strTargetFile)
 			strProp = strtrim(getFlankedBy(strCode,'sStimParamsSettings.','=','first'));
 			strVal =strtrim(getFlankedBy(strCode,'=',';','last'));
 			%assign if field
-			if ~isempty(strProp) && ~contains(strVal,'eval(')
+			if ~isempty(strProp) && ~contains(strVal,'eval(') && ~contains(strProp,'(') && ~contains(strProp,'strRecording')
 				cellComments(end+1,1) = {strComment};
 				cellProps(end+1,1) = {strProp};
 				cellVals(end+1,1) = {strVal};

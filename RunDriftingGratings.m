@@ -8,7 +8,7 @@ clearvars -except sStimPresets sStimParamsSettings;
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = false;
 boolUseNI = false;
-boolDebug = true;
+boolDebug = false;
 intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
 dblLightMultiplier = 1; %strength of infrared LEDs
@@ -63,6 +63,10 @@ try
 	strOldPath = cd(strTexDir);
 	cd(strOldPath);
 	if isa(strFilename,'char') && ~isempty(strFilename)
+		%append filename
+		if ~contains(strFilename,mfilename)
+			strFilename = strcat(strFilename,'_',mfilename);
+		end
 		%make directory
 		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
 		if ~exist(strOutputDir,'dir')
@@ -74,9 +78,11 @@ try
 			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
 		end
 	end
-catch
+catch ME
 	if boolUseSGL,CloseSGL(hSGL);end
+	rethrow(ME)
 end
+y
 
 %% check if temporary directory exists, clean or make
 strTempDir = 'X:\JorritMontijn\TempObjects';
@@ -128,12 +134,12 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcm
 	sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
 	sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
 	sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
-	sStimParamsSettings.vecUseMask = intUseMask; %[1] if mask to emulate retinal-space, [0] use screen-space
+	sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
 	
 	%receptive field size&location parameters
 	sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
 	sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
-	sStimParamsSettings.vecStimulusSize_deg = dblStimSizeDegs;%circular window in degrees [35]
+	sStimParamsSettings.vecStimulusSize_deg = 140;%circular window in degrees [140]
 	sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 	
 	%screen variables
@@ -159,7 +165,11 @@ else
 	% evaluate and assign pre-defined values to structure
 	cellFields = fieldnames(sStimParamsSettings);
 	for intField=1:numel(cellFields)
-		sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+		try
+			sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+		catch
+			sStimParamsSettings.(cellFields{intField}) = sStimParamsSettings.(cellFields{intField});
+		end
 	end
 end
 if structEP.debug == 1
@@ -168,39 +178,63 @@ else
 	intUseScreen = sStimParamsSettings.intUseScreen;
 end
 
-%% stim presets
-%load preset
-sStimPresets = loadStimPreset(intStimSet,mfilename);
-% evaluate and assign pre-defined values to structure
-cellFieldsSP = fieldnames(sStimPresets);
-for intField=1:numel(cellFieldsSP)
-	structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
-	sStimParamsSettings.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+%% prepare stimuli
+%load presets
+if ~exist('sStimPresets','var')
+	sStimPresets = loadStimPreset(intStimSet,mfilename);
 end
 
-%% prepare stimuli
+%build fields for getCombos
+if ~isfield(sStimPresets,'boolGenNoise')
+	sStimPresets.boolGenNoise = false;
+end
+if ~isfield(sStimPresets,'vecOrientationNoise')
+	sStimPresets.vecOrientationNoise = 0;
+end
+if ~isfield(sStimParamsSettings,'strRecording')
+	sStimParamsSettings.strRecording = strRecording;
+end
+sStimParams = catstruct(sStimParamsSettings,sStimPresets);
+cellFields = fieldnames(sStimParams);
+indRem = cellfun(@(x) strcmp(x(1:7),'dblSecs'),cellFields);
+sStimParamsCombosReduced = rmfield(sStimParams,cellFields(indRem));
+sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,{'boolGenNoise','intNumRepeats','vecOrientationNoise','strRecording'});
+
 %get stimuli
-[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(rmfield(sStimParamsSettings,'vecOrientationNoise'));
-if isfield(sStimPresets,'boolGenNoise') && sStimPresets.boolGenNoise
+[sStimParamsEvaluated,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParamsCombosReduced);
+if isfield(sStimParams,'boolGenNoise') && sStimParams.boolGenNoise
 	for intObject=1:numel(sStimObject)
-		sStimObject(intObject).OrientationNoise = sStimParamsSettings.vecOrientationNoise(intObject);
+		sStimObject(intObject).OrientationNoise = sStimParams.vecOrientationNoise(intObject);
 	end
 end
+warning('off','catstruct:DuplicatesFound');
+sStimParams = catstruct(sStimParamsEvaluated,sStimParams);
+warning('on','catstruct:DuplicatesFound');
 
 %get noise stimuli
 cellStimObjectNoise = cell(1,numel(sStimObject));
-vecStimsWithNoise = find(sStimParamsSettings.vecOrientationNoise > 0);
+vecStimsWithNoise = find(sStimParams.vecOrientationNoise > 0);
 for intNoiseStim=1:numel(vecStimsWithNoise)
 	intStim = vecStimsWithNoise(intNoiseStim);
-	dblOri = sStimParamsSettings.vecOrientations(intStim);
-	dblNoise = sStimParamsSettings.vecOrientationNoise(intStim);
+	dblOri = sStimParams.vecOrientations(intStim);
+	dblNoise = sStimParams.vecOrientationNoise(intStim);
 	vecNoiseStims = [dblOri-dblNoise*3:0.1:dblOri+dblNoise*3];
 	intNoiseStims = numel(vecNoiseStims);
 	fprintf('Loading %d noise stimuli for stim %d [%s]\n',intNoiseStims,numel(vecStimsWithNoise),getTime);
-	sStimParamsNoiseStim = rmfield(sStimParamsSettings,'vecOrientationNoise');
 	sStimParamsNoiseStim.vecOrientations = vecNoiseStims;
 	[dummy,sThisStimObjectNoise,dummy2] = getDriftingGratingCombos(sStimParamsNoiseStim);
 	cellStimObjectNoise{intStim} = sThisStimObjectNoise;
+end
+
+%% stim presets
+% evaluate and assign pre-defined values to structure
+cellFieldsSP = fieldnames(sStimPresets);
+for intField=1:numel(cellFieldsSP)
+	try
+		structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	catch
+		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
+	end
 end
 
 %% initialize parallel pool && gpu
