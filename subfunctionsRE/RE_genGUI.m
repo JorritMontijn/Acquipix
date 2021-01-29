@@ -31,7 +31,7 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 	%stim set input checker
 	sFigRE.ptrButtonCheckStimPresets = uicontrol('Style','pushbutton','FontSize',10,...
 		'String','Evaluate Inputs',...
-		'Position',[50 280 100 30],...
+		'Position',[20 280 100 30],...
 		'Enable','off',...
 		'Visible','off',...
 		'UserData','lock',...
@@ -39,8 +39,9 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 	
 	%estimated duration text
 	vecLocButtonStimPres = get(sFigRE.ptrButtonCheckStimPresets,'Position');
-	vecEstDurLocStaticText = vecLocButtonStimPres + [120 0 40 0];
-	vecEstDurLocText = vecEstDurLocStaticText + [140 0 40 0];
+	vecEstDurLocStaticText = [vecLocButtonStimPres(1)+vecLocButtonStimPres(3) vecLocButtonStimPres(2) + vecLocButtonStimPres(4) 0 0] +...
+		[20 -25 200 25];
+	vecEstDurLocText = [vecEstDurLocStaticText(1) vecEstDurLocStaticText(2)-20 vecEstDurLocStaticText(3) 20];
 	
 	sFigRE.ptrStaticTextEstDur = uicontrol('Style','text','FontSize',10,...
 		'Position',vecEstDurLocStaticText,...
@@ -51,10 +52,37 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		'Visible','off',...
 		'String','NaN');
 	
+	%stim set saver
+	vecLocSaveNewStimSet = [vecEstDurLocStaticText(1)+vecEstDurLocStaticText(3) vecEstDurLocStaticText(2) 0 0] + [20 2 100 25];
+	vecLocOverwriteStimSet = vecLocSaveNewStimSet + [0 -25 0 0];
+	vecLocDeleteStimSet = vecLocOverwriteStimSet + [vecLocOverwriteStimSet(3)+5 0 0 0];
+	sFigRE.ptrButtonOverwriteStimSet = uicontrol('Style','pushbutton','FontSize',10,...
+		'String','Overwrite',...
+		'Position',vecLocOverwriteStimSet,...
+		'Enable','off',...
+		'Visible','off',...
+		'UserData','lock',...
+		'Callback',@ptrButtonOverwriteStimPresets_Callback);
+	sFigRE.ptrButtonSaveNewStimSet = uicontrol('Style','pushbutton','FontSize',10,...
+		'String','Save New Set',...
+		'Position',vecLocSaveNewStimSet,...
+		'Enable','off',...
+		'Visible','off',...
+		'UserData','lock',...
+		'Callback',@ptrButtonSaveNewStimSet_Callback);
+	sFigRE.ptrButtonDeleteStimSet = uicontrol('Style','pushbutton','FontSize',10,...
+		'String','Delete',...
+		'Position',vecLocDeleteStimSet,...
+		'Enable','off',...
+		'Visible','off',...
+		'UserData','lock',...
+		'Callback',@ptrButtonDeleteStimSet_Callback);
+	
 	%start button
 	sFigRE.ptrButtonStartExperiment = uicontrol('Style','pushbutton','FontSize',10,...
 		'String','Start Experiment!',...
-		'Position',[50 20 100 30],...
+		'FontWeight','bold',...
+		'Position',[50 20 130 40],...
 		'Enable','off',...
 		'Visible','off',...
 		'UserData','lock',...
@@ -121,6 +149,13 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		set(sFigRE.ptrStaticTextEstDur,...
 			'Visible','on');
 		set(sFigRE.ptrTextEstDur,...
+			'Visible','on');
+		%save buttons
+		set(sFigRE.ptrButtonOverwriteStimSet,...
+			'Visible','on');
+		set(sFigRE.ptrButtonSaveNewStimSet,...
+			'Visible','on');
+		set(sFigRE.ptrButtonDeleteStimSet,...
 			'Visible','on');
 		
 		%% delete old panels
@@ -286,4 +321,103 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		assignin('base','sStimPresets',sStimPresets);
 		evalin('base',strStimType);
 	end
+	function ptrButtonOverwriteStimPresets_Callback(hObject, eventdata) %#ok<DEFNU>
+		%evaluate variables
+		ptrButtonCheckStimPresets_Callback;
+		if ~sRE.IsInputConfirmed
+			error
+			return;
+		end
+		
+		%get experiment
+		strStimType = sFigRE.ptrListSelectStimulusSet.String{sFigRE.ptrListSelectStimulusSet.Value};
+		
+		%retrieve stim preset panel settings
+		sStimPresets = sRE.sStimPresets;
+		
+		%get this set
+		strSets = sFigRE.ptrListSelectStimPresets.String{sFigRE.ptrListSelectStimPresets.Value};
+		intSet = str2double(strSets(5:end));
+		
+		%save
+		sOpt = struct;
+		sOpt.Interpreter = 'tex';
+		sOpt.Default = 'Cancel';
+		strAns = questdlg(sprintf('%s OVERWRITE preset with current parameters?\n\n"%s Set %d"\n','\fontsize{10}',strStimType,intSet),'Overwrite preset','Overwrite','Cancel',sOpt);
+		if strcmp(strAns,'Overwrite')
+			saveStimPreset(sStimPresets,strStimType,intSet);
+		end
+		
+	end
+	function ptrButtonSaveNewStimSet_Callback(hObject, eventdata) %#ok<DEFNU>
+		%evaluate variables
+		ptrButtonCheckStimPresets_Callback;
+		if ~sRE.IsInputConfirmed
+			error
+			return;
+		end
+		
+		%get current sets
+		cellSets = sFigRE.ptrListSelectStimPresets.String;
+		vecSets = cellfun(@(x) str2double(x(5:end)),cellSets);
+		vecPossible = 1:(max(vecSets)+1);
+		intFirstOpenEntry = find(~ismember(vecPossible,vecSets),1);
+		
+		%get experiment
+		strStimType = sFigRE.ptrListSelectStimulusSet.String{sFigRE.ptrListSelectStimulusSet.Value};
+		
+		%retrieve stim preset panel settings
+		sStimPresets = sRE.sStimPresets;
+		
+		%save
+		sOpt = struct;
+		sOpt.Interpreter = 'tex';
+		sOpt.Default = 'Cancel';
+		strAns = questdlg(sprintf('%s Save current parameters as new preset?\n\n"%s Set %d"\n','\fontsize{10}',strStimType,intFirstOpenEntry),'Save new preset','Create','Cancel',sOpt);
+		if strcmp(strAns,'Create')
+			saveStimPreset(sStimPresets,strStimType,intFirstOpenEntry);
+		else
+			return;
+		end
+		
+		%update gui
+		ptrListSelectStimulusSet_Callback(sFigRE.ptrListSelectStimulusSet);
+		sFigRE.ptrListSelectStimPresets.Value = intFirstOpenEntry;
+		ptrListSelectStimPresets_Callback(sFigRE.ptrListSelectStimPresets);
+	end
+	function ptrButtonDeleteStimSet_Callback(hObject, eventdata) %#ok<DEFNU>
+		%evaluate variables
+		ptrButtonCheckStimPresets_Callback;
+		if ~sRE.IsInputConfirmed
+			error
+			return;
+		end
+		
+		%get experiment
+		strStimType = sFigRE.ptrListSelectStimulusSet.String{sFigRE.ptrListSelectStimulusSet.Value};
+		
+		%get this set
+		strSets = sFigRE.ptrListSelectStimPresets.String{sFigRE.ptrListSelectStimPresets.Value};
+		intSet = str2double(strSets(5:end));
+		
+		%save
+		sOpt = struct;
+		sOpt.Interpreter = 'tex';
+		sOpt.Default = 'Cancel';
+		strAns = questdlg(sprintf('%s DELETE current preset?\n\n"%s Set %d"\n','\fontsize{10}',strStimType,intSet),'Delete preset','Delete','Cancel',sOpt);
+		if strcmp(strAns,'Delete')
+			%delete
+			strFullPath = mfilename('fullpath');
+			cellPathParts = strsplit(strFullPath,filesep);
+			strTargetPath = strjoin(cat(2,cellPathParts(1:(end-2)),'StimPresets'),filesep);
+			strDeleteFile = sprintf('Preset%d_%s.mat',intSet,strStimType);
+			delete(fullfile(strTargetPath,strDeleteFile));
+		else
+			return;
+		end
+		
+		%update gui
+		ptrListSelectStimulusSet_Callback(sFigRE.ptrListSelectStimulusSet);
+	end
+	
 end

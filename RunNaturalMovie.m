@@ -4,20 +4,14 @@
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
 clearvars -except sStimPresets sStimParamsSettings;
 
-%% define paths
-intStimSet = 1;
-dblLightMultiplier = 1; %strength of infrared LEDs
-dblSyncLightMultiplier = 0.5;
+%% define variables
+fprintf('Starting %s [%s]\n',mfilename,getTime);
+intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = false;
 boolUseNI = false;
-boolDebug = false;
-strThisPath = mfilename('fullpath');
-strThisPath = strThisPath(1:(end-numel(mfilename)));
-strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
-strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
-strTexSubDir = 'StimulusTextures';
-strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
-if ~exist(strTexDir,'dir'),mkdir(strTexDir);end
+boolDebug = true;
+dblLightMultiplier = 1; %strength of infrared LEDs
+dblSyncLightMultiplier = 0.5;
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
@@ -25,8 +19,75 @@ if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecordi
 else
 	strRecording = input('Recording name (e.g., MouseX): ', 's');
 end
-c = clock;
-strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
+
+%% input params
+fprintf('Loading settings...\n');
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'NaturalMovie')
+	%general
+	sStimParamsSettings = struct;
+	sStimParamsSettings.strStimType = 'NaturalMovie';
+	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
+	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
+	
+	%visual space parameters
+	sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
+	sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
+	sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
+	sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
+	
+	%receptive field size&location parameters
+	sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
+	sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
+	sStimParamsSettings.vecSceneSize_deg = 40;%stimulus will be assumed to be this size
+	sStimParamsSettings.vecStimulusSize_deg = 0;%circular window in degrees [35]
+	sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
+	
+	%screen variables
+	sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+	sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
+	sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
+	sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
+	sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+	sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
+	sStimParamsSettings.intUseScreen = 2; %which screen to use
+	
+	%stimulus control variables
+	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
+	sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
+	sStimParamsSettings.intUseGPU = 1;
+	sStimParamsSettings.intAntiAlias = 0;
+	sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
+	sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
+	sStimParamsSettings.vecContrasts = [100];
+	sStimParamsSettings.vecLuminances = [100];
+	sStimParamsSettings.vecScenes = [1]; %1: condor flight school
+	sStimParamsSettings.strScene = 'CondorFlightSchool'; %description
+	sStimParamsSettings.varDispRate = 'Screen'; %'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
+else
+	% evaluate and assign pre-defined values to structure
+	cellFields = fieldnames(sStimParamsSettings);
+	for intField=1:numel(cellFields)
+		try
+			sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+		catch
+			sStimParamsSettings.(cellFields{intField}) = sStimParamsSettings.(cellFields{intField});
+		end
+	end
+end
+
+if boolDebug == 1
+	intUseScreen = 0;
+else
+	intUseScreen = sStimParamsSettings.intUseScreen;
+end
+
+
+%% set output locations for logs
+strOutputPath = sStimParamsSettings.strOutputPath;
+strTempObjectPath = sStimParamsSettings.strTempObjectPath;
+strThisFilePath = mfilename('fullpath');
+[strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
+fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
@@ -42,126 +103,32 @@ if boolUseSGL
 	%% check disk space available
 	strDataDirSGL = GetDataDir(hSGL);
 	jFileObj = java.io.File(strDataDirSGL);
-	dblFreeB = jFileObj.getFreeSpace;
-	dblFreeGB = dblFreeB/(1024^3);
-	if dblFreeGB < 100
-		warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);
-	end
+	dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
+	if dblFreeGB < 100,warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);end
 else
 	sParamsSGL = struct;
 end
 
-%% set output locations for logs
-try
-	%define output filename
-	strThisDir = which(mfilename);
-	intOffset = length(mfilename) + 2;
-	strDir = strThisDir(1:end-intOffset);
-	fprintf('Saving output in directory %s; loading textures from %s\n',strSessionDir,strTexDir);
-	strOldPath = cd(strTexDir);
-	cd(strOldPath);
-	if isa(strFilename,'char') && ~isempty(strFilename)
-		%append filename
-		if ~contains(strFilename,mfilename)
-			strFilename = strcat(strFilename,'_',mfilename);
-		end
-		%make directory
-		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
-		if ~exist(strOutputDir,'dir')
-			mkdir(strOutputDir);
-		end
-		strOldPath = cd(strOutputDir);
-		%check if file does not exist
-		if exist([strOutputDir filesep strFilename],'file') || exist([strOutputDir filesep strFilename '.mat'],'file')
-			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
-		end
-	end
-catch ME
-	if boolUseSGL,CloseSGL(hSGL);end
-	rethrow(ME)
+%% build structEP
+%load presets
+if ~exist('sStimPresets','var')
+	sStimPresets = loadStimPreset(intStimSet,mfilename);
 end
 
-
-%% check if temporary directory exists, clean or make
-strTempDir = [strTempMasterPath 'TempObjects'];
-if exist(strTempDir,'dir')
-	warning('off','backtrace')
-	warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
-	warning('on','backtrace')
-	sFiles = dir(strcat(strTempDir,filesep,'*.mat'));
-	intFileNum = numel(sFiles);
-	if intFileNum > 0
-		strCleanFiles = input(sprintf('   Do you wish to delete all %d files in the temporary folder? [y/n]',intFileNum), 's');
-		if strcmpi(strCleanFiles,'y')
-			fprintf('Deleting %d .mat files...\n',intFileNum);
-			for intFile=1:intFileNum
-				delete(strcat(strTempDir,filesep,sFiles(intFile).name));
-			end
-			fprintf('\b  Done!\n');
-		end
-	end
-else
-	mkdir(strTempDir);
-end
-
-%% general parameters
-fprintf('Preparing variables...\n');
-%general variable definitions
+% evaluate and assign pre-defined values to structure
 structEP = struct; %structureElectroPhysiology
-
-%get default settings in Set
-intUseDaqDevice = 1; %set to 0 to skip I/O
-
-%assign filename
-structEP.strFile = mfilename;
-
-%screen params
-structEP.debug = boolDebug;
+cellFieldsSP = fieldnames(sStimPresets);
+for intField=1:numel(cellFieldsSP)
+	try
+		structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
+	catch
+		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
+	end
+end
+structEP.intStimTypes = numel(sStimObject);
+%note: stimulus duration is assigned automatically
 
 %% stimulus params
-if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'NaturalMovie')
-%visual space parameters
-sStimParamsSettings = struct;
-sStimParamsSettings.strStimType = 'NaturalMovie';
-sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParamsSettings.dblSubjectPosY_cm = -2.5; % cm; relative to center of screen, -3.5
-sStimParamsSettings.dblScreenDistance_cm = 17; % cm; measured, 14
-sStimParamsSettings.vecUseMask = 0; %[1] if mask to emulate retinal-space, [0] use screen-space
-
-%receptive field size&location parameters
-sStimParamsSettings.vecStimPosX_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecStimPosY_deg = 0; % deg; relative to subject
-sStimParamsSettings.vecSceneSize_deg = 40;%stimulus will be assumed to be this size
-sStimParamsSettings.vecStimulusSize_deg = 0;%circular window in degrees [35]
-sStimParamsSettings.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
-
-%screen variables
-sStimParamsSettings.intCornerTrigger = 2; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
-sStimParamsSettings.dblCornerSize = 1/30; % fraction of screen width
-sStimParamsSettings.dblScreenWidth_cm = 51; % cm; measured [51]
-sStimParamsSettings.dblScreenHeight_cm = 29; % cm; measured [29]
-sStimParamsSettings.dblScreenWidth_deg = 2 * atand(sStimParamsSettings.dblScreenWidth_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
-sStimParamsSettings.dblScreenHeight_deg = 2 * atand(sStimParamsSettings.dblScreenHeight_cm / (2 * sStimParamsSettings.dblScreenDistance_cm));
-sStimParamsSettings.intUseScreen = 2; %which screen to use
-
-%stimulus control variables
-sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
-sStimParamsSettings.intUseGPU = 1;
-sStimParamsSettings.intAntiAlias = 0;
-sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
-sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
-sStimParamsSettings.vecContrasts = [100];
-sStimParamsSettings.vecLuminances = [100];
-sStimParamsSettings.vecScenes = [1]; %1: condor flight school
-sStimParamsSettings.strScene = 'CondorFlightSchool'; %description
-sStimParamsSettings.varDispRate = 'Screen'; %'Source' (source file; 25 Hz), 'Screen' (screen refresh; 60 Hz), [int] (set frame rate)
-end
-if structEP.debug == 1
-	intUseScreen = 0;
-else
-	intUseScreen = sStimParamsSettings.intUseScreen;
-end
-
 %build single-repetition list
 sStimParamsCombosReduced = rmfield(sStimParamsSettings,{'strRecording'});
 [sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsCombosReduced);
@@ -174,33 +141,6 @@ if sStimParams.intUseGPU > 0
 	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
 
-%% stim presets
-%load presets
-if ~exist('sStimPresets','var')
-	sStimPresets = loadStimPreset(intStimSet,mfilename);
-end
-% evaluate and assign pre-defined values to structure
-cellFieldsSP = fieldnames(sStimPresets);
-for intField=1:numel(cellFieldsSP)
-	try
-		structEP.(cellFieldsSP{intField}) = eval(sStimPresets.(cellFieldsSP{intField}));
-	catch
-		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
-	end
-end
-structEP.intStimTypes = numel(sStimObject);
-%note: stimulus duration is assigned automatically
-
-% trial timing variables
-%{
-sStimPresets = struct;
-sStimPresets.intNumRepeats = 20;
-sStimPresets.dblSecsBlankAtStart = 3;
-sStimPresets.dblSecsBlankPre = 0;
-sStimPresets.dblSecsBlankPost = 0;
-sStimPresets.dblSecsBlankAtEnd = 3;
-%}
-
 %% initialize NI I/O box
 if boolUseNI
 	%initialize
@@ -208,7 +148,7 @@ if boolUseNI
 	strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
 	boolDaqIn = true;
 	try
-		objDAQIn = openDaqInput(intUseDaqDevice,strDataOutFile);
+		objDAQIn = openDaqInput(structEP.intUseDaqDevice,strDataOutFile);
 	catch ME
 		if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
 			fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
@@ -217,7 +157,7 @@ if boolUseNI
 			rethrow(ME);
 		end
 	end
-	objDAQOut = openDaqOutput(intUseDaqDevice);
+	objDAQOut = openDaqOutput(structEP.intUseDaqDevice);
 	
 	%turns leds on
 	stop(objDAQOut);
@@ -236,7 +176,7 @@ try
 	AssertOpenGL;
 	KbName('UnifyKeyNames');
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
-	if structEP.debug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
+	if boolDebug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
 	try
 		Screen('Preference', 'SkipSyncTests', 0);
 		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
@@ -253,7 +193,7 @@ try
 	
 	%% MAXIMIZE PRIORITY
 	intOldPriority = 0;
-	if structEP.debug == 0
+	if boolDebug == 0
 		intPriorityLevel=MaxPriority(ptrWindow);
 		intOldPriority = Priority(intPriorityLevel);
 	end
@@ -300,8 +240,8 @@ try
 	structEP.vecTrialStimOnSecs = structEP.vecTrialStartSecs + structEP.dblSecsBlankPre;
 	structEP.vecTrialStimOffSecs = structEP.vecTrialStimOnSecs + structEP.dblSecsStimDur;
 	structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankPost;
-
-
+	
+	
 	%% attempt to pre-load textures
 	if boolPreLoadTextures
 		fprintf('\nAttempting texture pre-loading...');
@@ -474,7 +414,7 @@ try
 				intFrame = vecSceneFrameIDs(1);
 				Screen('DrawTexture',ptrWindow,vecTex(intFrame));
 				Screen('DrawingFinished', ptrWindow);
-			
+				
 				%first flip
 				dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
 				dblStimStartFlip = dblLastFlip;
@@ -600,7 +540,7 @@ try
 	end
 	
 	%close Daq IO
-	if intUseDaqDevice > 0
+	if structEP.intUseDaqDevice > 0
 		if boolDaqIn
 			closeDaqInput(objDAQIn);
 		end
@@ -630,7 +570,7 @@ catch ME
 	end
 	
 	%% close Daq IO
-	if intUseDaqDevice > 0
+	if structEP.intUseDaqDevice > 0
 		try
 			closeDaqOutput(objDAQOut);
 			if boolDaqIn
