@@ -1,6 +1,6 @@
-function [strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath)
+function [strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath)
 	%RE_assertPaths Generates and tests required output paths
-	%   [strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath)
+	%   [strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath)
 	
 	%% generate texture path
 	cellPathParts = strsplit(strThisFilePath,filesep);
@@ -16,7 +16,8 @@ function [strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRec
 	
 	%% define output filename
 	vecC = clock;
-	strFilename = sprintf('%04d%02d%02d_%s',vecC(1),vecC(2),vecC(3),strRecording);
+	strTime = strrep(getTime(),':','_');
+	strFilename = sprintf('%04d%02d%02d_%s_%s',vecC(1),vecC(2),vecC(3),strRecording,strTime);
 	strSessionDir = strcat(strOutputPath,getDate()); %where are the logs saved?
 	if isa(strFilename,'char') && ~isempty(strFilename)
 		%append filename

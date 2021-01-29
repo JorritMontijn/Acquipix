@@ -7,9 +7,9 @@ clearvars -except sStimPresets sStimParamsSettings;
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
-boolUseSGL = false;
-boolUseNI = false;
-boolDebug = true;
+boolUseSGL = true;
+boolUseNI = true;
+boolDebug = false;
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
@@ -45,15 +45,15 @@ end
 strOutputPath = sStimParamsSettings.strOutputPath;
 strTempObjectPath = sStimParamsSettings.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
-[strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
-fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
+[strFilename,strLogDir,strTempDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
+fprintf('Saving output in directory %s\n',strLogDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
-	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -84,21 +84,16 @@ for intField=1:numel(cellFieldsSP)
 		structEP.(cellFieldsSP{intField}) = sStimPresets.(cellFieldsSP{intField});
 	end
 end
-structEP.intStimTypes = numel(sStimObject);
+structEP.intStimTypes = numel(sStimPresets.vecPulseITI);
 
 %% combine data & pre-allocate
 %combine
 sStimParams = catstruct(sStimParamsSettings,sStimPresets);
 %extract
-intTrialNum = sStimParams.intTrialNum;
-dblPrePostWait = sStimParams.dblPrePostWait;
-intRepsPerPulse = sStimParams.intRepsPerPulse;
-dblPulseWait = sStimParams.dblPulseWait;
-vecPulseITI = sStimParams.vecPulseITI;
-dblPulseDur = sStimParams.dblPulseDur;
-vecPulseDur = sStimParams.vecPulseDur;
-dblPulseWaitSignal = sStimParams.dblPulseWaitSignal;
-dblPulseWaitPause = sStimParams.dblPulseWaitPause;
+cellFields = fieldnames(sStimParams);
+for intField=1:numel(cellFields)
+	eval([(cellFields{intField}) ' = sStimParams.(cellFields{intField});']);
+end
 
 %build pres vectors
 cellPulseData = cell(1,intTrialNum);
@@ -127,7 +122,7 @@ for intTrial=1:intTrialNum
 end
 
 %% initialize NI I/O box
-if structEP.intUseDaqDevice > 0
+if sStimParamsSettings.intUseDaqDevice > 0
 	%% setup connection
 	%query connected devices
 	objDevice = daq.getDevices;
@@ -135,7 +130,7 @@ if structEP.intUseDaqDevice > 0
 	strID = objDevice.ID;
 	
 	%create connection
-	objDAQOut = daq.createSession(objDevice(structEP.intUseDaqDevice).Vendor.ID);
+	objDAQOut = daq.createSession(objDevice(sStimParamsSettings.intUseDaqDevice).Vendor.ID);
 	
 	%set variables
 	objDAQOut.IsContinuous = true;
@@ -176,9 +171,6 @@ structEP.sStimParams = sStimParams;
 structEP.sParamsSGL = sParamsSGL;
 structEP.objDAQOut = objDAQOut;
 
-%save parameters
-save([strOutputDir filesep strFilename], 'structEP');
-
 try
 	%% check escape
 	if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
@@ -190,6 +182,7 @@ try
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		pause(1/1000);
 	end
+	warning('off','CalinsNetMex:connectionClosed');
 	
 	%% run stimuli
 	for intTrial = 1:intTrialNum
@@ -203,7 +196,7 @@ try
 		cellPulseDur_Temp = cellPulseDur(1:(intTrial-1));
 		vecStimOnNI_Temp = vecStimOnNI(1:(intTrial-1));
 		vecStimOffNI_Temp = vecStimOffNI(1:(intTrial-1));
-		save([strOutputDir filesep strFilename '_Temp'],...
+		save(fullfile(strTempDir,[strFilename '_Temp']),...
 			'vecPulseVolt_Temp','cellPulseData_Temp','cellPulseITI_Temp','cellPulseDur_Temp','vecStimOnNI_Temp','vecStimOffNI_Temp');
 		
 		%get new pulse data
@@ -216,7 +209,7 @@ try
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		
 		%prep stimulus
-		if structEP.intUseDaqDevice > 0
+		if sStimParamsSettings.intUseDaqDevice > 0
 			stop(objDAQOut);
 			%extend
 			if size(matData,2) == 1
@@ -238,7 +231,7 @@ try
 		
 		%start stimulus
 		fprintf('\b; stim started at %.3fs\n',toc(hTicTrial));
-		if structEP.intUseDaqDevice > 0,startBackground(objDAQOut);end
+		if sStimParamsSettings.intUseDaqDevice > 0,startBackground(objDAQOut);end
 		
 		%log NI timestamp
 		if boolUseSGL
@@ -248,7 +241,7 @@ try
 		end
 		
 		%wait
-		if structEP.intUseDaqDevice > 0
+		if sStimParamsSettings.intUseDaqDevice > 0
 			dblTimeout = (size(matData,1)/dblSamplingRate)*1.5;
 			wait(objDAQOut,dblTimeout);
 		end
@@ -267,6 +260,7 @@ try
 		%msg
 		fprintf('\b; trial finished at %.3fs [%s]\n',toc(hTicTrial),getTime);
 	end
+	warning('on','CalinsNetMex:connectionClosed');
 	
 	%save data
 	structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
@@ -275,7 +269,7 @@ try
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
 	structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 	structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-	save([strOutputDir filesep strFilename], 'structEP');
+	save(fullfile(strLogDir,strFilename), 'structEP');
 	
 	%% end-wait
 	hTicExpStop = tic;
@@ -292,7 +286,7 @@ try
 	if boolUseSGL,CloseSGL(hSGL);end
 	
 	%close Daq IO
-	if structEP.intUseDaqDevice > 0
+	if sStimParamsSettings.intUseDaqDevice > 0
 		try
 			closeDaqOutput(objDAQOut);
 			if boolDaqIn
@@ -304,6 +298,7 @@ try
 catch ME
 	%% catch me and throw me
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
+	warning('on','CalinsNetMex:connectionClosed');
 	
 	%save data
 	structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
@@ -312,7 +307,7 @@ catch ME
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
 	structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 	structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-	save([strOutputDir filesep strFilename], 'structEP');
+	save(fullfile(strLogDir,strFilename), 'structEP');
 	
 	%% end recording
 	try
@@ -321,7 +316,7 @@ catch ME
 	end
 	
 	%% close Daq IO
-	if structEP.intUseDaqDevice > 0
+	if sStimParamsSettings.intUseDaqDevice > 0
 		try
 			closeDaqOutput(objDAQOut);
 			if boolDaqIn

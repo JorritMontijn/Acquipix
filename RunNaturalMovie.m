@@ -7,9 +7,9 @@ clearvars -except sStimPresets sStimParamsSettings;
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
-boolUseSGL = false;
-boolUseNI = false;
-boolDebug = true;
+boolUseSGL = true;
+boolUseNI = true;
+boolDebug = false;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
 
@@ -67,10 +67,14 @@ else
 	% evaluate and assign pre-defined values to structure
 	cellFields = fieldnames(sStimParamsSettings);
 	for intField=1:numel(cellFields)
-		try
-			sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
-		catch
+		if strcmp(cellFields{intField}(1:3),'str') || strcmp(cellFields{intField},'varDispRate') %copy directly
 			sStimParamsSettings.(cellFields{intField}) = sStimParamsSettings.(cellFields{intField});
+		else
+			try
+				sStimParamsSettings.(cellFields{intField}) = eval(sStimParamsSettings.(cellFields{intField}));
+			catch
+				sStimParamsSettings.(cellFields{intField}) = sStimParamsSettings.(cellFields{intField});
+			end
 		end
 	end
 end
@@ -86,15 +90,15 @@ end
 strOutputPath = sStimParamsSettings.strOutputPath;
 strTempObjectPath = sStimParamsSettings.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
-[strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
+[strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
 fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
-	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -108,6 +112,15 @@ if boolUseSGL
 else
 	sParamsSGL = struct;
 end
+
+%% stimulus params
+%build single-repetition list
+cellParamFields = fieldnames(sStimParamsSettings);
+cellAllRemFields = {'strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
+indKeepRemFields = contains(cellAllRemFields,cellParamFields);
+cellRemFields = cellAllRemFields(indKeepRemFields);
+sStimParamsCombosReduced = rmfield(sStimParamsSettings,cellRemFields);
+[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsCombosReduced);
 
 %% build structEP
 %load presets
@@ -128,10 +141,6 @@ end
 structEP.intStimTypes = numel(sStimObject);
 %note: stimulus duration is assigned automatically
 
-%% stimulus params
-%build single-repetition list
-sStimParamsCombosReduced = rmfield(sStimParamsSettings,{'strRecording'});
-[sStimParams,sStimObject,sStimTypeList] = getNaturalMovieCombos(sStimParamsCombosReduced);
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
@@ -145,10 +154,10 @@ end
 if boolUseNI
 	%initialize
 	fprintf('Connecting to National Instruments box...\n');
-	strDataOutFile = strcat(strOutputDir,strFilename,'PhotoDiode','.csv');
+	strDataOutFile = fullfile(strLogDir,[strFilename,'PhotoDiode','.csv']);
 	boolDaqIn = true;
 	try
-		objDAQIn = openDaqInput(structEP.intUseDaqDevice,strDataOutFile);
+		objDAQIn = openDaqInput(sStimParamsSettings.intUseDaqDevice,strDataOutFile);
 	catch ME
 		if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
 			fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
@@ -157,7 +166,7 @@ if boolUseNI
 			rethrow(ME);
 		end
 	end
-	objDAQOut = openDaqOutput(structEP.intUseDaqDevice);
+	objDAQOut = openDaqOutput(sStimParamsSettings.intUseDaqDevice);
 	
 	%turns leds on
 	stop(objDAQOut);
@@ -471,9 +480,9 @@ try
 			
 			%save object
 			sObject = sThisStimObject;
-			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
-		catch
-			warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
+			save(fullfile(strTempDir,['Object',num2str(intThisTrial),'.mat']),'sObject');
+		catch ME
+			warning(ME.identifier,'%s',ME.message);
 		end
 		
 		%% save data
@@ -511,7 +520,7 @@ try
 	structEP.sStimParams = sStimParams;
 	structEP.sStimObject = sStimObject;
 	structEP.sStimTypeList = sStimTypeList;
-	save([strOutputDir filesep strFilename], 'structEP','sParamsSGL');
+	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 	
 	%show trial summary
 	fprintf('Finished experiment & data saving at [%s], waiting for end blank (dur=%.3fs)\n',getTime,structEP.dblSecsBlankAtEnd);
@@ -540,47 +549,77 @@ try
 	end
 	
 	%close Daq IO
-	if structEP.intUseDaqDevice > 0
+	if sStimParamsSettings.intUseDaqDevice > 0
 		if boolDaqIn
 			closeDaqInput(objDAQIn);
 		end
 		closeDaqOutput(objDAQOut);
 	end
 catch ME
-	%% catch me and throw me
-	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
-	
-	%save data
-	structEP.sStimParams = sStimParams;
-	structEP.sStimObject = sStimObject;
-	structEP.sStimTypeList = sStimTypeList;
-	save([strOutputDir filesep strFilename], 'structEP');
-	
-	%% catch me and throw me
-	Screen('Close');
-	Screen('CloseAll');
-	ShowCursor;
-	Priority(0);
-	Screen('Preference', 'Verbosity',intOldVerbosity);
-	
-	%% end recording
-	try
-		CloseSGL(hSGL);
-	catch
-	end
-	
-	%% close Daq IO
-	if structEP.intUseDaqDevice > 0
-		try
-			closeDaqOutput(objDAQOut);
+	%% check if escape
+	if strcmp(ME.identifier,'RunNaturalMovie:EscapePressed')
+		fprintf('\nEscape pressed at [%s], closing down and cleaning up...\n',getTime);
+		%save data
+		structEP.sStimParams = sStimParams;
+		structEP.sStimObject = sStimObject;
+		structEP.sStimTypeList = sStimTypeList;
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
+		
+		%clean up
+		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
+		Screen('Close',ptrWindow);
+		Screen('Close');
+		Screen('CloseAll');
+		ShowCursor;
+		Priority(0);
+		Screen('Preference', 'Verbosity',intOldVerbosity);
+		
+		%end recording
+		if boolUseSGL,CloseSGL(hSGL);end
+		
+		%close Daq IO
+		if boolUseNI
 			if boolDaqIn
 				closeDaqInput(objDAQIn);
 			end
+			closeDaqOutput(objDAQOut);
+		end
+	else
+		%% catch me and throw me
+		fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
+		
+		%save data
+		structEP.sStimParams = sStimParams;
+		structEP.sStimObject = sStimObject;
+		structEP.sStimTypeList = sStimTypeList;
+		save(fullfile(strLogDir,strFilename), 'structEP');
+		
+		%% catch me and throw me
+		Screen('Close');
+		Screen('CloseAll');
+		ShowCursor;
+		Priority(0);
+		Screen('Preference', 'Verbosity',intOldVerbosity);
+		
+		%% end recording
+		try
+			CloseSGL(hSGL);
 		catch
 		end
+		
+		%% close Daq IO
+		if boolUseNI
+			try
+				closeDaqOutput(objDAQOut);
+				if boolDaqIn
+					closeDaqInput(objDAQIn);
+				end
+			catch
+			end
+		end
+		
+		%% show error
+		rethrow(ME);
 	end
-	
-	%% show error
-	rethrow(ME);
 end
 %end

@@ -11,8 +11,8 @@ clearvars -except sStimPresets sStimParamsSettings;
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
 intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
-boolUseSGL = false;
-boolUseNI = false;
+boolUseSGL = true;
+boolUseNI = true;
 boolDebug = false;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
@@ -95,15 +95,15 @@ end
 strOutputPath = sStimParamsSettings.strOutputPath;
 strTempObjectPath = sStimParamsSettings.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
-[strFilename,strLogDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
+[strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
 fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
-	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -142,7 +142,11 @@ dblInversionDurSecs = (1/sStimParamsSettings.dblFlickerFreq)/2; %Hz
 matMapDegsXYD = buildRetinalSpaceMap(sStimParamsSettings);
 
 %prepare checker-board stimuli for incremental on-the-fly stimulus creation
-sStimParamsCombosReduced = rmfield(sStimParamsSettings,{'strRecording'});
+cellParamFields = fieldnames(sStimParamsSettings);
+cellAllRemFields = {'strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
+indKeepRemFields = contains(cellAllRemFields,cellParamFields);
+cellRemFields = cellAllRemFields(indKeepRemFields);
+sStimParamsCombosReduced = rmfield(sStimParamsSettings,cellRemFields);
 [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = getSparseCheckerCombos(sStimParamsCombosReduced,matMapDegsXYD);
 
 %add timestamps to object
@@ -168,7 +172,7 @@ end
 if boolUseNI
 	%initialize
 	fprintf('Connecting to National Instruments box...\n');
-	strDataOutFile = strcat(strLogDir,strFilename,'PhotoDiode','.csv');
+	strDataOutFile = fullfile(strLogDir,[strFilename,'PhotoDiode','.csv']);
 	boolDaqIn = true;
 	try
 		objDAQIn = openDaqInput(sStimParamsSettings.intUseDaqDevice,strDataOutFile);
@@ -409,9 +413,9 @@ try
 			%save object
 			sStimObject(end) = sThisStimObject;
 			sObject = sThisStimObject;
-			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
-		catch
-			warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
+			save(fullfile(strTempDir,['Object',num2str(intThisTrial),'.mat']),'sObject');
+		catch ME
+			warning(ME.identifier,'%s',ME.message);
 		end
 		
 		%% wait post-blanking
@@ -445,7 +449,7 @@ try
 	%save data
 	structEP.sStimParams = sStimParams;
 	structEP.sStimObject = sStimObject;
-	save([strLogDir filesep strFilename], 'structEP','sParamsSGL');
+	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 	
 	%show trial summary
 	fprintf('Finished experiment & data saving at [%s], waiting for end blank (dur=%.3fs)\n',getTime,structEP.dblSecsBlankAtEnd);
@@ -485,7 +489,7 @@ catch ME
 	%save data
 	structEP.sStimParams = sStimParams;
 	structEP.sStimObject = sStimObject;
-	save([strLogDir filesep strFilename], 'structEP');
+	save(fullfile(strLogDir,strFilename), 'structEP');
 	
 	%% catch me and throw me
 	Screen('Close');
@@ -501,7 +505,7 @@ catch ME
 	end
 	
 	%% close Daq IO
-	if intUseDaqDevice > 0
+	if sStimParamsSettings.intUseDaqDevice > 0
 		try
 			closeDaqOutput(objDAQOut);
 			if boolDaqIn
