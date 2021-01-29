@@ -179,12 +179,13 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		cellStimPresets = cell(0);
 		cellStimPresetText = cell(0);
 		intPresetIdx = 0;
-		while ~boolFinishedLoading
+		while ~boolFinishedLoading || intPresetIdx < 100
 			intPresetIdx = intPresetIdx + 1;
 			try
 				sStimPresets = loadStimPreset(intPresetIdx,strStimSet);
 				cellStimPresets{end+1} = sStimPresets;
 				cellStimPresetText{end+1} = sprintf('Set %d',intPresetIdx);
+				boolFinishedLoading = false;
 			catch
 				boolFinishedLoading = true;
 			end
