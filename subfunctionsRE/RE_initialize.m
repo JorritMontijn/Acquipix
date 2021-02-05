@@ -12,5 +12,6 @@ function [sFig,sRE] = RE_initialize(sFig,sRE)
 	
 	%set msg
 	sRE.IsInitialized = true;
+	sRE.IsInputConfirmed = false;
 end
 
