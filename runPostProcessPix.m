@@ -1,19 +1,20 @@
 % default options are in parenthesis after the comment
 clear all;
 %sites
-cellRec{1}{1} = 'P:\Montijn\DataNeuropixels\Exp2019-11-20\20191120_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-11-21\20191121_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_R02_RunDriftingGratingsR01_g0';
-cellRec{2}{1} = 'P:\Montijn\DataNeuropixels\Exp2019-12-10\20191210_MP3_RunDriftingGratingsR01_g0';%(might have missed onset first stim with eye tracker)
-cellRec{2}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-12-11\20191211_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-12-12\20191212_MP3_RunNaturalMovieR01_g0';
-cellRec{2}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-12-13\20191213_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{5} = 'P:\Montijn\DataNeuropixels\Exp2019-12-16\20191216_MP3_RunNaturalMovieR01_g0';
-cellRec{2}{6} = 'P:\Montijn\DataNeuropixels\Exp2019-12-17\20191217_MP3_RunDriftingGratingsR01_g0';
-cellRec{3}{1} = 'P:\Montijn\DataNeuropixels\Exp2020-01-15\20200115_MP4_RunDriftingGratingsR01_g0';%eye-tracking bad at end
-cellRec{3}{2} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0';
-cellRec{3}{3} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0';
+strDrivePath = '\\vs02.herseninstituut.knaw.nl\csf\Montijn\';
+cellRec{1}{1} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-11-20\20191120_MP2_RunDriftingGratingsR01_g0');
+cellRec{1}{2} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-11-21\20191121_MP2_RunDriftingGratingsR01_g0');
+cellRec{1}{3} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-11-22\20191122_MP2_RunDriftingGratingsR01_g0');
+cellRec{1}{4} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-11-22\20191122_MP2_R02_RunDriftingGratingsR01_g0');
+cellRec{2}{1} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-10\20191210_MP3_RunDriftingGratingsR01_g0');%(might have missed onset first stim with eye tracker)
+cellRec{2}{2} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-11\20191211_MP3_RunDriftingGratingsR01_g0');
+cellRec{2}{3} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-12\20191212_MP3_RunNaturalMovieR01_g0');
+cellRec{2}{4} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-13\20191213_MP3_RunDriftingGratingsR01_g0');
+cellRec{2}{5} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-16\20191216_MP3_RunNaturalMovieR01_g0');
+cellRec{2}{6} = fullfile(strDrivePath,'\DataNeuropixels\Exp2019-12-17\20191217_MP3_RunDriftingGratingsR01_g0');
+cellRec{3}{1} = fullfile(strDrivePath,'\DataNeuropixels\Exp2020-01-15\20200115_MP4_RunDriftingGratingsR01_g0');%eye-tracking bad at end
+cellRec{3}{2} = fullfile(strDrivePath,'\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0');
+cellRec{3}{3} = fullfile(strDrivePath,'\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0');
 
 
 cellDepthCorrection{1}{1} = 100;%01
@@ -44,7 +45,7 @@ cellDepths{3}{1} = 3250;
 cellDepths{3}{2} = 3400;
 cellDepths{3}{3} = 3300;
 
-cellDepths = cellfun(@plus,cellDepths,cellDepthCorrection);
+%cellDepths = cellfun(@plus,cellDepths,cellDepthCorrection);
 
 cellMouseType{1}{1} = 'BL6';
 cellMouseType{1}{2} = 'BL6';
@@ -74,13 +75,15 @@ matRunPrePro = [...
 	3 1;...11
 	3 2;...12
 	3 3];%13
-matRunPrePro = [1 4];
+matRunPrePro = [1 2];
 %set target path
-strDataTarget = 'P:\GluA3_VR\TRNinvivo\processed';
+strDataTarget = fullfile(strDrivePath,'DataNeuropixels');
 strSecondPathAP = 'D:\NeuropixelData\';
 
 %boolean switch
 boolOnlyJson = false;
+boolUseEyeTracking = true;
+boolUseVisSync = true;
 
 %% run
 runPostProcessPixModule

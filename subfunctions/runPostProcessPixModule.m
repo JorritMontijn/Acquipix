@@ -8,6 +8,7 @@ for intRunPrePro=[1]
 	
 	%% set recording
 	cellPath = strsplit(cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)},filesep);
+	cellPath(cellfun(@isempty,cellPath))=[];
 	cellRecParts = strsplit(cellPath{end},'_');
 	strMouse = cellRecParts{2};
 	strExperiment = cellPath{4};
@@ -25,6 +26,9 @@ for intRunPrePro=[1]
 	strThisPath = mfilename('fullpath');
 	strThisPath = strThisPath(1:(end-numel(mfilename)));
 	strDataPath = strjoin(cellPath(1:3),filesep);
+	if strcmp(cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)}(1),filesep) && ~strcmp(strjoin(cellPath(1:3),filesep),filesep)
+		strDataPath = [filesep filesep strjoin(cellPath(1:3),filesep)];
+	end
 	strPathDataTarget = [strDataTarget filesep strExperiment filesep];
 	if ~exist(strPathDataTarget,'dir'),mkdir(strPathDataTarget);end
 	strChanMapFile = strcat(strThisPath,'subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat');
@@ -34,8 +38,12 @@ for intRunPrePro=[1]
 	strPathStimLogs = strPathEphys;
 	if boolUseEyeTracking
 		clear sPupil
+		%find video file
+		%strPathEyeTracking = fullfile(strDataPath,strExperiment);
+		%strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment,'Exp','') strRec '.mat'];
+		%cellSubPaths = getSubDirs(strDataPath,inf);
+		
 		for intTryPaths = [1 2]
-			%find video file
 			if intTryPaths == 1
 				strPathEphys = fullfile(strDataPath,strExperiment,strRecording);
 				strPathEyeTracking = fullfile(strDataPath,strExperiment,'EyeTracking');
@@ -186,7 +194,7 @@ for intRunPrePro=[1]
 		cellStim{intLogFile} = load(fullfile(strPathStimLogs,sFiles(vecReorderStimFiles(intLogFile)).name));
 		strStimType = cellStim{intLogFile}.structEP.strFile;
 		if ~boolUseVisSync,continue;end
-		
+		%return
 		intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
 		if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI - intFirstSample/dblSampRateNI;
