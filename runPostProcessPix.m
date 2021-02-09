@@ -75,7 +75,7 @@ matRunPrePro = [...
 	3 1;...11
 	3 2;...12
 	3 3];%13
-matRunPrePro = [1 2];
+%matRunPrePro = [1 2];
 %set target path
 strDataTarget = fullfile(strDataDrivePath,'DataNeuropixels');
 strSecondPathAP = 'D:\NeuropixelData\';

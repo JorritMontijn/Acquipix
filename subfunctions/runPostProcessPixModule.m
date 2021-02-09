@@ -23,15 +23,19 @@ for intRunPrePro=[1]
 	strRec = '*';
 	
 	%% set & generate paths
-	strThisPath = mfilename('fullpath');
-	strThisPath = strThisPath(1:(end-numel(mfilename)));
+	cellThisPath = strsplit(mfilename('fullpath'),filesep);
+	strThisPath = strjoin(cellThisPath(1:find(cellfun(@(x) strcmp(x,'Acquipix'),cellThisPath))),filesep);
 	strDataPath = strjoin(cellPath(1:3),filesep);
 	if strcmp(cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)}(1),filesep) && ~strcmp(strjoin(cellPath(1:3),filesep),filesep)
 		strDataPath = [filesep filesep strjoin(cellPath(1:3),filesep)];
 	end
-	strPathDataTarget = [strDataTarget filesep strExperiment filesep];
+	if strcmp(strExperiment,'DataNeuropixels')
+		strPathDataTarget = [strDataTarget filesep strExperiment2 filesep];
+	else
+		strPathDataTarget = [strDataTarget filesep strExperiment filesep];
+	end
 	if ~exist(strPathDataTarget,'dir'),mkdir(strPathDataTarget);end
-	strChanMapFile = strcat(strThisPath,'subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat');
+	strChanMapFile = fullfile(strThisPath,'subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat');
 	
 	%% load eye-tracking
 	strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
@@ -50,12 +54,14 @@ for intRunPrePro=[1]
 				strPathStimLogs = fullfile(strDataPath,strExperiment,strMouse);
 				strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment,'Exp','') strRec '.mat'];
 				sEyeFiles = dir(fullfile(strPathEyeTracking,strSearchEyeFile));
+				strExp = strExperiment;
 			elseif intTryPaths == 2
 				strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
 				strPathEyeTracking = fullfile(strDataPath,strExperiment,strExperiment2,'EyeTracking');
 				strPathStimLogs = fullfile(strDataPath,strExperiment,strExperiment2,strMouse);
 				strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment2,'Exp','') strRec '.mat'];
 				sEyeFiles = dir(fullfile(strPathEyeTracking,strSearchEyeFile));
+				strExp = strExperiment2;
 			end
 			fprintf('Loading pre-processed eye-tracking data at %s [%s]\n',strPathEyeTracking,getTime);
 			if numel(sEyeFiles) == 1
@@ -633,7 +639,7 @@ for intRunPrePro=[1]
 	
 	%save json file
 	strJsonData = jsonencode(sJson);
-	strJsonFileOut = strcat(strExperiment,'_',strMouse,'_',strRecIdx,'.json');
+	strJsonFileOut = strcat(strExperiment,'_',strMouse,'_',strRecIdx,'_session.json');
 	strJsonTarget = fullfile(strPathDataTarget,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
 	save(strJsonTarget,'strJsonData','ascii');
