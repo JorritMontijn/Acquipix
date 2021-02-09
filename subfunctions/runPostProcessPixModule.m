@@ -320,7 +320,7 @@ for intRunPrePro=[1]
 		subplot(2,3,1)
 		hold on
 		plot(vecPupilTime,vecPupilSyncLum - mean(vecPupilSyncLum));
-		plot(vecPupilTime,boolPupilSync);
+		plot(vecPupilTime,boolPupilSync1);
 		hold off
 		xlabel('Time (s)');
 		ylabel('Screen signal (raw)');
@@ -332,7 +332,7 @@ for intRunPrePro=[1]
 		subplot(2,3,2)
 		hold on
 		plot(vecPupilTime,vecFiltSyncLum./std(vecFiltSyncLum));
-		plot(vecPupilTime,boolPupilSync);
+		plot(vecPupilTime,boolPupilSync1);
 		hold off
 		xlabel('Time (s)');
 		ylabel('Screen signal (smoothed)');
