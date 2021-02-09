@@ -86,6 +86,6 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 		intStopHiDef = find(boolPupilSyncOff==0,1);
 		dblStopHiDefT = intStopHiDef/dblSampRatePupil;
 	end
-	%close;
+	close;
 end
 

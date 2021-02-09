@@ -78,7 +78,7 @@ matRunPrePro = [...
 %matRunPrePro = [1 2];
 %set target path
 strDataTarget = fullfile(strDataDrivePath,'DataNeuropixels');
-strSecondPathAP = 'D:\NeuropixelData\';
+strSecondPathAP = 'D:\Data\Processed\Neuropixels\';
 
 %boolean switch
 boolOnlyJson = false;
