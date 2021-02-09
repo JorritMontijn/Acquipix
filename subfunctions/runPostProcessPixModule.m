@@ -232,7 +232,7 @@ for intRunPrePro=[1]
 				vecUseSignalOnT = vecSignalOnT(intStartStim:end);
 				
 				%get ON times
-				[vecStimOnTime,vecDiffOnT] = SC_refineDiffT(vecStimActOnSecs,vecUseSignalOnT - vecUseSignalOnT(1),inf);
+				[vecStimOnTime,vecDiffOnT] = OT_refineT(vecStimActOnSecs,vecUseSignalOnT - vecUseSignalOnT(1),inf);
 				vecError(intStartStim) = nansum(vecDiffOnT.^2);
 			end
 			[dblMin,intStartStim] = min(vecError);
@@ -260,7 +260,7 @@ for intRunPrePro=[1]
 		dblMaxErr = 0.1;
 		vecPresStimOnT = vecStimActOnNI(~vecRem);
 		vecSignalOnT = vecStimOnScreenPD/dblSampRateNI;
-		[vecStimOnTime,vecDiffOnT] = SC_refineDiffT(vecPresStimOnT,vecSignalOnT,inf);
+		[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
 		indReplace = abs(vecDiffOnT) > dblMaxErr;
 		vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - median(vecDiffOnT);
 		fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
@@ -272,7 +272,7 @@ for intRunPrePro=[1]
 			vecPresStimOffT = vecStimActOffNI(~vecRem);
 		end
 		vecSignalOffT = vecStimOffScreenPD/dblSampRateNI;
-		[vecStimOffTime,vecDiffOffT] = SC_refineDiffT(vecPresStimOffT,vecSignalOffT,inf);
+		[vecStimOffTime,vecDiffOffT] = OT_refineT(vecPresStimOffT,vecSignalOffT,inf);
 		indReplace = abs(nanzscore(vecDiffOffT)) > 5;
 		vecStimOffTime(indReplace) = vecStimActOffNI(indReplace) - median(vecDiffOffT);
 		fprintf('Average timing error is %.3fs for stimulus offsets; %d violations, %d corrected\n',mean(abs(vecDiffOffT)),sum(abs(vecDiffOffT) > dblMaxErr),sum(indReplace));
@@ -296,68 +296,23 @@ for intRunPrePro=[1]
 		
 		%build approximate onsets
 		dblSecsT0 = vecStimActOnNI(1);
-		vecEyeStimOnT = vecStimActOnNI - dblSecsT0;
+		vecNIStimOnT = vecStimActOnNI - dblSecsT0;
 		
-		%go through onsets to check which one aligns with timings
-		intStims = numel(vecSignalOnT);
-		vecError = nan(1,intStims);
-		parfor intStartStim=1:intStims
-			%select onsets
-			vecUseSignalOnT = vecSignalOnT(intStartStim:end) - vecSignalOnT(intStartStim);
-			%vecUseSignalOnT = vecSignalOnT - vecSignalOnT(intStartStim);
-			
-			%get ON times
-			[vecPupilOnT,vecDiffPupilOnT] = SC_refineDiffT(vecEyeStimOnT,vecUseSignalOnT,inf);
-			vecError(intStartStim) = nansum(vecDiffPupilOnT.^2);
-		end
-		[dblMin,intStartStim] = min(vecError);
-		dblStartT = vecSignalOnT(intStartStim);
+		%build user var struct
+		sUserVars = struct;
+		sUserVars.strType = 'eye-tracking video';
+		sUserVars.vecSignalVals = vecPupilSyncLum;
+		sUserVars.vecSignalTime = vecPupilTime;
+		sUserVars.intBlockNr = intLogFile;
 		
-		
-		%% calculate probability & request input if low
-		%get probability
-		[vecP,vecMax10]=findmax(-vecError,10);
-		vecSoftmin = softmax(vecP);
-		[vecP,vecI]=findmax(vecSoftmin,10);
-		dblAlignmentCertainty = vecP(1)/sum(vecP);
-		fprintf('Aligned pupil onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
-		if dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)
-			fprintf('\n << Alignment certainty is under 90%%, please check manually >>\n');
-			[dblStartHiDefT,dblUserStartT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intLogFile);
-			
-			%re-align
-			[dblMin,intStartStim] = min(abs(vecSignalOnT-dblStartHiDefT));
-			intIndex = find(vecMax10==intStartStim,1);
-			if isempty(intIndex)
-				dblProb = 0;
-			else
-				dblProb = vecP(intIndex)/sum(vecP);
-			end
-			
-			%message
-			fprintf('My guess (%.3f%% confidence): %.3fs; your guess: %.3fs (I gave it %.3f%% probability)\n',dblAlignmentCertainty*100,dblStartT,dblStartHiDefT,dblProb*100);
-			dblStartT = dblStartHiDefT;
-		end
-		
-		%re-run alignment for chosen stimulus
-		vecUseSignalOnT = vecSignalOnT(intStartStim:end) - vecSignalOnT(intStartStim);
-		[vecPupilOnT,vecDiffPupilOnT] = SC_refineDiffT(vecEyeStimOnT,vecUseSignalOnT,inf);
-		
-		%replace out-of-bounds values
-		dblMaxErrZ = 5;
-		indReplace = abs(zscore(vecDiffPupilOnT)) > dblMaxErrZ;
-		dblMedianError = median(vecDiffPupilOnT(~indReplace));
-		dblMeanAbsErr = mean(abs(vecDiffPupilOnT(~indReplace)));
-		
-		%replace
-		vecPupilStimOnTime0 = vecPupilOnT;
-		vecPupilStimOnTime0(indReplace) = vecDiffPupilOnT(indReplace) - dblMedianError;
-		fprintf('Mean absolute timing error is %.3fs for pupil stim onsets; %d onsets corrected\n',dblMeanAbsErr,sum(indReplace));
-		
-		%recenter
-		dblFirstError = vecPupilStimOnTime0(1);
-		vecPupilStimOnTime = vecPupilStimOnTime0 + dblStartT;
-		
+		%rename & align
+		vecReferenceT = vecEyeStimOnT;
+		vecNoisyHighResT = vecSignalOnT;
+		[vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = ...
+			SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
+		vecPupilStimOnTime = vecAlignedTime;
+		vecPupilOnT = vecRefinedT;
+		%vecError = vecIntervalError;
 		
 		%% plot output
 		close;
@@ -418,8 +373,8 @@ for intRunPrePro=[1]
 		
 		subplot(2,3,6)
 		hold on
-		plot(vecEyeStimOnT - vecPupilOnT,'r')
-		plot(vecEyeStimOnT - vecPupilStimOnTime0,'-.b')
+		plot(vecNIStimOnT - vecPupilOnT,'r')
+		plot(vecNIStimOnT - vecPupilStimOnTime0,'-.b')
 		hold off
 		title(sprintf('Error for sync event %d; red=raw,blue=corrected',intStartStim));
 		ylabel('Alignment error (s)');
