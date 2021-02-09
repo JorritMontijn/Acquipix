@@ -29,17 +29,15 @@ for intRunPrePro=[1]
 	if strcmp(cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)}(1),filesep) && ~strcmp(strjoin(cellPath(1:3),filesep),filesep)
 		strDataPath = [filesep filesep strjoin(cellPath(1:3),filesep)];
 	end
-	if strcmp(strExperiment,'DataNeuropixels')
-		strPathDataTarget = [strDataTarget filesep strExperiment2 filesep];
-	else
-		strPathDataTarget = [strDataTarget filesep strExperiment filesep];
-	end
-	if ~exist(strPathDataTarget,'dir'),mkdir(strPathDataTarget);end
+	
+	if ~strcmp(strDataTarget(end),filesep),strDataTarget(end+1)=filesep;end
+	if ~exist(strDataTarget,'dir'),mkdir(strDataTarget);end
 	strChanMapFile = fullfile(strThisPath,'subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat');
 	
 	%% load eye-tracking
 	strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
 	strPathStimLogs = strPathEphys;
+	strExp = strExperiment;
 	if boolUseEyeTracking
 		clear sPupil
 		%find video file
@@ -104,7 +102,7 @@ for intRunPrePro=[1]
 		hold on
 		plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterX);
 		hold off
-		title(sprintf('Pupil pos x, %s',[strExperiment strRecIdx]),'Interpreter','none');
+		title(sprintf('Pupil pos x, %s',[strExp strRecIdx]),'Interpreter','none');
 		xlabel('Time (s)');
 		ylabel('Pupil x-position');
 		fixfig
@@ -114,7 +112,7 @@ for intRunPrePro=[1]
 		hold on
 		plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterY);
 		hold off
-		title(sprintf('Pupil pos y, %s',[strExperiment strRecIdx]),'Interpreter','none');
+		title(sprintf('Pupil pos y, %s',[strExp strRecIdx]),'Interpreter','none');
 		xlabel('Time (s)');
 		ylabel('Pupil y-position');
 		fixfig
@@ -393,7 +391,7 @@ for intRunPrePro=[1]
 		maxfig;drawnow;
 			
 		%save output
-		strSyncMetricPath = [strPathDataTarget 'VideoSyncMetrics' filesep];
+		strSyncMetricPath = [strDataTarget 'VideoSyncMetrics' filesep];
 		if ~exist(strSyncMetricPath,'dir')
 			mkdir(strSyncMetricPath);
 		end
@@ -493,7 +491,7 @@ for intRunPrePro=[1]
 			end
 			
 			%assign to object
-			sCluster(intCluster).Exp = strExperiment;
+			sCluster(intCluster).Exp = strExp;
 			sCluster(intCluster).Rec = strRecording;
 			sCluster(intCluster).Area = [];
 			sCluster(intCluster).MouseType = strMouseType;
@@ -552,8 +550,8 @@ for intRunPrePro=[1]
 	%build Acquipix post-processing structure
 	fprintf('Combining data and saving to disk... [%s]\n',getTime);
 	sAP = struct;
-	strFileOut = strcat(strExperiment,'_',strMouse,'_',strRecIdx,'_AP');
-	strFileAP = strcat(strPathDataTarget,strFileOut,'.mat');
+	strFileOut = strcat(strExp,'_',strMouse,'_',strRecIdx,'_AP');
+	strFileAP = strcat(strDataTarget,strFileOut,'.mat');
 	strFileAP2 = strcat(strSecondPathAP,strFileOut,'.mat');
 	%save LFP separately because of large size
 	%sAP_LFP = struct;
@@ -601,17 +599,17 @@ for intRunPrePro=[1]
 	sJson = struct;
 	sJson.date = strRecDate;
 	sJson.version = '1.0';
-	sJson.project = 'Gria3';
+	sJson.project = 'NOT';
 	sJson.dataset = 'Neuropixels data';
 	sJson.subject = strMouse;
-	sJson.investigator = 'Valentina_Riguccini';
+	sJson.investigator = 'Jorrit Montijn';
 	sJson.setup = 'Neuropixels';
 	sJson.stimulus = 'VisStimAcquipix';
 	sJson.condition = 'none';
-	sJson.id = strjoin({strRecIdx,strMouse,strExperiment},'_');
+	sJson.id = strjoin({strRecIdx,strMouse,strExp},'_');
 	
 	%additional fields
-	sJson.experiment = strExperiment;
+	sJson.experiment = strExp;
 	sJson.recording = strRecording;
 	sJson.recidx = strRecIdx;
 	sJson.mousetype = strMouseType;
@@ -639,8 +637,8 @@ for intRunPrePro=[1]
 	
 	%save json file
 	strJsonData = jsonencode(sJson);
-	strJsonFileOut = strcat(strExperiment,'_',strMouse,'_',strRecIdx,'_session.json');
-	strJsonTarget = fullfile(strPathDataTarget,strJsonFileOut);
+	strJsonFileOut = strcat(strExp,'_',strMouse,'_',strRecIdx,'_session.json');
+	strJsonTarget = fullfile(strDataTarget,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
-	save(strJsonTarget,'strJsonData','ascii');
+	save(strJsonTarget,'strJsonData','-ascii');
 end
