@@ -312,8 +312,10 @@ for intRunPrePro=[1]
 			SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
 		vecPupilStimOnTime = vecAlignedTime;
 		vecPupilOnT = vecRefinedT;
+		vecPupilOnPlusStartT = vecPupilOnT + dblStartT;
 		vecDiffPupilOnT = sSyncStruct.vecIntervalError;
 		vecAligned0 = sSyncStruct.vecAlignedTime0;
+		intStartStim = sSyncStruct.intStartEvent;
 		%vecError = vecIntervalError;
 		
 		%% plot output
@@ -345,7 +347,7 @@ for intRunPrePro=[1]
 		hold on
 		plot(vecPupilTime,vecFiltSyncLum./std(vecFiltSyncLum));
 		scatter(vecPupilSignalOnT,1.05*ones(size(vecPupilSignalOnT)),'kx');
-		scatter(vecPupilOnT + dblStartT,1.1*ones(size(vecPupilOnT)),'rx');
+		scatter(vecPupilOnPlusStartT,1.1*ones(size(vecPupilOnPlusStartT)),'rx');
 		scatter(vecPupilStimOnTime,1.15*ones(size(vecPupilStimOnTime)),'bx');
 		hold off
 		xlabel('Time (s)');

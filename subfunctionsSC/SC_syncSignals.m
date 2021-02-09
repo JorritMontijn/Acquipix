@@ -62,7 +62,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	
 	%replace
 	vecAlignedTime0 = vecRefinedT;
-	vecAlignedTime0(indReplace) = vecIntervalError(indReplace) - dblMedianError;
+	vecAlignedTime0(indReplace) = vecAlignedTime0(indReplace) + vecIntervalError(indReplace) + dblMedianError;
 	
 	%get type
 	if exist('sUserVars','var') && isfield(sUserVars,'strType')
@@ -81,8 +81,8 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 		sSyncStruct = struct;
 		sSyncStruct.vecIntervalError = vecIntervalError;
 		sSyncStruct.dblFirstError = dblFirstError;
-		sSyncStruct.vecAlignedTime = vecAlignedTime;
 		sSyncStruct.vecAlignedTime0 = vecAlignedTime0;
+		sSyncStruct.intStartEvent = intStartEvent;
 	end
 end
 
