@@ -292,7 +292,7 @@ for intRunPrePro=[1]
 		end
 		
 		%get onset signals
-		vecSignalOnT = sPupil.vecPupilTime(vecPupilSyncOn(intLastPupilStop:end));
+		vecPupilSignalOnT = sPupil.vecPupilTime(vecPupilSyncOn(intLastPupilStop:end));
 		
 		%build approximate onsets
 		dblSecsT0 = vecStimActOnNI(1);
@@ -306,8 +306,8 @@ for intRunPrePro=[1]
 		sUserVars.intBlockNr = intLogFile;
 		
 		%rename & align
-		vecReferenceT = vecEyeStimOnT;
-		vecNoisyHighResT = vecSignalOnT;
+		vecReferenceT = vecNIStimOnT;
+		vecNoisyHighResT = vecPupilSignalOnT;
 		[vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = ...
 			SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
 		vecPupilStimOnTime = vecAlignedTime;
@@ -342,7 +342,7 @@ for intRunPrePro=[1]
 		subplot(2,3,3)
 		hold on
 		plot(vecPupilTime,vecFiltSyncLum./std(vecFiltSyncLum));
-		scatter(vecSignalOnT,1.05*ones(size(vecSignalOnT)),'kx');
+		scatter(vecPupilSignalOnT,1.05*ones(size(vecPupilSignalOnT)),'kx');
 		scatter(vecPupilOnT + dblStartT,1.1*ones(size(vecPupilOnT)),'rx');
 		scatter(vecPupilStimOnTime,1.15*ones(size(vecPupilStimOnTime)),'bx');
 		hold off
