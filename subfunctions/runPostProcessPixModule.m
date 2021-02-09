@@ -312,6 +312,8 @@ for intRunPrePro=[1]
 			SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
 		vecPupilStimOnTime = vecAlignedTime;
 		vecPupilOnT = vecRefinedT;
+		vecDiffPupilOnT = sSyncStruct.vecIntervalError;
+		vecAligned0 = sSyncStruct.vecAlignedTime0;
 		%vecError = vecIntervalError;
 		
 		%% plot output
@@ -374,7 +376,7 @@ for intRunPrePro=[1]
 		subplot(2,3,6)
 		hold on
 		plot(vecNIStimOnT - vecPupilOnT,'r')
-		plot(vecNIStimOnT - vecPupilStimOnTime0,'-.b')
+		plot(vecNIStimOnT - vecAligned0,'-.b')
 		hold off
 		title(sprintf('Error for sync event %d; red=raw,blue=corrected',intStartStim));
 		ylabel('Alignment error (s)');
