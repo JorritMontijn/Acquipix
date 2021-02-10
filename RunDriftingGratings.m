@@ -91,19 +91,9 @@ fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,st
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
-	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
-=======
 	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,strHostAddress);
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
->>>>>>> Stashed changes
-=======
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
-	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
-	
+
 	%retrieve some parameters
 	intStreamNI = -1;
 	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
@@ -117,43 +107,11 @@ else
 	sParamsSGL = struct;
 end
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-%% set output locations for logs
-try
-	%define output filename
-	strThisDir = which(mfilename);
-	intOffset = length(mfilename) + 2;
-	strDir = strThisDir(1:end-intOffset);
-	fprintf('Saving output in directory %s; loading textures from %s\n',strSessionDir,strTexDir);
-	strOldPath = cd(strTexDir);
-	cd(strOldPath);
-	if isa(strFilename,'char') && ~isempty(strFilename)
-		%make directory
-		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
-		if ~exist(strOutputDir,'dir')
-			mkdir(strOutputDir);
-		end
-		strOldPath = cd(strOutputDir);
-		%check if file does not exist
-		if exist([strOutputDir filesep strFilename],'file') || exist([strOutputDir filesep strFilename '.mat'],'file')
-			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
-		end
-	end
-catch
-	if boolUseSGL,CloseSGL(hSGL);end
-=======
+
 %% build structEP
 %load presets
 if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
 	sStimPresets = loadStimPreset(intStimSet,mfilename);
->>>>>>> Stashed changes
-=======
-%% build structEP
-%load presets
-if ~exist('sStimPresets','var')
-	sStimPresets = loadStimPreset(intStimSet,mfilename);
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
 end
 
 % evaluate and assign pre-defined values to structure
@@ -179,30 +137,15 @@ end
 if ~isfield(sStimParamsSettings,'strRecording')
 	sStimParamsSettings.strRecording = strRecording;
 end
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
 sStimParams = catstruct(sStimParamsSettings,sStimPresets);
 cellFields = fieldnames(sStimParams);
 indRem = cellfun(@(x) strcmp(x(1:7),'dblSecs'),cellFields);
 sStimParamsCombosReduced = rmfield(sStimParams,cellFields(indRem));
-<<<<<<< HEAD
 cellParamFields = fieldnames(sStimParamsCombosReduced);
 cellAllRemFields = {'boolGenNoise','intNumRepeats','vecOrientationNoise','strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
 indKeepRemFields = contains(cellAllRemFields,cellParamFields);
 cellRemFields = cellAllRemFields(indKeepRemFields);
 sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,cellRemFields);
->>>>>>> Stashed changes
-=======
-sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,{'boolGenNoise','intNumRepeats','vecOrientationNoise','strRecording'});
-cellParamFields = fieldnames(sStimParamsCombosReduced);
-cellAllRemFields = {'strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
-indKeepRemFields = contains(cellAllRemFields,cellParamFields);
-cellRemFields = cellAllRemFields(indKeepRemFields);
-sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,cellRemFields);
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
 
 %get stimuli
 [sStimParamsEvaluated,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParamsCombosReduced);

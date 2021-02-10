@@ -16,23 +16,8 @@ boolUseNI = true;
 boolDebug = false;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
-<<<<<<< Updated upstream
-
-<<<<<<< HEAD
-%% define paths
-strThisPath = mfilename('fullpath');
-strThisPath = strThisPath(1:(end-numel(mfilename)));
-strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
-strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
-strTexSubDir = 'StimulusTextures';
-strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
-=======
 strHostAddress = '192.87.10.238';
->>>>>>> Stashed changes
-
-=======
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
-
+mfilename
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
 	strRecording = sStimParamsSettings.strRecording;
@@ -117,19 +102,9 @@ fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,st
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
-	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
-=======
 	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,strHostAddress);
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
->>>>>>> Stashed changes
-=======
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
-	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
-	
+
 	%retrieve some parameters
 	intStreamNI = -1;
 	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
@@ -143,71 +118,10 @@ else
 	sParamsSGL = struct;
 end
 
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-%% set output locations for logs
-try
-	%define output filename
-	strThisDir = which(mfilename);
-	intOffset = length(mfilename) + 2;
-	strDir = strThisDir(1:end-intOffset);
-	fprintf('Saving output in directory %s; loading textures from %s\n',strSessionDir,strTexDir);
-	strOldPath = cd(strTexDir);
-	cd(strOldPath);
-	if isa(strFilename,'char') && ~isempty(strFilename)
-		%make directory
-		strOutputDir = strcat(strSessionDir,filesep,strRecording,filesep); %where are the logs saved?
-		if ~exist(strOutputDir,'dir')
-			mkdir(strOutputDir);
-		end
-		strOldPath = cd(strOutputDir);
-		%check if file does not exist
-		if exist([strOutputDir filesep strFilename],'file') || exist([strOutputDir filesep strFilename '.mat'],'file')
-			error([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
-		end
-	end
-catch
-	if boolUseSGL,CloseSGL(hSGL);end
-end
-
-%% check if temporary directory exists, clean or make
-strTempDir = fullfile(strTempMasterPath,'TempObjects');
-if exist(strTempDir,'dir')
-	warning('off','backtrace')
-	warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
-	warning('on','backtrace')
-	sFiles = dir(strcat(strTempDir,filesep,'*.mat'));
-	intFileNum = numel(sFiles);
-	if intFileNum > 0
-		strCleanFiles = input(sprintf('   Do you wish to delete all %d files in the temporary folder? [y/n]',intFileNum), 's');
-		if strcmpi(strCleanFiles,'y')
-			fprintf('Deleting %d .mat files...\n',intFileNum);
-			for intFile=1:intFileNum
-				delete(strcat(strTempDir,filesep,sFiles(intFile).name));
-			end
-			fprintf('\b  Done!\n');
-		end
-	end
-else
-	if exist(strTempMasterPath,'dir')
-		mkdir(strTempDir);
-	else
-		sME.identifier = [mfilename ':NetworkDirMissing'];
-		sME.message = ['Cannot connect to ' strTempDir];
-		error(sME);
-	end
-=======
 %% build structEP
 %load presets
 if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
 	sStimPresets = loadStimPreset(intStimSet,mfilename);
->>>>>>> Stashed changes
-=======
-%% build structEP
-%load presets
-if ~exist('sStimPresets','var')
-	sStimPresets = loadStimPreset(intStimSet,mfilename);
->>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
 end
 
 % evaluate and assign pre-defined values to structure
