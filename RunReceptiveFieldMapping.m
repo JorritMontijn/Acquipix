@@ -16,6 +16,7 @@ boolDebug = false;
 intUseMask = 0;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
+<<<<<<< Updated upstream
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -24,6 +25,9 @@ strSessionDir = strcat('C:\_Data\Exp',getDate()); %where are the logs saved?
 strTempMasterPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 strTexSubDir = 'StimulusTextures';
 strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
+=======
+strHostAddress = '192.87.10.238';
+>>>>>>> Stashed changes
 
 
 %% query user input for recording name
@@ -35,8 +39,13 @@ strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strRecording,mfilename
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
+<<<<<<< Updated upstream
 	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
 	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
+=======
+	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,strHostAddress);
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
+>>>>>>> Stashed changes
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -54,6 +63,7 @@ else
 	sParamsSGL = struct;
 end
 
+<<<<<<< Updated upstream
 %% set output locations for logs
 try
 	%define output filename
@@ -105,6 +115,12 @@ else
 		sME.message = ['Cannot connect to ' strTempDir];
 		error(sME);
 	end
+=======
+%% build structEP
+%load presets
+if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
+	sStimPresets = loadStimPreset(intStimSet,mfilename);
+>>>>>>> Stashed changes
 end
 
 %% general parameters
