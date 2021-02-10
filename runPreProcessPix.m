@@ -1,35 +1,34 @@
 %% recordings
 clear all;close all;
 %sites
-cellRec{1}{1} = 'P:\Montijn\DataNeuropixels\Exp2019-11-20\20191120_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-11-21\20191121_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_RunDriftingGratingsR01_g0';
-cellRec{1}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-11-22\20191122_MP2_R02_RunDriftingGratingsR01_g0';
-cellRec{2}{1} = 'P:\Montijn\DataNeuropixels\Exp2019-12-10\20191210_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{2} = 'P:\Montijn\DataNeuropixels\Exp2019-12-11\20191211_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{3} = 'P:\Montijn\DataNeuropixels\Exp2019-12-12\20191212_MP3_RunNaturalMovieR01_g0';
-cellRec{2}{4} = 'P:\Montijn\DataNeuropixels\Exp2019-12-13\20191213_MP3_RunDriftingGratingsR01_g0';
-cellRec{2}{5} = 'P:\Montijn\DataNeuropixels\Exp2019-12-16\20191216_MP3_RunNaturalMovieR01_g0';
-cellRec{2}{6} = 'P:\Montijn\DataNeuropixels\Exp2019-12-17\20191217_MP3_RunDriftingGratingsR01_g0';
-cellRec{3}{1} = 'P:\Montijn\DataNeuropixels\Exp2020-01-15\20200115_MP4_RunDriftingGratingsR01_g0';
-cellRec{3}{2} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0';
-cellRec{3}{3} = 'P:\Montijn\DataNeuropixels\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0';
-cellRec{4}{1} = 'P:\Montijn\DataNeuropixels\Nora\Exp2020-09-17\20200917_NPX2_RunOptoNoraR02_g0';
+strDataRoot = '\\vs02.herseninstituut.knaw.nl\csf\Montijn\DataNeuropixels';
+%strDataRoot = 'P:\Montijn\DataNeuropixels'; %does not work, 2019b problem?
+cellRecSub{1}{1} = '\Exp2019-11-20\20191120_MP2_RunDriftingGratingsR01_g0';
+cellRecSub{1}{2} = '\Exp2019-11-21\20191121_MP2_RunDriftingGratingsR01_g0';
+cellRecSub{1}{3} = '\Exp2019-11-22\20191122_MP2_RunDriftingGratingsR01_g0';
+cellRecSub{1}{4} = '\Exp2019-11-22\20191122_MP2_R02_RunDriftingGratingsR01_g0';
+cellRecSub{2}{1} = '\Exp2019-12-10\20191210_MP3_RunDriftingGratingsR01_g0';
+cellRecSub{2}{2} = '\Exp2019-12-11\20191211_MP3_RunDriftingGratingsR01_g0';
+cellRecSub{2}{3} = '\Exp2019-12-12\20191212_MP3_RunNaturalMovieR01_g0';
+cellRecSub{2}{4} = '\Exp2019-12-13\20191213_MP3_RunDriftingGratingsR01_g0';
+cellRecSub{2}{5} = '\Exp2019-12-16\20191216_MP3_RunNaturalMovieR01_g0';
+cellRecSub{2}{6} = '\Exp2019-12-17\20191217_MP3_RunDriftingGratingsR01_g0';
+cellRecSub{3}{1} = '\Exp2020-01-15\20200115_MP4_RunDriftingGratingsR01_g0';
+cellRecSub{3}{2} = '\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR01_g0';
+cellRecSub{3}{3} = '\Exp2020-01-16\20200116_MP4_RunDriftingGratingsR02_g0';
+cellRecSub{4}{1} = '\Exp2020-12-04\20201204_MA4_RunDriftingGratingsR01_g0';
+cellRecSub{5}{1} = '\Exp2020-12-09\20201209_MA3_RunReceptiveFieldMappingR01_g0';
+cellRecSub{5}{2} = '\Exp2020-12-10\20201210_MA3_RunDriftingGratingsR01_g0';
+cellRecSub{5}{3} = '\Exp2020-12-11\20201211_MA3_RunDriftingGratingsR01_g0';
+cellRecSub{5}{4} = '\Exp2020-12-14\20201214_MA3_RunDriftingGratingsR01_g0';
 
-matRunPre = [...
-	1 3;...
-	2 2;...
-	2 5;...
-	3 1;...
-	3 2;...
-	3 3;...
-	1 4;...
-	2 1;...
-	2 3;...
-	2 4;...
-	2 6;...
-	];
-matRunPre = [4 1];
+cellRec = cellfun(@strcat,cellfill(strDataRoot,size(cellRecSub)),cellRecSub,'uniformoutput',false);
+
+matRunPre = [4 1;...
+	5 1;...
+	5 2;...
+	5 3;...
+	5 4];
 
 %											0=none, 1=KS, 2=eye,3=post,4=area+depth
 %Rec	Mouse	Date		Quality	V+good	Processed	CORT		SUBCORT	Comments
@@ -48,4 +47,4 @@ matRunPre = [4 1];
 %13:3-3	MP4		2020-01-16b	Good	 51/216	4			RS			NOT		Subcort vis, Possibly NOT: SUBCORT, but very nice cells					
 
 %% run actual script
-runPreProModuleNpx
+runPreProModuleNpx;

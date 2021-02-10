@@ -70,7 +70,11 @@ end
 
 %% build structEP
 %load presets
+<<<<<<< HEAD
 if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
+=======
+if ~exist('sStimPresets','var')
+>>>>>>> parent of 048e9b8... Revert "Merge branch 'master' of https://github.com/JorritMontijn/Acquipix"
 	sStimPresets = loadStimPreset(intStimSet,mfilename);
 end
 

@@ -10,6 +10,9 @@ function RunExperiment
 		error([mfilename ':SingularGUI'],'RunExperiment instance is already running; only one simultaneous GUI is allowed');
 	end
 	
+	%assert preset presence
+	intPresetsCreated = assertPresets();
+	
 	%clear data & disable new instance
 	sFigRE = struct;
 	sRE = struct;

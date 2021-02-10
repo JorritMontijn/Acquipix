@@ -28,7 +28,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
     for intPath=1:length(cellPaths)
         sDataFiles=dir([cellPaths{intPath} filesep strSearch]);
         if numel(sDataFiles) == 1
-            cellTargets{end+1} = [cellPaths{intPath} filesep sDataFiles(1).name];
+            cellTargets{end+1} = fullfile(cellPaths{intPath},sDataFiles(1).name);
         end
     end
     if numel(cellTargets) == 1
@@ -75,14 +75,15 @@ for intRunPrePro=1:size(matRunPrePro,1)
     hold off
     %ylim([min(get(gca,'ylim')) 0]);
     %xlim([0 0.1]);
-    xlabel('ZETA');
+    %set(gca,'xscale','log');
+    xlabel('ZETA-p');
     ylabel('Depth from pia (\mum)');
     %h=colorbar;
     %ylabel(h,'ZETA');
     fixfig;
     %title(sprintf('Cortex: %d; subcortex: %d',sum(vecCorrectedDepth(indInclude) > -1000),sum(vecCorrectedDepth(indInclude) < -1500)))
     
-    return
+    %return
     %% assign areas to clusters
     for intCluster=1:numel(sAP.sCluster)
         intArea = find(sAP.sCluster(intCluster).Depth > vecProbeAreaEdges,1,'last');
@@ -97,8 +98,10 @@ for intRunPrePro=1:size(matRunPrePro,1)
     strBackup = strcat(strTarget,'.backup',getDate);
     fprintf('Saving "%s"... [%s]\n',strBackup,getTime);
     copyfile(strTarget,strBackup);
-    fprintf('Saving "%s"... [%s]\n',strTarget1,getTime);
-    save(strTarget1,'sAP');
+    if exist('strTarget1','var')
+        fprintf('Saving "%s"... [%s]\n',strTarget1,getTime);
+        save(strTarget1,'sAP');
+    end
     fprintf('Saving "%s"... [%s]\n',strTarget,getTime);
     save(strTarget,'sAP');
     fprintf('Done! [%s]\n',getTime);
