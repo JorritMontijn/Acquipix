@@ -9,7 +9,7 @@ function sRE = RE_populateStructure(sRE)
 	end
 	
 	%experiment types
-	sRE.metaData.cellStimSets = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim'};
+	sRE.metaData.cellStimSets = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie'};
 	
 	%initialize variables
 	sRE.IsInitialized = false;

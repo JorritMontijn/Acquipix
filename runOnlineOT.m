@@ -193,7 +193,7 @@ function ptrEditHostSGL_Callback(hObject, eventdata, handles)
 	set(sFig.ptrTextRecording, 'string', '...');
 	set(sFig.ptrListSelectProbe, 'string', {''});
 	
-	%connect to host; 192.87.10.238
+	%connect to host
 	sOT.strHostSGL = get(sFig.ptrEditHostSGL,'String');
 	
 	% try connection

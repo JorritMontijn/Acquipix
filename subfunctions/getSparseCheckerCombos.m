@@ -14,26 +14,26 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		
 		%subject parameters
 		'dblSubjectPosX_cm',0;... % cm; relative to center of screen
-		'dblSubjectPosY_cm',-2.5;... % cm; relative to center of screen
-		'dblScreenDistance_cm',17;... % cm; measured
-		'vecUseMask',[0];... %[1] if mask to emulate retinal-space, [0] use screen-space
+		'dblSubjectPosY_cm',0;... % cm; relative to center of screen
+		'dblScreenDistance_cm',16;... % cm; measured
+		'vecUseMask',[1];... %[1] if mask to emulate retinal-space, [0] use screen-space
 		
 		%screen variables
-		'intUseScreen',2;... %which screen to use
-		'dblScreenWidth_cm',51;... % cm; measured [51]
-		'dblScreenHeight_cm',29;... % cm; measured [29]
-		'intScreenWidth_pix',1920;... % cm
-		'intScreenHeight_pix',1080;... % cm
+		'intUseScreen',1;... %which screen to use
+		'dblScreenWidth_cm',33;... % cm; measured [51]
+		'dblScreenHeight_cm',25;... % cm; measured [29]
+		'intScreenWidth_pix',nan;... % cm
+		'intScreenHeight_pix',nan;... % cm
 		
 		%stimulus control variables
-		'intCornerTrigger',2;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 		'dblCornerSize',1/30;... % fraction of screen width
 		'intAntiAlias',1;... % anti-alias? set to "0" to improve performance
 		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
 		'intUseParPool',0;... % set to non-zero to specify how many workers to use
-		'dblCheckerSizeX_deg',7;... % deg;  width of checker
-		'dblCheckerSizeY_deg',7;... % deg; height of checker
-		'intOnOffCheckers',3;... % how many are on/off at any frame?
+		'dblCheckerSizeX_deg',5;... % deg;  width of checker
+		'dblCheckerSizeY_deg',5;... % deg; height of checker
+		'intOnOffCheckers',6;... % how many are on/off at any frame?
 		'dblContrast',[100];... %contrast [0-100]
 		'dblFlickerFreq',0;... %flicker frequency (Hz)
 		'dblLuminance',[100];...%luminance [0-100]
@@ -48,7 +48,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		strField = cellFieldDefaults{intDefaultField,1};
 		varDefaultValue = cellFieldDefaults{intDefaultField,2};
 		%check if supplied version exists
-		if isfield(sStimParams,strField) && ~isempty(sStimParams.(strField))
+		if isfield(sStimParams,strField)
 			sStimParamsChecked.(strField) = sStimParams.(strField);
 		else
 			sStimParamsChecked.(strField) = varDefaultValue;
@@ -89,10 +89,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	end
 	
 	%% check if screen size is supplied
-	if ischar(sStimParams.intScreenWidth_pix) || ischar(sStimParams.intScreenHeight_pix)
-		sStimParams.intScreenWidth_pix = cellFieldDefaults{cellfun(@(x) strcmp(x,'intScreenWidth_pix'),cellFieldDefaults(:,1)),2};
-		sStimParams.intScreenHeight_pix = cellFieldDefaults{cellfun(@(x) strcmp(x,'intScreenHeight_pix'),cellFieldDefaults(:,1)),2};
-	elseif isnan(sStimParams.intScreenWidth_pix) || isnan(sStimParams.intScreenHeight_pix)
+	if isnan(sStimParams.intScreenWidth_pix) || isnan(sStimParams.intScreenHeight_pix)
 		intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
 		vecRect=Screen('Rect', sStimParams.intUseScreen);
 		Screen('Preference', 'Verbosity',intOldVerbosity); %enable PTB spamming
@@ -105,19 +102,15 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	%% check if retinal map is supplied, otherwise calculate flat pixel-based map
 	if ~exist('matMapDegsXY','var') || isempty(matMapDegsXY)
 		if ~isnan(intScreenWidth_pix) && ~isnan(intScreenHeight_pix)
-			% assign derived values
-			dblScreenWidth_deg = atand((sStimParams.dblScreenWidth_cm / 2) / sStimParams.dblScreenDistance_cm) * 2;
-			dblScreenHeight_deg = atand((sStimParams.dblScreenHeight_cm / 2) / sStimParams.dblScreenDistance_cm) * 2;
-			
 			vecPixX_deg = ((1:intScreenWidth_pix)/intScreenWidth_pix)*dblScreenWidth_deg-dblSubjectPosX_deg;
-			vecPixY_deg = ((1:intScreenHeight_pix)/intScreenHeight_pix)*dblScreenHeight_deg-dblSubjectPosY_deg;
+			vecPixY_deg = ((1:intScreenHeight_pix)/intScreenHeight_pix)*dblScreenWidth_deg-dblSubjectPosY_deg;
 			%move to gpu
 			if sStimParams.intUseGPU > 0
 				vecPixX_deg = gpuArray(vecPixX_deg);
 				vecPixY_deg = gpuArray(vecPixY_deg);
 			end
 			[mapX,mapY] = meshgrid(vecPixX_deg,vecPixY_deg);
-			matMapDegsXY = cat(3,mapX,mapY);
+			matMapDegsXY(:,:,1) = cat(3,mapX,mapY);
 		else
 			error
 		end
