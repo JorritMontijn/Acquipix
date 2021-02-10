@@ -14,7 +14,6 @@ intUseMask = 0;
 dblStimSizeDegs = 140;%was 120
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
-strHostAddress = '192.87.10.238';
 
 %% define paths
 strThisPath = mfilename('fullpath');
@@ -33,13 +32,8 @@ strFilename = sprintf('%04d%02d%02d_%s',c(1),c(2),c(3),strRecording);
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-<<<<<<< Updated upstream
 	[hSGL,strFilename,sParamsSGL] = InitSGL(strRecording,strFilename);
 	fprintf('Recording started, saving output to "%s.mat" [%s]...\n',strFilename,getTime);
-=======
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,strHostAddress);
-	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
->>>>>>> Stashed changes
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -57,7 +51,6 @@ else
 	sParamsSGL = struct;
 end
 
-<<<<<<< Updated upstream
 %% set output locations for logs
 try
 	%define output filename
@@ -81,12 +74,6 @@ try
 	end
 catch
 	if boolUseSGL,CloseSGL(hSGL);end
-=======
-%% build structEP
-%load presets
-if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
-	sStimPresets = loadStimPreset(intStimSet,mfilename);
->>>>>>> Stashed changes
 end
 
 %% check if temporary directory exists, clean or make
@@ -187,18 +174,6 @@ if structEP.debug == 1
 else
 	intUseScreen = sStimParamsSettings.intUseScreen;
 end
-<<<<<<< Updated upstream
-=======
-sStimParams = catstruct(sStimParamsSettings,sStimPresets);
-cellFields = fieldnames(sStimParams);
-indRem = cellfun(@(x) strcmp(x(1:7),'dblSecs'),cellFields);
-sStimParamsCombosReduced = rmfield(sStimParams,cellFields(indRem));
-cellParamFields = fieldnames(sStimParamsCombosReduced);
-cellAllRemFields = {'boolGenNoise','intNumRepeats','vecOrientationNoise','strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
-indKeepRemFields = contains(cellAllRemFields,cellParamFields);
-cellRemFields = cellAllRemFields(indKeepRemFields);
-sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,cellRemFields);
->>>>>>> Stashed changes
 
 %% trial timing variables
 if ~exist('intNumRepeats','var'),intNumRepeats = 10;end
