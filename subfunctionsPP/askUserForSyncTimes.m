@@ -16,7 +16,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	plot(vecPupilTime,boolPupilSync);
 	hold off
 	xlabel('Time (s)');
-	ylabel('Screen signal');
+	ylabel('Synchronization signal');
 	hold off;
 	fixfig(gca,[],1);
 	
@@ -26,7 +26,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	plot(vecPupilTime,boolPupilSync);
 	hold off
 	xlabel('Time (s)');
-	ylabel('Screen signal');
+	ylabel('Synchronization signal');
 	fixfig(gca,[],1);
 	
 	%ask when the stimuli start
