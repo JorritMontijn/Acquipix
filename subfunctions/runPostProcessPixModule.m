@@ -313,7 +313,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		
 		%build approximate onsets
 		dblSecsT0 = vecStimActOnNI(1);
-		vecNIStimOnT = vecStimActOnNI - dblSecsT0;
+		vecNIStimOnT = vecStimActOnNI(~isnan(vecStimActOnNI)) - dblSecsT0;
 		
 		%build user var struct
 		sUserVars = struct;
@@ -327,12 +327,13 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		vecNoisyHighResT = vecPupilSignalOnT;
 		[vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = ...
 			SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
+		intStartStim = sSyncStruct.intStartEvent;
+		dblStartT = vecPupilSignalOnT(intStartStim);
 		vecPupilStimOnTime = vecAlignedTime;
 		vecPupilOnT = vecRefinedT;
 		vecPupilOnPlusStartT = vecPupilOnT + dblStartT;
 		vecDiffPupilOnT = sSyncStruct.vecIntervalError;
 		vecAligned0 = sSyncStruct.vecAlignedTime0;
-		intStartStim = sSyncStruct.intStartEvent;
 		%vecError = vecIntervalError;
 		
 		%% plot output
