@@ -1,5 +1,6 @@
 function RunExperiment
-% RunExperiment Run Neuropixel Acquisition session
+	% RunExperiment Run Neuropixel Acquisition session
+	%to do: set name at start up & turn on LEDs
 	
 	%define globals
 	global sFigRE;

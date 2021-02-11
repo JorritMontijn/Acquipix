@@ -25,6 +25,17 @@ function varargout = runOnlineOT(varargin)
 	%		Small bug fixes & transfer to parallel processing of data
 	%		streaming and analysis
 	
+	%to do: change figure to be more responsive to channel selection and
+	%not only update after stimulus log file is processed
+	%
+	%bug when changing channels after stim end:
+	%ERROR: # of ch in matUseResp=384, but # in vecSelectChans=100
+	%Error while evaluating TimerFcn for timer 'timer-6'
+	%
+	%Index exceeds the number of array elements (100).
+	%
+	%Add z-score by channel scatter plot to tuning plotter
+
 	%set tags
 	%#ok<*INUSL>
 	%#ok<*INUSD>
