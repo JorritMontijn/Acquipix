@@ -1,5 +1,5 @@
 
-for intRunPrePro=[1]
+for intRunPrePro=1:size(matRunPrePro,1)
 	%% prepare
 	% clear variables and select session to preprocess
 	clearvars -except boolUseVisSync boolUseEyeTracking strDataTarget strSecondPathAP cellRec cellDepths cellMouseType matRunPrePro intRunPrePro boolOnlyJson
@@ -19,8 +19,6 @@ for intRunPrePro=[1]
 	dblCh1DepthFromPia = cellDepths{vecRunPreProGLX(1)}{vecRunPreProGLX(2)};
 	strMouseType = cellMouseType{vecRunPreProGLX(1)}{vecRunPreProGLX(2)};
 	
-	% search for file
-	strRec = '*';
 	
 	%% set & generate paths
 	cellThisPath = strsplit(mfilename('fullpath'),filesep);
@@ -45,15 +43,29 @@ for intRunPrePro=[1]
 		%strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment,'Exp','') strRec '.mat'];
 		%cellSubPaths = getSubDirs(strDataPath,inf);
 		
-		for intTryPaths = [1 2]
+		for intTryPaths = 1:3
 			if intTryPaths == 1
+				% search for file
+				intRecChar=regexp(strRecording,'R[0-9]+');
+				if isempty(intRecChar),continue;end
+				strRec = strcat('*',strRecording((intRecChar):(intRecChar+2)),'*');
+				strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
+				strPathEyeTracking = fullfile(strDataPath,strExperiment,strExperiment2,'EyeTracking');
+				strPathStimLogs = fullfile(strDataPath,strExperiment,strExperiment2,strMouse);
+				strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment2,'Exp','') strRec '.mat'];
+				sEyeFiles = dir(fullfile(strPathEyeTracking,strSearchEyeFile));
+				strExp = strExperiment2;
+				
+			elseif intTryPaths == 2
+				strRec = '*';
 				strPathEphys = fullfile(strDataPath,strExperiment,strRecording);
 				strPathEyeTracking = fullfile(strDataPath,strExperiment,'EyeTracking');
 				strPathStimLogs = fullfile(strDataPath,strExperiment,strMouse);
 				strSearchEyeFile = ['EyeTrackingProcessed*' strrep(strExperiment,'Exp','') strRec '.mat'];
 				sEyeFiles = dir(fullfile(strPathEyeTracking,strSearchEyeFile));
 				strExp = strExperiment;
-			elseif intTryPaths == 2
+			elseif intTryPaths == 3
+				strRec = '*';
 				strPathEphys = fullfile(strDataPath,strExperiment,strExperiment2,strRecording);
 				strPathEyeTracking = fullfile(strDataPath,strExperiment,strExperiment2,'EyeTracking');
 				strPathStimLogs = fullfile(strDataPath,strExperiment,strExperiment2,strMouse);
@@ -66,6 +78,7 @@ for intRunPrePro=[1]
 				sEyeTracking = load(fullfile(sEyeFiles(1).folder,sEyeFiles(1).name));
 				sPupil = sEyeTracking.sPupil;
 				clear sEyeTracking;
+				break;
 			elseif numel(sEyeFiles) > 1
 				error([mfilename ':AmbiguousInput'],'Multiple video files found, please narrow search parameters');
 			end
@@ -640,5 +653,5 @@ for intRunPrePro=[1]
 	strJsonFileOut = strcat(strExp,'_',strMouse,'_',strRecIdx,'_session.json');
 	strJsonTarget = fullfile(strDataTarget,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
-	save(strJsonTarget,'strJsonData','-ascii');
+	savejson('', sJson, strJsonTarget);
 end
