@@ -1,6 +1,10 @@
 function RunExperiment
 	% RunExperiment Run Neuropixel Acquisition session
-	%to do: set name at start up & turn on LEDs
+	%to do: 
+	% - set name at start up
+	% - turn on LEDs
+	% - callback on edit
+	% - move host address to preset
 	
 	%define globals
 	global sFigRE;

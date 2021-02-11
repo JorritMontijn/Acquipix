@@ -17,7 +17,7 @@ boolDebug = false;
 dblLightMultiplier = 1; %strength of infrared LEDs
 dblSyncLightMultiplier = 0.5;
 strHostAddress = '192.87.10.238';
-mfilename
+
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
 	strRecording = sStimParamsSettings.strRecording;
