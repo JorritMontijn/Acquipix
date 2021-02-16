@@ -266,7 +266,11 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 				set(hObject,'Value',0);
 			end
 		else
-			set(hObject,'Value',0);
+			if IsSaving(sRE.hSGL)
+				set(hObject,'Value',1);
+			else
+				set(hObject,'Value',0);
+			end
 		end
 	end
 	function ptrListSelectDaq_Callback(hObject, eventdata)

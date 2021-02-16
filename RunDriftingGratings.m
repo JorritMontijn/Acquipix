@@ -103,7 +103,7 @@ fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,st
 %% initialize connection with SpikeGLX
 if boolUseSGL
 	%check if data are supplied
-	if exist(sExpMeta,'var') && isfield(sExpMeta,'hSGL') && isfield(sExpMeta,'strRunName') && isfield(sExpMeta,'sParamsSGL')
+	if exist('sExpMeta','var') && isfield(sExpMeta,'hSGL') && isfield(sExpMeta,'strRunName') && isfield(sExpMeta,'sParamsSGL')
 		%get data
 		hSGL = sExpMeta.hSGL;
 		strRunName = sExpMeta.strRunName;
@@ -419,11 +419,11 @@ try
 		
 		%fill DAQ with data
 		if boolUseNI
-			stop(objDAQOut);
+			stop(objDaqOut);
 			outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
-			outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
-			queueOutputData(objDAQOut,[outputData1 outputData2]);
-			prepare(objDAQOut);
+			outputData2 = dblPupilLightMultiplier*linspace(3, 3, 250)';
+			queueOutputData(objDaqOut,[outputData1 outputData2]);
+			prepare(objDaqOut);
 		end
 		
 		%retrieve stimulus info
@@ -475,7 +475,7 @@ try
 		end
 		
 		%% 250ms pulse at stim start
-		if boolUseNI,startBackground(objDAQOut);end
+		if boolUseNI,startBackground(objDaqOut);end
 		
 		%% show stimulus
 		dblStimStartFlip = dblLastFlip;
