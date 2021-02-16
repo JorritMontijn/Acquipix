@@ -23,6 +23,7 @@ fprintf('Loading settings...\n');
 if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
 	%parameters
 	sStimParamsSettings.strStimType = 'OptoStim';
+	sStimParamsSettings.strHostAddress = '192.87.10.238'; 
 	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
 	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
@@ -52,7 +53,7 @@ fprintf('Saving output in directory %s\n',strLogDir);
 if boolUseSGL
 	%start connection
 	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording);
+	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,sStimParamsSettings.strHostAddress);
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
 	
 	%retrieve some parameters

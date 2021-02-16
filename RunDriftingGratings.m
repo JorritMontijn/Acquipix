@@ -2,7 +2,7 @@
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-clearvars -except sStimPresets sStimParamsSettings;
+clearvars -except sStimPresets sStimParamsSettings sExpMeta;
 
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
@@ -10,9 +10,21 @@ intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size
 boolUseSGL = true;
 boolUseNI = true;
 boolDebug = false;
-dblLightMultiplier = 1; %strength of infrared LEDs
-dblSyncLightMultiplier = 0.5;
-strHostAddress = '192.87.10.238';
+if exist('sExpMeta','var')
+	%defaults
+	dblPupilLightMultiplier = 1; %strength of infrared LEDs
+	dblSyncLightMultiplier = 0.5;
+	strHostAddress = '192.87.10.238'; %default host address
+	objDaqOut = [];
+	
+	%expand structure
+	if isfield(sExpMeta,'dblPupilLightMultiplier'),dblPupilLightMultiplier=sExpMeta.dblPupilLightMultiplier;end
+	if isfield(sExpMeta,'dblSyncLightMultiplier'),dblSyncLightMultiplier=sExpMeta.dblSyncLightMultiplier;end
+	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
+	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
+else
+	sExpMeta = [];
+end
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
@@ -20,6 +32,7 @@ if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecordi
 else
 	strRecording = input('Recording name (e.g., MouseX): ', 's');
 end
+
 
 %% input params
 fprintf('Loading settings...\n');
@@ -89,11 +102,22 @@ fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,st
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
-	%start connection
-	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,strHostAddress);
-	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
-
+	%check if data are supplied
+	if exist(sExpMeta,'var') && isfield(sExpMeta,'hSGL') && isfield(sExpMeta,'strRunName') && isfield(sExpMeta,'sParamsSGL')
+		%get data
+		hSGL = sExpMeta.hSGL;
+		strRunName = sExpMeta.strRunName;
+		sParamsSGL = sExpMeta.sParamsSGL;
+		
+		%start recording
+		intOutFlag = StartRecordingSGL(hSGL);
+	else
+		%start connection
+		fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
+		[hSGL,strRunName,sParamsSGL] = InitSGL(strRecording,strHostAddress);
+	end
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strRunName,strFilename,getTime);
+	
 	%retrieve some parameters
 	intStreamNI = -1;
 	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
@@ -106,7 +130,6 @@ if boolUseSGL
 else
 	sParamsSGL = struct;
 end
-
 
 %% build structEP
 %load presets
@@ -205,29 +228,32 @@ structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankP
 if boolUseNI
 	%initialize
 	fprintf('Connecting to National Instruments box...\n');
-	strDataOutFile = fullfile(strLogDir,[strFilename,'PhotoDiode','.csv']);
-	boolDaqIn = true;
-	try
-		objDAQIn = openDaqInput(sStimParamsSettings.intUseDaqDevice,strDataOutFile);
-	catch ME
-		if strcmp(ME.identifier,'nidaq:ni:DAQmxResourceReserved')
-			fprintf('NI DAQ is likely already being recorded by SpikeGLX: skipping PhotoDiode logging\n');
-			boolDaqIn = false;
-		else
-			rethrow(ME);
+	boolDaqOutRunning = false;
+	if exist('objDaqOut','var') && ~isempty(objDaqOut)
+		try
+			%turns leds on
+			stop(objDaqOut);
+			outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+			outputData2 = dblPupilLightMultiplier*linspace(3, 3, 250)';
+			queueOutputData(objDaqOut,[outputData1 outputData2]);
+			prepare(objDaqOut);
+			pause(0.1);
+			startBackground(objDaqOut)
+			boolDaqOutRunning = true;
+		catch
 		end
 	end
-	objDAQOut = openDaqOutput(sStimParamsSettings.intUseDaqDevice);
-	
-	%turns leds on
-	stop(objDAQOut);
-	%outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
-	outputData2 = dblLightMultiplier*linspace(3, 3, 250)';
-	outputData1 = 0*dblSyncLightMultiplier*linspace(3, 3, 250)';
-	queueOutputData(objDAQOut,[outputData1 outputData2]);
-	prepare(objDAQOut);
-	pause(0.1);
-	startBackground(objDAQOut)
+	if ~boolDaqOutRunning
+		objDaqOut = openDaqOutput(sStimParamsSettings.intUseDaqDevice);
+		%turns leds on
+		stop(objDaqOut);
+		outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
+		outputData2 = dblPupilLightMultiplier*linspace(3, 3, 250)';
+		queueOutputData(objDaqOut,[outputData1 outputData2]);
+		prepare(objDaqOut);
+		pause(0.1);
+		startBackground(objDaqOut)
+	end
 end
 
 try
@@ -593,16 +619,14 @@ try
 	Priority(0);
 	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
-	%end recording
-	if boolUseSGL,CloseSGL(hSGL);end
-	
-	%close Daq IO
-	if boolUseNI > 0
-		if boolDaqIn
-			closeDaqInput(objDAQIn);
+	%% close Daq IO
+	if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
+		try
+			closeDaqOutput(objDaqOut);
+		catch
 		end
-		closeDaqOutput(objDAQOut);
 	end
+	
 catch ME
 	%% check if escape
 	if strcmp(ME.identifier,'RunDriftingGratings:EscapePressed')
@@ -622,16 +646,14 @@ catch ME
 		Priority(0);
 		Screen('Preference', 'Verbosity',intOldVerbosity);
 		
-		%end recording
-		if boolUseSGL,CloseSGL(hSGL);end
-		
-		%close Daq IO
-		if boolUseNI > 0
-			if boolDaqIn
-				closeDaqInput(objDAQIn);
+		%% close Daq IO
+		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
+			try
+				closeDaqOutput(objDaqOut);
+			catch
 			end
-			closeDaqOutput(objDAQOut);
 		end
+		
 	else
 		%% catch me and throw me
 		fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
@@ -649,19 +671,10 @@ catch ME
 		Priority(0);
 		Screen('Preference', 'Verbosity',intOldVerbosity);
 		
-		%% end recording
-		try
-			CloseSGL(hSGL);
-		catch
-		end
-		
 		%% close Daq IO
-		if sStimParams.intUseDaqDevice > 0
+		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
 			try
-				closeDaqOutput(objDAQOut);
-				if boolDaqIn
-					closeDaqInput(objDAQIn);
-				end
+				closeDaqOutput(objDaqOut);
 			catch
 			end
 		end
@@ -670,4 +683,4 @@ catch ME
 		rethrow(ME);
 	end
 end
-	%end
+%end

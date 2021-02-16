@@ -1,10 +1,13 @@
-function [ptrPanelParent,ptrSlider] = RE_genSliderPanel(ptrMasterFigure,vecLocation,cellProps,cellVals,cellComments,dblStartVal)
+function [ptrPanelParent,ptrSlider] = RE_genSliderPanel(ptrMasterFigure,vecLocation,cellProps,cellVals,cellComments,cellCallbacks,dblStartVal)
 	
 	%check input
 	if nargin < 5 || isempty(cellComments)
 		cellComments = cellfill('',size(cellProps));
 	end
-	if nargin < 6 || isempty(dblStartVal)
+	if nargin < 6 || isempty(cellCallbacks)
+		cellCallbacks = cellfill('',size(cellProps));
+	end
+	if nargin < 7 || isempty(dblStartVal)
 		dblStartVal = 1;
 	end
 	
@@ -41,6 +44,9 @@ function [ptrPanelParent,ptrSlider] = RE_genSliderPanel(ptrMasterFigure,vecLocat
 		
 		vecParamEditPtrs(intParam) = uicontrol(ptrPanelChild,'style','edit',...
 			'Position',[150 (intParams*30)-((intParam-1)*30) 390 25],'String',cellVals{intParam},'Tooltip',cellComments{intParam},'FontSize',10);
+		if ~isempty(cellCallbacks{intParam})
+			set(vecParamEditPtrs(intParam),'Callback',cellCallbacks{intParam})
+		end
 	end
 	
 	%show panel
