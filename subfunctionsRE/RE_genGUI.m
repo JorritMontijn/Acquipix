@@ -490,7 +490,18 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		%evaluate variables
 		ptrButtonCheckStimPresets_Callback;
 		if ~sRE.IsInputConfirmed || ~sRE.IsConnectedSGL || ~sRE.IsConnectedDaq
-			error
+			strError = '';
+			if ~sRE.IsInputConfirmed
+				strError = [strError '; Input unconfirmed'];
+			end
+			if ~sRE.IsConnectedSGL
+				strError = [strError '; SGL not connected'];
+			end
+			if ~sRE.IsConnectedDaq
+				strError = [strError '; Daq not connected'];
+			end
+			
+			strAns = questdlg(['Error' strError],'Error','OK','OK');
 			return;
 		end
 		
