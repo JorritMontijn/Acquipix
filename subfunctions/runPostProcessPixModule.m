@@ -2,7 +2,7 @@
 for intRunPrePro=1:size(matRunPrePro,1)
 	%% prepare
 	% clear variables and select session to preprocess
-	clearvars -except boolUseVisSync boolUseEyeTracking strDataTarget strSecondPathAP cellRec cellDepths cellMouseType matRunPrePro intRunPrePro boolOnlyJson
+	clearvars -except sJson boolUseVisSync boolUseEyeTracking strDataTarget strSecondPathAP cellRec cellDepths cellMouseType matRunPrePro intRunPrePro boolOnlyJson
 	vecRunPreProGLX = matRunPrePro(intRunPrePro,:);
 	fprintf('\nStarting pre-processing of "%s" [%s]\n',cellRec{vecRunPreProGLX(1)}{vecRunPreProGLX(2)},getTime);
 	
@@ -86,69 +86,72 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		if ~exist('sPupil','var') || isempty(sPupil)
 			error([mfilename ':AmbiguousInput'],'No video files found, please change search parameters');
 		end
-		
-		% interpolate detection failures
-		%initial roundness check
-		indWrongA = sqrt(zscore(sPupil.vecPupilCenterX).^2 + zscore(sPupil.vecPupilCenterY).^2) > 4;
-		indWrong1 = conv(indWrongA,ones(1,5),'same')>0;
-		vecAllPoints1 = 1:numel(indWrong1);
-		vecGoodPoints1 = find(~indWrong1);
-		vecTempX = interp1(vecGoodPoints1,sPupil.vecPupilCenterX(~indWrong1),vecAllPoints1);
-		vecTempY = interp1(vecGoodPoints1,sPupil.vecPupilCenterY(~indWrong1),vecAllPoints1);
-		%remove position outliers
-		indWrongB = abs(nanzscore(vecTempX)) > 4 | abs(nanzscore(vecTempY)) > 4;
-		%define final removal vector
-		indWrong = conv(indWrongA | indWrongB,ones(1,5),'same')>0;
-		vecAllPoints = 1:numel(indWrong);
-		vecGoodPoints = find(~indWrong);
-		
-		%fix
-		sPupil.vecPupilFixedCenterX = interp1(vecGoodPoints,sPupil.vecPupilCenterX(~indWrong),vecAllPoints,'linear','extrap');
-		sPupil.vecPupilFixedCenterY = interp1(vecGoodPoints,sPupil.vecPupilCenterY(~indWrong),vecAllPoints,'linear','extrap');
-		sPupil.vecPupilFixedRadius = interp1(vecGoodPoints,sPupil.vecPupilRadius(~indWrong),vecAllPoints,'linear','extrap');
-		
-		% plot
-		close;
-		figure
-		subplot(2,1,1)
-		plot(sPupil.vecPupilTime,sPupil.vecPupilCenterX);
-		hold on
-		plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterX);
-		hold off
-		title(sprintf('Pupil pos x, %s',[strExp strRecIdx]),'Interpreter','none');
-		xlabel('Time (s)');
-		ylabel('Pupil x-position');
-		fixfig
-		
-		subplot(2,1,2)
-		plot(sPupil.vecPupilTime,sPupil.vecPupilCenterY);
-		hold on
-		plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterY);
-		hold off
-		title(sprintf('Pupil pos y, %s',[strExp strRecIdx]),'Interpreter','none');
-		xlabel('Time (s)');
-		ylabel('Pupil y-position');
-		fixfig
-		drawnow;
-		
-		%% prepare pupil synchronization
-		fprintf('Filtering pupil synchronization data [%s]\n',getTime);
-		vecPupilSyncLum = sPupil.vecPupilSyncLum;
-		vecPupilTime = sPupil.vecPupilTime;
-		dblSampRatePupil = 1/median(diff(vecPupilTime));
-		
-		%filter to 0.1-30Hz
-		vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
-		[fb,fa] = butter(2,vecWindow2,'bandpass');
-		vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
-		boolPupilSync1 = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
-		boolPupilSync2 = vecFiltSyncLum>(std(vecFiltSyncLum)/3);
-		
-		%get on/off
-		vecChangePupilSync1 = diff(boolPupilSync1);
-		vecChangePupilSync2 = diff(boolPupilSync2);
-		vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
+		if ~boolOnlyJson
+			
+			% interpolate detection failures
+			%initial roundness check
+			indWrongA = sqrt(zscore(sPupil.vecPupilCenterX).^2 + zscore(sPupil.vecPupilCenterY).^2) > 4;
+			indWrong1 = conv(indWrongA,ones(1,5),'same')>0;
+			vecAllPoints1 = 1:numel(indWrong1);
+			vecGoodPoints1 = find(~indWrong1);
+			vecTempX = interp1(vecGoodPoints1,sPupil.vecPupilCenterX(~indWrong1),vecAllPoints1);
+			vecTempY = interp1(vecGoodPoints1,sPupil.vecPupilCenterY(~indWrong1),vecAllPoints1);
+			%remove position outliers
+			indWrongB = abs(nanzscore(vecTempX)) > 4 | abs(nanzscore(vecTempY)) > 4;
+			%define final removal vector
+			indWrong = conv(indWrongA | indWrongB,ones(1,5),'same')>0;
+			vecAllPoints = 1:numel(indWrong);
+			vecGoodPoints = find(~indWrong);
+			
+			%fix
+			sPupil.vecPupilFixedCenterX = interp1(vecGoodPoints,sPupil.vecPupilCenterX(~indWrong),vecAllPoints,'linear','extrap');
+			sPupil.vecPupilFixedCenterY = interp1(vecGoodPoints,sPupil.vecPupilCenterY(~indWrong),vecAllPoints,'linear','extrap');
+			sPupil.vecPupilFixedRadius = interp1(vecGoodPoints,sPupil.vecPupilRadius(~indWrong),vecAllPoints,'linear','extrap');
+			
+			% plot
+			close;
+			figure
+			subplot(2,1,1)
+			plot(sPupil.vecPupilTime,sPupil.vecPupilCenterX);
+			hold on
+			plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterX);
+			hold off
+			title(sprintf('Pupil pos x, %s',[strExp strRecIdx]),'Interpreter','none');
+			xlabel('Time (s)');
+			ylabel('Pupil x-position');
+			fixfig
+			
+			subplot(2,1,2)
+			plot(sPupil.vecPupilTime,sPupil.vecPupilCenterY);
+			hold on
+			plot(sPupil.vecPupilTime,sPupil.vecPupilFixedCenterY);
+			hold off
+			title(sprintf('Pupil pos y, %s',[strExp strRecIdx]),'Interpreter','none');
+			xlabel('Time (s)');
+			ylabel('Pupil y-position');
+			fixfig
+			drawnow;
+			
+			%% prepare pupil synchronization
+			fprintf('Filtering pupil synchronization data [%s]\n',getTime);
+			vecPupilSyncLum = sPupil.vecPupilSyncLum;
+			vecPupilTime = sPupil.vecPupilTime;
+			dblSampRatePupil = 1/median(diff(vecPupilTime));
+			
+			%filter to 0.1-30Hz
+			vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
+			[fb,fa] = butter(2,vecWindow2,'bandpass');
+			vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
+			boolPupilSync1 = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
+			boolPupilSync2 = vecFiltSyncLum>(std(vecFiltSyncLum)/3);
+			
+			%get on/off
+			vecChangePupilSync1 = diff(boolPupilSync1);
+			vecChangePupilSync2 = diff(boolPupilSync2);
+			vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
+		end
 	end
+	
 	%% load NI sync stream times
 	strFileNI = strcat(strRecording,'_t0.nidq.bin');
 	fprintf('Processing recording at %s%s%s [%s]\n',strPathEphys,filesep,strFileNI,getTime);
@@ -161,7 +164,8 @@ for intRunPrePro=1:size(matRunPrePro,1)
 	fprintf('   Loading raw data ... [%s]\n',getTime);
 	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strFileNI, strPathEphys);
 	fprintf('   Calculating screen diode flip times ... [%s]\n',getTime);
-	[boolVecScreenPhotoDiode,dblCritValPD] = DP_GetUpDown(matDataNI(1,:));
+	vecDiodeSignal = matDataNI(1,:);
+	[boolVecScreenPhotoDiode,dblCritValPD] = DP_GetUpDown(vecDiodeSignal);
 	[boolVecSyncPulses,dblCritValSP] = DP_GetUpDown(matDataNI(2,:));
 	clear matDataNI;
 	
@@ -181,7 +185,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 	if dblSampRateFault < -1e-5 || dblSampRateFault > 1e-5
 		error([mfilename 'E:SampRateFault'],sprintf('Sampling rate fault is high: %e. Please check!',dblSampRateFault));
 	end
-	
+		
 	%% load stimulus info
 	%load logging file
 	fprintf('Synchronizing multi-stream data...\n');
@@ -211,12 +215,13 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		fprintf('>Log file "%s" [%s]\n',sFiles(vecReorderStimFiles(intLogFile)).name,getTime)
 		cellStim{intLogFile} = load(fullfile(strPathStimLogs,sFiles(vecReorderStimFiles(intLogFile)).name));
 		strStimType = cellStim{intLogFile}.structEP.strFile;
-		if ~boolUseVisSync,continue;end
+		if ~boolUseVisSync || boolOnlyJson,continue;end
 		%return
 		intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
 		if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI - intFirstSample/dblSampRateNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI - intFirstSample/dblSampRateNI;
+			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		else
 			%approximate timings
 			vecStimOn = vecStimOnScreenPD/dblSampRateNI;
@@ -260,9 +265,12 @@ for intRunPrePro=1:size(matRunPrePro,1)
 			[vecP,vecI]=findmax(vecSoftmin,10);
 			dblAlignmentCertainty = vecP(1)/sum(vecP);
 			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
-			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~(intLogFile == 1 && intRunPrePro == 7) && ~(intLogFile == 2 && intRunPrePro == 10)
-				error([mfilename 'E:CheckAlignment'],'Alignment certainty is under 90%%, please check manually');
-			end
+			%if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && 0
+			%	error([mfilename 'E:CheckAlignment'],'Alignment certainty is under 90%%, please check manually');
+			%end
+			vecSubSampled = double(vecDiodeSignal(1:100:end));
+			[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblSampRateNI/100),numel(vecSubSampled)),intLogFile);
+			
 			%ensure same starting time
 			vecStimActOnNI = vecStimActOnSecs + dblStartT;
 			vecStimActOffNI = vecStimActOffSecs + dblStartT;
@@ -302,7 +310,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		cellStim{intLogFile}.structEP.SampRateNI = dblSampRateNI;
 		
 		%% align eye-tracking data
-		%if boolOnlyJson || intRunPrePro == 9 && intLogFile == 1,continue;end
+		%if intLogFile == 1,continue;end
 		%get pupil on/offsets
 		if ~exist('intLastPupilStop','var') || isempty(intLastPupilStop)
 			intLastPupilStop = 1;
@@ -403,7 +411,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		xlabel('Trial #');
 		fixfig(gca);
 		maxfig;drawnow;
-			
+		
 		%save output
 		strSyncMetricPath = [strDataTarget 'VideoSyncMetrics' filesep];
 		if ~exist(strSyncMetricPath,'dir')
@@ -419,7 +427,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 		%% off & save
 		%get OFF times
 		vecStimDur = vecStimOffTime - vecStimOnTime;
-		if contains(strStimType,'NaturalMovie') 
+		if contains(strStimType,'NaturalMovie')
 			%set offsets to movie midpoint
 			vecPupilStimOffTime = vecPupilStimOnTime + median(diff(vecPupilStimOnTime))/2;
 		else
@@ -445,43 +453,44 @@ for intRunPrePro=1:size(matRunPrePro,1)
 	vecKilosortContamination = sRez.est_contam_rate;
 	vecKilosortGood = sRez.good;
 	
-	% load some of the useful pieces of information from the kilosort and manual sorting results into a struct
-	sSpikes = loadKSdir(strPathEphys);
-	vecAllSpikeTimes = sSpikes.st;
-	vecAllSpikeClust = sSpikes.clu;
-	vecClusters = unique(vecAllSpikeClust);
-	
-	%get channel depth from pia
-	sChanMap=load(strChanMapFile);
-	vecChannelDepth = sChanMap.ycoords;
-	vecChannelDepth = vecChannelDepth - max(vecChannelDepth);
-	if dblInvertLeads,vecChannelDepth = vecChannelDepth(end:-1:1);end
-	vecChannelDepth = vecChannelDepth + dblCh1DepthFromPia;
-	
-	%get cluster data
-	fprintf('Assigning spikes to clusters... [%s]\n',getTime);
-	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
-	vecAllSpikeDepth = dblCh1DepthFromPia - vecAllSpikeDepth;
-	
-	%remove nans
-	for intStim=1:numel(cellStim)
-		matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
-		%remove nans
-		vecRem = any(isnan(matStimOnOff),2);
-		matStimOnOff(vecRem,:) = [];
-		cellStim{intStim}.structEP = remStimAP(cellStim{intStim}.structEP,vecRem);
-	end
-	
-	%% prepare spiking cell array
-	intClustNum = numel(vecClusters);
-	cellSpikes = cell(1,intClustNum);
-	vecDepth = nan(1,intClustNum);
-	for intCluster=1:intClustNum
-		intClustIdx = vecClusters(intCluster);
-		cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx);
-		vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
-	end
 	if ~boolOnlyJson
+		% load some of the useful pieces of information from the kilosort and manual sorting results into a struct
+		sSpikes = loadKSdir(strPathEphys);
+		vecAllSpikeTimes = sSpikes.st;
+		vecAllSpikeClust = sSpikes.clu;
+		vecClusters = unique(vecAllSpikeClust);
+		
+		%get channel depth from pia
+		sChanMap=load(strChanMapFile);
+		vecChannelDepth = sChanMap.ycoords;
+		vecChannelDepth = vecChannelDepth - max(vecChannelDepth);
+		if dblInvertLeads,vecChannelDepth = vecChannelDepth(end:-1:1);end
+		vecChannelDepth = vecChannelDepth + dblCh1DepthFromPia;
+		
+		%get cluster data
+		fprintf('Assigning spikes to clusters... [%s]\n',getTime);
+		[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
+		vecAllSpikeDepth = dblCh1DepthFromPia - vecAllSpikeDepth;
+		
+		%remove nans
+		for intStim=1:numel(cellStim)
+			matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
+			%remove nans
+			vecRem = any(isnan(matStimOnOff),2);
+			matStimOnOff(vecRem,:) = [];
+			cellStim{intStim}.structEP = remStimAP(cellStim{intStim}.structEP,vecRem);
+		end
+		
+		%% prepare spiking cell array
+		intClustNum = numel(vecClusters);
+		cellSpikes = cell(1,intClustNum);
+		vecDepth = nan(1,intClustNum);
+		for intCluster=1:intClustNum
+			intClustIdx = vecClusters(intCluster);
+			cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx);
+			vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
+		end
+		
 		%% go through clusters
 		sCluster = struct;
 		parfor intCluster=1:intClustNum
@@ -497,7 +506,7 @@ for intRunPrePro=1:size(matRunPrePro,1)
 				matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
 				
 				%get responsiveness
-				[dblZETA,vecLatencies,sZETA] = getZeta(vecSpikeTimes,matStimOnOff,nanmedian(diff(cellStim{intStim}.structEP.vecStimOnTime)),50,0,0);
+				[dblZetaP,vecLatencies,sZETA] = getZeta(vecSpikeTimes,matStimOnOff,nanmedian(diff(cellStim{intStim}.structEP.vecStimOnTime)),50,0,0);
 				%sZETA=[];
 				if isempty(sZETA),continue;end
 				ZetaP(intStim) = sZETA.dblP;
@@ -567,23 +576,23 @@ for intRunPrePro=1:size(matRunPrePro,1)
 	strFileOut = strcat(strExp,'_',strMouse,'_',strRecIdx,'_AP');
 	strFileAP = strcat(strDataTarget,strFileOut,'.mat');
 	strFileAP2 = strcat(strSecondPathAP,strFileOut,'.mat');
-	%save LFP separately because of large size
-	%sAP_LFP = struct;
-	%strFileOutLFP = strcat(strFileOut,'_LFP');
-	%strFileLFP = strcat(strPathDataTarget,strFileOutLFP,'.mat');
-	
-	%LFP
-	%sAP_LFP.vecTimestampsLFP = vecTimestampsLFP;
-	%sAP_LFP.matLFP = matLFP;
-	%sAP_LFP.sMetaLFP = sMetaLFP;
-	
-	%stimulation & eye-tracking timings
-	sAP.cellStim = cellStim;
-	sAP.sPupil = sPupil;
-	
-	%probe data
-	sAP.vecChannelDepth = vecChannelDepth;
 	if ~boolOnlyJson
+		%save LFP separately because of large size
+			%sAP_LFP = struct;
+		%strFileOutLFP = strcat(strFileOut,'_LFP');
+		%strFileLFP = strcat(strPathDataTarget,strFileOutLFP,'.mat');
+		
+		%LFP
+		%sAP_LFP.vecTimestampsLFP = vecTimestampsLFP;
+		%sAP_LFP.matLFP = matLFP;
+		%sAP_LFP.sMetaLFP = sMetaLFP;
+		
+		%stimulation & eye-tracking timings
+		sAP.cellStim = cellStim;
+		sAP.sPupil = sPupil;
+		
+		%probe data
+		sAP.vecChannelDepth = vecChannelDepth;
 		%clusters & spikes
 		sAP.sCluster = sCluster;
 		
@@ -610,49 +619,55 @@ for intRunPrePro=1:size(matRunPrePro,1)
 	if ~exist('strFileLFP','var'),strFileLFP='';end
 	
 	%required fields
-	sJson = struct;
-	sJson.date = strRecDate;
-	sJson.version = '1.0';
-	sJson.project = 'NOT';
-	sJson.dataset = 'Neuropixels data';
-	sJson.subject = strMouse;
-	sJson.investigator = 'Jorrit Montijn';
-	sJson.setup = 'Neuropixels';
-	sJson.stimulus = 'VisStimAcquipix';
-	sJson.condition = 'none';
-	sJson.id = strjoin({strRecIdx,strMouse,strExp},'_');
+	if ~exist('sJson','var') || isempty(sJson)
+		sJsonTemp = struct;
+	else
+		sJsonTemp = sJson;
+	end
+	if ~isfield(sJsonTemp,'date') || isempty(sJsonTemp.date),sJsonTemp.date = strRecDate;end
+	if ~isfield(sJsonTemp,'version') || isempty(sJsonTemp.version),sJsonTemp.version = '1.0';end
+	if ~isfield(sJsonTemp,'dataset') || isempty(sJsonTemp.dataset),sJsonTemp.dataset = 'Neuropixels data';end
+	if ~isfield(sJsonTemp,'subject') || isempty(sJsonTemp.subject),sJsonTemp.subject = strMouse;end
+	if ~isfield(sJsonTemp,'investigator') || isempty(sJsonTemp.investigator),sJsonTemp.investigator = 'Jorrit Montijn';end
+	if ~isfield(sJsonTemp,'project') || isempty(sJsonTemp.project),sJsonTemp.project = 'MontijnNPX2020';end
+	if ~isfield(sJsonTemp,'setup') || isempty(sJsonTemp.setup),sJsonTemp.setup = 'Neuropixels';end
+	if ~isfield(sJsonTemp,'stimulus') || isempty(sJsonTemp.stimulus),sJsonTemp.stimulus = 'VisStimAcquipix';end
+	if ~isfield(sJsonTemp,'condition') || isempty(sJsonTemp.condition),sJsonTemp.condition = 'none';end
+	if ~isfield(sJsonTemp,'id') || isempty(sJsonTemp.id),sJsonTemp.id = strjoin({strRecIdx,strMouse,strExp},'_');end
+	if ~isfield(sJsonTemp,'project') || isempty(sJsonTemp.project),sJsonTemp.project = 'NOT';end
 	
 	%additional fields
-	sJson.experiment = strExp;
-	sJson.recording = strRecording;
-	sJson.recidx = strRecIdx;
-	sJson.mousetype = strMouseType;
-	sJson.nstims = num2str(numel(cellStim));
-	sJson.stims = strjoin(cellfun(@(x) x.structEP.strFile,cellStim,'uniformoutput',false),';');
-	sJson.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.vecStimOnTime)),cellStim,'uniformoutput',false),';');
-	sJson.nclust = numel(vecKilosortGood);
-	sJson.ngood = sum(vecKilosortGood);
+	if ~exist('vecKilosortGood','var'),vecKilosortGood=[];end
+	sJsonTemp.experiment = strExp;
+	sJsonTemp.recording = strRecording;
+	sJsonTemp.recidx = strRecIdx;
+	sJsonTemp.mousetype = strMouseType;
+	sJsonTemp.nstims = num2str(numel(cellStim));
+	sJsonTemp.stims = strjoin(cellfun(@(x) x.structEP.strFile,cellStim,'uniformoutput',false),';');
+	sJsonTemp.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.ActOnSecs)),cellStim,'uniformoutput',false),';');
+	sJsonTemp.nclust = numel(vecKilosortGood);
+	sJsonTemp.ngood = sum(vecKilosortGood);
 	
 	%check meta data
 	cellFields = fieldnames(sMetaNI);
 	intMetaField = find(contains(cellFields,'recording'));
 	if numel(intMetaField) == 1
-		sJson.recording = strjoin({sMetaNI.(cellFields{intMetaField}),cellFields{intMetaField}},'_');
+		sJsonTemp.recording = strjoin({sMetaNI.(cellFields{intMetaField}),cellFields{intMetaField}},'_');
 	else
-		sJson.recording = '';
+		sJsonTemp.recording = '';
 		warning([mfilename 'W:NoMetaField'],'Meta field not found in NI header file');
 	end
 	
 	%file locations
-	sJson.file_ap = strFileAP;
-	sJson.file_ap2 = strFileAP2;
-	sJson.file_lfp = strFileLFP;
-	sJson.file_ni = sMetaNI.fileName;
+	sJsonTemp.file_ap = strFileAP;
+	sJsonTemp.file_ap2 = strFileAP2;
+	sJsonTemp.file_lfp = strFileLFP;
+	sJsonTemp.file_ni = sMetaNI.fileName;
 	
 	%save json file
-	strJsonData = jsonencode(sJson);
+	strJsonData = jsonencode(sJsonTemp);
 	strJsonFileOut = strcat(strExp,'_',strMouse,'_',strRecIdx,'_session.json');
 	strJsonTarget = fullfile(strDataTarget,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
-	savejson('', sJson, strJsonTarget);
+	savejson('', sJsonTemp, strJsonTarget);
 end

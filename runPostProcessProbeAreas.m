@@ -1,8 +1,10 @@
 % default options are in parenthesis after the comment
 clear all;
 %sites
-strPath = 'D:\Data\Processed\Neuropixels\';
-strPath2 = 'P:\Montijn\DataPreProcessed\';
+strDataDrivePath = '\\vs02.herseninstituut.knaw.nl\csf\Montijn\';
+strPath = fullfile(strDataDrivePath,'\DataNeuropixels\');
+strPathAllenCCF = 'D:\Downloads\AllenCCF\';
+%strPath2 = 'P:\Montijn\DataPreProcessed\';
 strSubFormat = '*S%dL%d_AP.mat';
 
 %depths
@@ -67,10 +69,10 @@ cellMouseType{3}{2} = 'BL6';
 cellMouseType{3}{3} = 'BL6';
 
 matRunPrePro = [...
-	1 1;...1
-	1 2;...2
-	1 3;...3
-	1 4;...4
+	...1 1;...1
+	...1 2;...2
+	...1 3;...3
+	...1 4;...4
 	2 1;...5
 	2 2;...6
 	2 3;...7

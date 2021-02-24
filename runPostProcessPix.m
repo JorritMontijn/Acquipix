@@ -67,23 +67,35 @@ matRunPrePro = [...
 	...1 3;...3
 	...1 4;...4
 	...2 1;...5
-	2 2;...6
-	2 3;...7
-	2 4;...8
-	2 5;...9
+	...2 2;...6
+	...2 3;...7
+	...2 4;...8
+	...2 5;...9
 	2 6;...10
 	3 1;...11
 	3 2;...12
-	3 3];%13
+	...3 3;...
+	];%13
 %matRunPrePro = [1 2];
 %set target path
 strDataTarget = fullfile(strDataDrivePath,'DataNeuropixels');
 strSecondPathAP = 'D:\Data\Processed\Neuropixels\';
 
 %boolean switch
-boolOnlyJson = false;
+boolOnlyJson = true;
 boolUseEyeTracking = true;
 boolUseVisSync = true;
+
+%set json data
+%required fields
+sJson = struct;
+sJson.version = '1.0';
+sJson.dataset = 'Neuropixels data';
+sJson.investigator = 'Jorrit Montijn';
+sJson.project = 'MontijnNPX2020';
+sJson.setup = 'Neuropixels';
+sJson.stimulus = 'VisStimAcquipix';
+sJson.condition = 'none';
 
 %% run
 runPostProcessPixModule
