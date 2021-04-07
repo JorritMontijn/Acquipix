@@ -62,19 +62,19 @@ cellMouseType{3}{2} = 'BL6';
 cellMouseType{3}{3} = 'BL6';
 
 matRunPrePro = [...
-	...1 1;...1
-	...1 2;...2
-	...1 3;...3
-	...1 4;...4
-	...2 1;...5
-	...2 2;...6
-	...2 3;...7
-	...2 4;...8
-	...2 5;...9
+	1 1;...1
+	1 2;...2
+	1 3;...3
+	1 4;...4
+	2 1;...5
+	2 2;...6
+	2 3;...7
+	2 4;...8
+	2 5;...9
 	2 6;...10
 	3 1;...11
 	3 2;...12
-	...3 3;...
+	3 3;...
 	];%13
 %matRunPrePro = [1 2];
 %set target path
@@ -91,7 +91,7 @@ boolUseVisSync = true;
 sJson = struct;
 sJson.version = '1.0';
 sJson.dataset = 'Neuropixels data';
-sJson.investigator = 'Jorrit Montijn';
+sJson.investigator = 'Jorrit_Montijn';
 sJson.project = 'MontijnNPX2020';
 sJson.setup = 'Neuropixels';
 sJson.stimulus = 'VisStimAcquipix';
