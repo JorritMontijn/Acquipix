@@ -158,8 +158,13 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		'Position',[90 0 50 20]);
 	
 	%button to start recording
-	sFigRE.ptrToggleStartRecording = uicontrol(sFigRE.ptrPanelSGL,'Style','togglebutton','String','Record NPX','FontSize',10,'ForegroundColor',[0 0 0],...
-		'Position',[165 2 110 22],'Callback',@ptrToggleStartRecording_Callback);
+	sFigRE.ptrToggleStartRecording = uicontrol(sFigRE.ptrPanelSGL,'Style','togglebutton','String','Start Rec.','FontSize',10,'ForegroundColor',[0 0 0],...
+		'Position',[150 2 70 22],'Callback',@ptrToggleStartRecording_Callback);
+	
+	%button to ignore spikeglx
+	sFigRE.ptrCheckEnableNpx = uicontrol(sFigRE.ptrPanelSGL,'Style','checkbox','String','SGL','Value',1,'FontSize',10,'ForegroundColor',[0 0 0],...
+		'Position',[225 2 50 22]);
+	
 	
 	%% build Daq module
 	%make panel
@@ -206,6 +211,11 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		'String','LEDs Off',...
 		'Position',[120 2 100 20],...
 		'Callback',@ptrButtonSetLightsOff_Callback);
+	
+	%button for ignoring daq
+	sFigRE.ptrCheckEnableDaq = uicontrol(sFigRE.ptrPanelDaq,'Style','checkbox','String','Daq','Value',1,'FontSize',10,'ForegroundColor',[0 0 0],...
+		'Position',[225 2 50 22]);
+	
 	
 	%don't forget to update gratings and RF mapper (and opto stim?) to nat
 	%mov changes
@@ -487,9 +497,13 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		sRE.sStimParams = sStimParams;
 	end
 	function ptrButtonStartExperiment_Callback(hObject, eventdata) %#ok<DEFNU>
+		%get enable switches
+		boolUseSGL = sFigRE.ptrCheckEnableNpx.Value==1;
+		boolUseNI = sFigRE.ptrCheckEnableDaq.Value==1;
+		
 		%evaluate variables
 		ptrButtonCheckStimPresets_Callback;
-		if ~sRE.IsInputConfirmed || ~sRE.IsConnectedSGL || ~sRE.IsConnectedDaq
+		if ~sRE.IsInputConfirmed || (~sRE.IsConnectedSGL && boolUseSGL) || (~sRE.IsConnectedDaq && boolUseNI)
 			strError = '';
 			if ~sRE.IsInputConfirmed
 				strError = [strError '; Input unconfirmed'];
@@ -523,15 +537,22 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 			dblPupilLightMultiplier = 1;
 		end
 		
+		
 		%get meta settings
 		sExpMeta = struct;
+		sExpMeta.boolUseSGL = boolUseSGL;
+		sExpMeta.boolUseNI = boolUseNI;
 		sExpMeta.dblPupilLightMultiplier = dblPupilLightMultiplier;
 		sExpMeta.dblSyncLightMultiplier = dblSyncLightMultiplier;
-		sExpMeta.strHostAddress = sRE.strHostAddress;
-		sExpMeta.objDaqOut = sRE.objDaqOut;
-		sExpMeta.hSGL = sRE.hSGL;
-		sExpMeta.strRunName = sRE.strRunName;
-		sExpMeta.sParamsSGL = sRE.sParamsSGL;
+		if boolUseSGL
+			sExpMeta.strHostAddress = sRE.strHostAddress;
+			sExpMeta.hSGL = sRE.hSGL;
+			sExpMeta.sParamsSGL = sRE.sParamsSGL;
+			sExpMeta.strRunName = sRE.strRunName;
+		end
+		if boolUseNI
+			sExpMeta.objDaqOut = sRE.objDaqOut;
+		end
 		
 		%run!
 		assignin('base','sExpMeta',sExpMeta);

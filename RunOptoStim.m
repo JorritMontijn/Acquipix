@@ -10,6 +10,19 @@ intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
 boolUseSGL = true;
 boolUseNI = true;
 boolDebug = false;
+if exist('sExpMeta','var')
+	%defaults
+	strHostAddress = '192.87.10.238'; %default host address
+	objDaqOut = [];
+	
+	%expand structure
+	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
+	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
+	if isfield(sExpMeta,'boolUseSGL'),boolUseSGL=sExpMeta.boolUseSGL;end
+	if isfield(sExpMeta,'boolUseNI'),boolUseNI=sExpMeta.boolUseNI;end
+else
+	sExpMeta = [];
+end
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
@@ -23,7 +36,7 @@ fprintf('Loading settings...\n');
 if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
 	%parameters
 	sStimParamsSettings.strStimType = 'OptoStim';
-	sStimParamsSettings.strHostAddress = '192.87.10.238'; 
+	sStimParamsSettings.strHostAddress = strHostAddress;
 	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
 	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
@@ -46,15 +59,26 @@ end
 strOutputPath = sStimParamsSettings.strOutputPath;
 strTempObjectPath = sStimParamsSettings.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
-[strFilename,strLogDir,strTempDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
-fprintf('Saving output in directory %s\n',strLogDir);
+[strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
+fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
-	%start connection
-	fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
-	[hSGL,strSGL_Filename,sParamsSGL] = InitSGL(strRecording,sStimParamsSettings.strHostAddress);
-	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strSGL_Filename,strFilename,getTime);
+	%check if data are supplied
+	if exist('sExpMeta','var') && isfield(sExpMeta,'hSGL') && isfield(sExpMeta,'strRunName') && isfield(sExpMeta,'sParamsSGL')
+		%get data
+		hSGL = sExpMeta.hSGL;
+		strRunName = sExpMeta.strRunName;
+		sParamsSGL = sExpMeta.sParamsSGL;
+		
+		%start recording
+		intOutFlag = StartRecordingSGL(hSGL);
+	else
+		%start connection
+		fprintf('Opening SpikeGLX connection & starting recording "%s" [%s]...\n',strRecording,getTime);
+		[hSGL,strRunName,sParamsSGL] = InitSGL(strRecording,strHostAddress);
+	end
+	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strRunName,strFilename,getTime);
 	
 	%retrieve some parameters
 	intStreamNI = -1;
@@ -296,38 +320,68 @@ try
 		catch
 		end
 	end
+	
 catch ME
-	%% catch me and throw me
-	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
-	warning('on','CalinsNetMex:connectionClosed');
-	
-	%save data
-	structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
-	structEP.cellPulseData = cellPulseData(1:intTrial);
-	structEP.cellPulseITI = cellPulseITI(1:intTrial);
-	structEP.cellPulseDur = cellPulseDur(1:intTrial);
-	structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
-	structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-	save(fullfile(strLogDir,strFilename), 'structEP');
-	
-	%% end recording
-	try
-		CloseSGL(hSGL);
-	catch
-	end
-	
-	%% close Daq IO
-	if sStimParamsSettings.intUseDaqDevice > 0
-		try
-			closeDaqOutput(objDAQOut);
-			if boolDaqIn
-				closeDaqInput(objDAQIn);
+	%% check if escape
+	if strcmp(ME.identifier,'RunOptoStim:EscapePressed')
+		fprintf('\nEscape pressed at [%s], closing down and cleaning up...\n',getTime);
+		
+		%save data
+		structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
+		structEP.cellPulseData = cellPulseData(1:intTrial);
+		structEP.cellPulseITI = cellPulseITI(1:intTrial);
+		structEP.cellPulseDur = cellPulseDur(1:intTrial);
+		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
+		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
+		save(fullfile(strLogDir,strFilename), 'structEP');
+		
+		%clean up
+		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
+		Screen('Close',ptrWindow);
+		Screen('Close');
+		Screen('CloseAll');
+		ShowCursor;
+		Priority(0);
+		Screen('Preference', 'Verbosity',intOldVerbosity);
+		
+		%% close Daq IO
+		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
+			try
+				closeDaqOutput(objDaqOut);
+			catch
 			end
-		catch
 		end
+		
+	else
+		%% catch me and throw me
+		fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
+		
+		%save data
+		structEP.vecPulseVolt = vecPulseVolt(1:intTrial);
+		structEP.cellPulseData = cellPulseData(1:intTrial);
+		structEP.cellPulseITI = cellPulseITI(1:intTrial);
+		structEP.cellPulseDur = cellPulseDur(1:intTrial);
+		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
+		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
+		save(fullfile(strLogDir,strFilename), 'structEP');
+		
+		%% catch me and throw me
+		Screen('Close');
+		Screen('CloseAll');
+		ShowCursor;
+		Priority(0);
+		Screen('Preference', 'Verbosity',intOldVerbosity);
+		
+		%% close Daq IO
+		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
+			try
+				closeDaqOutput(objDaqOut);
+			catch
+			end
+		end
+		
+		%% show error
+		rethrow(ME);
 	end
-	
-	%% show error
-	rethrow(ME);
 end
 %end

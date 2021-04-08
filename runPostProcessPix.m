@@ -90,7 +90,7 @@ boolUseVisSync = true;
 %required fields
 sJson = struct;
 sJson.version = '1.0';
-sJson.dataset = 'Neuropixels data';
+sJson.dataset = 'Neuropixels_data';
 sJson.investigator = 'Jorrit_Montijn';
 sJson.project = 'MontijnNPX2020';
 sJson.setup = 'Neuropixels';
