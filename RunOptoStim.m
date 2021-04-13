@@ -2,7 +2,7 @@
 
 %% suppress m-lint warnings
 %#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-clearvars -except sStimPresets sStimParamsSettings;
+clearvars -except sStimPresets sExpMeta sStimParamsSettings;
 
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
@@ -148,7 +148,7 @@ for intTrial=1:intTrialNum
 end
 
 %% initialize NI I/O box
-if sStimParamsSettings.intUseDaqDevice > 0
+if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0
 	%% setup connection
 	%query connected devices
 	objDevice = daq.getDevices;
@@ -235,7 +235,7 @@ try
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		
 		%prep stimulus
-		if sStimParamsSettings.intUseDaqDevice > 0
+		if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0
 			stop(objDAQOut);
 			%extend
 			if size(matData,2) == 1
@@ -257,7 +257,7 @@ try
 		
 		%start stimulus
 		fprintf('\b; stim started at %.3fs\n',toc(hTicTrial));
-		if sStimParamsSettings.intUseDaqDevice > 0,startBackground(objDAQOut);end
+		if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0,startBackground(objDAQOut);end
 		
 		%log NI timestamp
 		if boolUseSGL
@@ -267,7 +267,7 @@ try
 		end
 		
 		%wait
-		if sStimParamsSettings.intUseDaqDevice > 0
+		if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0
 			dblTimeout = (size(matData,1)/dblSamplingRate)*1.5;
 			wait(objDAQOut,dblTimeout);
 		end
@@ -338,12 +338,8 @@ catch ME
 		
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
-		Screen('Close',ptrWindow);
-		Screen('Close');
-		Screen('CloseAll');
 		ShowCursor;
 		Priority(0);
-		Screen('Preference', 'Verbosity',intOldVerbosity);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
@@ -367,11 +363,8 @@ catch ME
 		save(fullfile(strLogDir,strFilename), 'structEP');
 		
 		%% catch me and throw me
-		Screen('Close');
-		Screen('CloseAll');
 		ShowCursor;
 		Priority(0);
-		Screen('Preference', 'Verbosity',intOldVerbosity);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
