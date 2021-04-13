@@ -10,9 +10,9 @@ intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise
 boolUseSGL = true;
 boolUseNI = true;
 boolDebug = false;
+strHostAddress = '192.87.10.238'; %default host address
 if exist('sExpMeta','var')
 	%defaults
-	strHostAddress = '192.87.10.238'; %default host address
 	objDaqOut = [];
 	
 	%expand structure
