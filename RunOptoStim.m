@@ -33,7 +33,7 @@ end
 
 %% input params
 fprintf('Loading settings...\n');
-if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) 
 	%parameters
 	sStimParamsSettings.strStimType = 'OptoStim';
 	sStimParamsSettings.strHostAddress = strHostAddress;
@@ -42,7 +42,8 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcm
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
 	sStimParamsSettings.dblSamplingRate = 10000;%Hz
 	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
-	
+elseif ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
+	error([mfilename ':WrongStimType'],sprintf('You''re trying to run "%s", but the stim parameter structure is meant for "%s"',mfilename',sStimParamsSettings.strStimType));
 else
 	% evaluate and assign pre-defined values to structure
 	cellFields = fieldnames(sStimParamsSettings);
