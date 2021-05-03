@@ -1,10 +1,10 @@
 %% set default paths
-strDefaultKilosort2 = 'C:\Code\Acquisition\Kilosort2';
+strDefaultKilosort = 'C:\Code\Acquisition\Kilosort';
 strDefaultNpyMATLAB = 'C:\Code\Acquisition\npy-matlab';
 strDefaultTempDirSSD = 'E:\_TempData';
 
-if ~exist('strPathKilosort2','var') || isempty(strPathKilosort2)
-    strPathKilosort2 = strDefaultKilosort2;
+if ~exist('strPathKilosort2','var') || isempty(strPathKilosort)
+    strPathKilosort = strDefaultKilosort;
 end
 if ~exist('strNpyMatlab','var') || isempty(strNpyMatlab)
     strNpyMatlab = strDefaultNpyMATLAB;
@@ -16,14 +16,14 @@ end
 %% run
 for intRunPrePro=1:size(matRunPre,1)
 %% clear variables and select session to preprocess
-clearvars -except cellRec matRunPre intRunPrePro strPathKilosort2 strNpyMatlab strTempDirSSD
+clearvars -except cellRec matRunPre intRunPrePro strPathKilosort strNpyMatlab strTempDirSSD
 runPreGLX = matRunPre(intRunPrePro,:);
 fprintf('Starting pre-processing of "%s" [%s]\n',cellRec{runPreGLX(1)}{runPreGLX(2)},getTime);
 
 %% path definitions
 strThisPath = mfilename('fullpath');
 strThisPath = strThisPath(1:(end-numel(mfilename)));
-addpath(genpath(strPathKilosort2)); % path to kilosort folder
+addpath(genpath(strPathKilosort)); % path to kilosort folder
 addpath(strNpyMatlab); % for converting to Phy
 rootZ = cellRec{runPreGLX(1)}{runPreGLX(2)}; % the raw data binary file is in this folder
 strPathToConfigFile = strcat(strThisPath,'subfunctionsPP',filesep); % take from Github folder and put it somewhere else (together with the master_file)
@@ -75,6 +75,9 @@ ops.sig        = 20;  % spatial smoothness constant for registration
 ops.fshigh     = 300; % high-pass more aggresively
 ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
+% main parameter changes from Kilosort2.5 to v3.0
+ops.Th       = [9 9];
+
 % is there a channel map file in this folder?
 fs = dir(fullfile(rootZ, 'chan*.mat'));
 if ~isempty(fs)
@@ -85,38 +88,22 @@ end
 fs          = [dir(fullfile(rootZ, '*.bin')) dir(fullfile(rootZ, '*.dat'))];
 ops.fbinary = fullfile(rootZ, fs(1).name);
 
-% preprocess data to create temp_wh.dat
-rez = preprocessDataSub(ops);
-%
-% NEW STEP TO DO DATA REGISTRATION
-rez = datashift2(rez, 1); % last input is for shifting data
+rez                = preprocessDataSub(ops);
+rez                = datashift2(rez, 1);
 
-% ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
-iseed = 1;
-                 
-% main tracking and template matching algorithm
-rez = learnAndSolve8b(rez, iseed);
+[rez, st3, tF]     = extract_spikes(rez);
 
-% OPTIONAL: remove double-counted spikes - solves issue in which individual spikes are assigned to multiple templates.
-% See issue 29: https://github.com/MouseLand/Kilosort/issues/29
-%rez = remove_ks2_duplicate_spikes(rez);
+rez                = template_learning(rez, tF, st3);
 
-% final merges
-rez = find_merges(rez, 1);
+[rez, st3, tF]     = trackAndSort(rez);
 
-% final splits by SVD
-rez = splitAllClusters(rez, 1);
+rez                = final_clustering(rez, tF, st3);
 
-% decide on cutoff
-rez = set_cutoff(rez);
-% eliminate widely spread waveforms (likely noise)
-rez.good = get_good_units(rez);
+rez                = find_merges(rez, 1);
 
-fprintf('found %d good units \n', sum(rez.good>0))
-
-% write to Phy
-fprintf('Saving results to Phy  \n')
-rezToPhy(rez, rootZ);
+rootZ = fullfile(rootZ, 'kilosort3');
+mkdir(rootZ)
+rezToPhy2(rez, rootZ);
 
 %% if you want to save the results to a Matlab file...
 
