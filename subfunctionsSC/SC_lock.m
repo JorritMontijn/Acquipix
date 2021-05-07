@@ -10,6 +10,9 @@ function SC_lock(handles)
 				~isempty(strfind(cellNames{intPtr},'ptrEdit'))) && ...
 				isempty(strfind(cellNames{intPtr},'ptrButtonSave'))
 			set(handles.(cellNames{intPtr}),'Enable','off');
+			if strcmpi(get(handles.(cellNames{intPtr}),'UserData'),'lock')
+				set(handles.(cellNames{intPtr}),'UserData','unlock');
+			end
 		end
 	end
 end
