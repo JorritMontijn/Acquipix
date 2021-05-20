@@ -6,18 +6,24 @@ function [boolArray,dblCritVal] = DP_GetUpDown(vecData,dblLowerPercentile,dblUpp
 	%(by default) the 10th and 90th percentile 
 	
 	%default percentiles
-	if ~exist('dblPercentile','var') || isempty(dblLowerPercentile)
+	if ~exist('dblLowerPercentile','var') || isempty(dblLowerPercentile)
 		dblLowerPercentile = 0.1;
 	end
-	if ~exist('dblPercentile','var') || isempty(dblUpperPercentile)
+	if ~exist('dblUpperPercentile','var') || isempty(dblUpperPercentile)
 		dblUpperPercentile = 1-dblLowerPercentile;
 	end
 	
 	%get critical value as midpoint between 10th and 90th percentile
 	vecSorted = sort(vecData,'ascend');
-	intPoints = numel(vecData);
-	dblLower = vecSorted(round(intPoints*dblLowerPercentile));
-	dblUpper = vecSorted(round(intPoints*dblUpperPercentile));
+	vecSorted(isnan(vecSorted)) = [];
+	if isempty(vecSorted)
+		dblCritVal = nan;
+		boolArray = true(size(vecData));
+		return;
+	end
+	intPoints = numel(vecSorted);
+	dblLower = vecSorted(ceil(intPoints*dblLowerPercentile));
+	dblUpper = vecSorted(ceil(intPoints*dblUpperPercentile));
 	dblCritVal = (dblUpper - dblLower)/2 + dblLower;
 	boolArray = vecData >= dblCritVal;
 end
