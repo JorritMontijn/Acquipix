@@ -42,6 +42,7 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings)
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
 	sStimParamsSettings.dblSamplingRate = 10000;%Hz
 	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
+    sStimParamsSettings.strPortOut = 'ao1'; %output port of DAQ device
 elseif ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
 	error([mfilename ':WrongStimType'],sprintf('You''re trying to run "%s", but the stim parameter structure is meant for "%s"',mfilename',sStimParamsSettings.strStimType));
 else
@@ -167,7 +168,7 @@ if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0
 	%[chOut0,dblIdx0] = addAnalogOutputChannel(objDAQOut, strID, 'ao0', 'Voltage');
 	
 	%add opto LED output channels
-	[chOut1,dblIdx1] = addAnalogOutputChannel(objDAQOut, strID, 'ao1', 'Voltage');
+	[chOut1,dblIdx1] = addAnalogOutputChannel(objDAQOut, strID, strPortOut, 'Voltage');
 	
 	%% set spritzer off
 	dblStartT = 0.1;
@@ -188,7 +189,6 @@ structEP.intRepsPerPulse = intRepsPerPulse;%count
 structEP.intTrialNum = intTrialNum;%count
 structEP.dblPulseWait = dblPulseWait;%secs, at least ~0.2s
 structEP.vecPulseITI = vecPulseITI;%secs
-structEP.dblPulseDur = dblPulseDur;%secs
 structEP.vecPulseDur = vecPulseDur;%secs
 structEP.dblPulseWaitSignal = dblPulseWaitSignal;
 structEP.dblPulseWaitPause = dblPulseWaitPause;
