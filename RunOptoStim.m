@@ -37,8 +37,8 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings)
 	%parameters
 	sStimParamsSettings.strStimType = 'OptoStim';
 	sStimParamsSettings.strHostAddress = strHostAddress;
-	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
-	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
+	sStimParamsSettings.strOutputPath = 'F:\DataRaw\Exp'; %appends date
+	sStimParamsSettings.strTempObjectPath = 'D:\Tempdata\';%X:\JorritMontijn\ or F:\Data\Temp\
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
 	sStimParamsSettings.dblSamplingRate = 10000;%Hz
 	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
@@ -86,10 +86,10 @@ if boolUseSGL
 	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
 	
 	%% check disk space available
-	strDataDirSGL = GetDataDir(hSGL);
-	jFileObj = java.io.File(strDataDirSGL);
-	dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
-	if dblFreeGB < 100,warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);end
+	%strDataDirSGL = GetDataDir(hSGL);
+	%jFileObj = java.io.File(strDataDirSGL);
+	%dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
+	%if dblFreeGB < 100,warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);end
 else
 	sParamsSGL = struct;
 end
@@ -338,8 +338,6 @@ catch ME
 		
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
-		ShowCursor;
-		Priority(0);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
@@ -361,10 +359,6 @@ catch ME
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
 		save(fullfile(strLogDir,strFilename), 'structEP');
-		
-		%% catch me and throw me
-		ShowCursor;
-		Priority(0);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))

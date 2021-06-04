@@ -246,7 +246,11 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		catch ME
 			set(sFigRE.ptrTextConnectedSGL,'ForegroundColor',[0 0 0],'String','Idle');
 			sRE.IsConnectedSGL = false;
-			%rethrow(ME);
+            if strcmp(ME.identifier,'MATLAB:UndefinedFunction') && strcmp(ME.message,'Undefined function ''SpikeGL'' for input arguments of type ''char''.')
+                strAns = questdlg(['Error: SpikeGL.m not found, please install the Matlab GLX client scripts, e.g.: https://github.com/JorritMontijn/ClientGLX'],'Error','OK','OK');
+            else
+                dispErr(ME);
+            end
 			return
 		end
 		
@@ -254,10 +258,10 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 		set(sFigRE.ptrTextRunNameSGL,'String',sRE.strRunName);
 		
 		%display available disk space
-		strDataDirSGL = GetDataDir(sRE.hSGL);
-		jFileObj = java.io.File(strDataDirSGL);
-		dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
-		set(sFigRE.ptrTextDiskSpaceAvailable,'String',sprintf('%.1f GB',dblFreeGB));
+		%strDataDirSGL = GetDataDir(sRE.hSGL);
+		%jFileObj = java.io.File(strDataDirSGL);
+		%dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
+		%set(sFigRE.ptrTextDiskSpaceAvailable,'String',sprintf('%.1f GB',dblFreeGB));
 		
 	end
 	function ptrToggleStartRecording_Callback(hObject, eventdata)
