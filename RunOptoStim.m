@@ -37,11 +37,12 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings)
 	%parameters
 	sStimParamsSettings.strStimType = 'OptoStim';
 	sStimParamsSettings.strHostAddress = strHostAddress;
-	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
-	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
+	sStimParamsSettings.strOutputPath = 'F:\DataRaw\Exp'; %appends date
+	sStimParamsSettings.strTempObjectPath = 'D:\Tempdata\';%X:\JorritMontijn\ or F:\Data\Temp\
 	sStimParamsSettings.dblPulseVoltage = 3;%volts
 	sStimParamsSettings.dblSamplingRate = 10000;%Hz
 	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
+    sStimParamsSettings.strPortOut = 'ao1'; %output port of DAQ device
 elseif ~strcmpi(sStimParamsSettings.strStimType,'OptoStim')
 	error([mfilename ':WrongStimType'],sprintf('You''re trying to run "%s", but the stim parameter structure is meant for "%s"',mfilename',sStimParamsSettings.strStimType));
 else
@@ -86,10 +87,10 @@ if boolUseSGL
 	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
 	
 	%% check disk space available
-	strDataDirSGL = GetDataDir(hSGL);
-	jFileObj = java.io.File(strDataDirSGL);
-	dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
-	if dblFreeGB < 100,warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);end
+	%strDataDirSGL = GetDataDir(hSGL);
+	%jFileObj = java.io.File(strDataDirSGL);
+	%dblFreeGB = (jFileObj.getFreeSpace)/(1024^3);
+	%if dblFreeGB < 100,warning([mfilename ':LowDiskSpace'],'Low disk space available (%.0fGB) for Neuropixels data (dir: %s)',dblFreeGB,strDataDirSGL);end
 else
 	sParamsSGL = struct;
 end
@@ -167,7 +168,7 @@ if boolUseNI && sStimParamsSettings.intUseDaqDevice > 0
 	%[chOut0,dblIdx0] = addAnalogOutputChannel(objDAQOut, strID, 'ao0', 'Voltage');
 	
 	%add opto LED output channels
-	[chOut1,dblIdx1] = addAnalogOutputChannel(objDAQOut, strID, 'ao1', 'Voltage');
+	[chOut1,dblIdx1] = addAnalogOutputChannel(objDAQOut, strID, strPortOut, 'Voltage');
 	
 	%% set spritzer off
 	dblStartT = 0.1;
@@ -188,7 +189,6 @@ structEP.intRepsPerPulse = intRepsPerPulse;%count
 structEP.intTrialNum = intTrialNum;%count
 structEP.dblPulseWait = dblPulseWait;%secs, at least ~0.2s
 structEP.vecPulseITI = vecPulseITI;%secs
-structEP.dblPulseDur = dblPulseDur;%secs
 structEP.vecPulseDur = vecPulseDur;%secs
 structEP.dblPulseWaitSignal = dblPulseWaitSignal;
 structEP.dblPulseWaitPause = dblPulseWaitPause;
@@ -338,8 +338,6 @@ catch ME
 		
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
-		ShowCursor;
-		Priority(0);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
@@ -361,10 +359,6 @@ catch ME
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
 		save(fullfile(strLogDir,strFilename), 'structEP');
-		
-		%% catch me and throw me
-		ShowCursor;
-		Priority(0);
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))

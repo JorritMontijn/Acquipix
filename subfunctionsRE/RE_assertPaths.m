@@ -11,7 +11,19 @@ function [strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutput
 	strTexSubDir = 'StimulusTextures';
 	strTexDir = strcat(strjoin(cellPathParts(1:(end-1)),filesep),filesep,strTexSubDir); %where are the stimulus textures saved?
 	%test
-	strOldPath = cd(strTexDir);
+    try
+        strOldPath = cd(strTexDir);
+    catch ME
+        strAns = questdlg(['Would you to create a new texture directory at "' strTexDir '"?'], ...
+            'Create new directory', ...
+            'Yes','No','No');
+        if strcmp(strAns,'Yes')
+            mkdir(strTexDir);
+            strOldPath = cd(strTexDir);
+        else
+            rethrow(ME);
+        end
+    end
 	cd(strOldPath);
 	
 	%% define output filename
