@@ -1,6 +1,7 @@
-StimulusTextures/**
-
+StimulusTextures/*.mat
+StimPresets/*.mat
 Scenes/**
 backup/**
 *.asv
 data/**
+*.ini
