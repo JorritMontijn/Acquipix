@@ -6,6 +6,9 @@ function intPresetIdx = saveStimPreset(sStimPresets,strFilename,intPresetIdx)
 	strFullPath = mfilename('fullpath');
 	cellPathParts = strsplit(strFullPath,filesep);
 	strTargetPath = strjoin(cat(2,cellPathParts(1:(end-2)),'StimPresets'),filesep);
+	if ~exist(strTargetPath,'dir')
+		mkdir(strTargetPath);
+	end
 	strFile = strcat('Preset*_',strFilename,'*');
 	%check next number
 	if nargin < 3 || isempty(intPresetIdx)
