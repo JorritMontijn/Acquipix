@@ -276,7 +276,7 @@ function [sFigRE,sRE] = RE_genGUI(sFigRE,sRE)
 				set(hObject,'Value',0);
 			end
 		else
-			if IsSaving(sRE.hSGL)
+			if isfield(sRE,'hSGL') && IsSaving(sRE.hSGL)
 				set(hObject,'Value',1);
 			else
 				set(hObject,'Value',0);
