@@ -1,0 +1,121 @@
+function sFiles = RP_CompileDataLibrary(sRP)
+	
+	%%
+	%strOutputPath: 'D:\Data\Processed\Neuropixels'
+    %       strTempPath: 'E:\_TempData'
+    %      strEphysPath: 'D:\Data\Raw\Neuropixels'
+    %    strStimLogPath: 'D:\Data\Raw\Neuropixels'
+    %strEyeTrackingPath: 'D:\Data\Raw\Neuropixels'
+    %   strProbeLocPath: 'D:\Data\Raw\Neuropixels'
+	  
+	%% compile potential raw SpikeGLX ephys files (using Nidq as master)
+	sPossibleEphysFiles = dir(fullfile(sRP.strEphysPath, '**','*.meta'));
+	cellEphysFilesNidq = regexp({sPossibleEphysFiles.name},sRP.strEphysRegExpNidq);
+	sEphysFilesNidq = sPossibleEphysFiles(~cellfun(@isempty,cellEphysFilesNidq));
+	
+	%% compile potential stim files
+	sAllStimMatStimFiles = dir(fullfile(sRP.strStimLogPath, '**','*.mat'));
+	cellStimFiles = regexp({sAllStimMatStimFiles.name},sRP.strStimLogRegExpStim);
+	sPossibleStimFiles = sAllStimMatStimFiles(~cellfun(@isempty,cellStimFiles));
+	
+	%% compile potential pupil files
+	sAllPupilMatFiles = dir(fullfile(sRP.strEyeTrackingPath, '**','*Processed*.mat'));
+	cellPupilFiles = regexp({sAllPupilMatFiles.name},sRP.strEyeTrackingRegExpVid);
+	sPossiblePupilFiles = sAllPupilMatFiles(~cellfun(@isempty,cellPupilFiles));
+	
+	%% group files
+	sFiles = [];
+	for intFile=1:numel(sEphysFilesNidq)
+		%% nidq
+		sEphysNidq = sEphysFilesNidq(intFile);
+		strNidqFile = sEphysNidq.name;
+		strNidqPath = sEphysNidq.folder;
+		if ~strcmp(strNidqPath(end),filesep),strNidqPath(end+1)=filesep;end
+		sMeta = DP_ReadMeta(strNidqFile, strNidqPath);
+		[dummy,strNidqName] = fileparts(sMeta.fileName);
+		strNidqName = strrep(strNidqName,'.nidq','');
+		sMeta.strNidqName = strNidqName;
+		
+		%extract date
+		[intB,intE]=regexp(strNidqFile,'(\d{4}[-/]?(\d{2})[-/]?\d{2})');
+		strDate1 = strrep(strNidqFile(intB:intE),'-','');
+		strDate2 = strjoin({strDate1(1:4),strDate1(5:6),strDate1(7:8)},'-');
+		
+		%% ap
+		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
+		sEphysAp = dir(strcat(strNidqPath,strApFile));
+		
+		%% lf
+		strLfFile = strrep(strNidqFile,'nidq','imec*.lf');
+		sEphysLf = dir(strcat(strNidqPath,strLfFile));
+		
+		%% processed kilosort data
+		sClustered = dir(strcat(strNidqPath,sRP.strEphysFindClustered));
+		if isempty(sClustered)
+			%try /kilosort3/ subfolder
+			sClustered = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindClustered));
+		end
+		
+		%% combined data synthesis
+		%{
+		to do
+		sClustered = dir(strcat(strNidqPath,sRP.strEphysFindClustered));
+		if isempty(sClustered)
+			%try /kilosort3/ subfolder
+			sClustered = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindClustered));
+		end
+		%}
+		
+		%% raw stimulus files
+		cellPossibleStimFiles = {sPossibleStimFiles.name};
+		indPossFiles = contains(cellPossibleStimFiles,strDate1) | contains(cellPossibleStimFiles,strDate2);
+		sSameDateStimFiles = sPossibleStimFiles(indPossFiles);
+		sStimFiles = sSameDateStimFiles;
+		sStimFiles(:)=[];
+		%check if spikeglx run name matches
+		for intStimFile=1:numel(sSameDateStimFiles)
+			sLoad=load(fullpath(sSameDateStimFiles(intStimFile).folder,sSameDateStimFiles(intStimFile).name));
+			strRunName = sLoad.sParamsSGL.snsRunName;
+			if strcmp(strRunName,strNidqName(1:numel(strRunName)))
+				%match
+				sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
+			end
+		end
+		
+		%% processed eye-tracking data
+		cellPossiblePupilFiles = {sPossiblePupilFiles.name};
+		indPossFiles = contains(cellPossiblePupilFiles,strDate1) | contains(cellPossiblePupilFiles,strDate2);
+		sSameDatePupilFiles = sPossiblePupilFiles(indPossFiles);
+		sPupilFiles = sSameDatePupilFiles;
+		sPupilFiles(:)=[];
+		warning('off','MATLAB:elementsNowStruc');
+		%check if spikeglx run name matches
+		for intPupilFile=1:numel(sSameDatePupilFiles)
+			sLoad=load(fullpath(sSameDatePupilFiles(intPupilFile).folder,sSameDatePupilFiles(intPupilFile).name));
+			if isfield(sLoad.sPupil,'sParamsSGL')
+				strRunName = sLoad.sPupil.sParamsSGL.snsRunName;
+				if strcmp(strRunName,strNidqName(1:numel(strRunName)))
+					%match
+					sPupilFiles(end+1) = sSameDatePupilFiles(intPupilFile);
+				end
+			else
+				%cannot check run name, so we'll just add it anyway
+				sPupilFiles(end+1) = sSameDatePupilFiles(intPupilFile);
+			end
+		end
+		warning('on','MATLAB:elementsNowStruc');
+		
+		%% histology/probe location data
+		sProbeCoords = []; %to do
+		
+		%% assign data
+		sFiles(intFile).sMeta = sMeta;
+		sFiles(intFile).sEphysNidq = sEphysNidq;
+		sFiles(intFile).sEphysAp = sEphysAp;
+		sFiles(intFile).sEphysLf = sEphysLf;
+		sFiles(intFile).sClustered = sClustered;
+		sFiles(intFile).sStimFiles = sStimFiles;
+		sFiles(intFile).sPupilFiles = sPupilFiles;
+		sFiles(intFile).sProbeCoords = sProbeCoords;
+	end
+end

@@ -4,7 +4,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	
 	%filter to 0.1-30Hz
 	dblSampRatePupil = 1/median(diff(vecPupilTime));
-	vecWindow2 = [0.5 30]./(dblSampRatePupil./2);
+	vecWindow2 = [0.5./(dblSampRatePupil./2) 0.99]
 	[fb,fa] = butter(2,vecWindow2,'bandpass');
 	vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
 	boolPupilSync = vecFiltSyncLum>(std(vecFiltSyncLum)/3);

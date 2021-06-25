@@ -5,3 +5,5 @@ backup/**
 *.asv
 data/**
 *.ini
+*.jpg
+*.pptx

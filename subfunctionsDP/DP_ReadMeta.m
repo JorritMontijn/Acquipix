@@ -8,7 +8,10 @@ function [meta] = DP_ReadMeta(binName, path)
     metaName = strcat(name, '.meta');
 
     % Parse ini file into cell entries C{1}{i} = C{2}{i}
-    fid = fopen(fullfile(path, metaName), 'r');
+    [fid,ferr] = fopen(fullfile(path, metaName), 'r');
+	if fid==-1
+		error(ferr);
+	end
 % -------------------------------------------------------------
 %    Need 'BufSize' adjustment for MATLAB earlier than 2014
 %    C = textscan(fid, '%[^=] = %[^\r\n]', 'BufSize', 32768);

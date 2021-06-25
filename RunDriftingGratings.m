@@ -400,6 +400,10 @@ try
 	dblLastFlip = Screen('Flip', ptrWindow);
 	dblInitialFlip = dblLastFlip;
 	
+	%timestamp start
+	structEP.strStartDate = getDate();
+	structEP.strStartTime = getTime();
+	
 	%% wait initial-blanking
 	fprintf('Starting initial blank (dur=%.3fs) [%s]\n',structEP.dblSecsBlankAtStart,getTime);
 	dblInitialBlankDur = 0;
@@ -508,7 +512,7 @@ try
 			%send trigger for stim start
 			if ~boolFirstFlip
 				%set switch
-				boolFirstFlip = 1;
+				boolFirstFlip = true;
 				
 				%log NI timestamp
 				if boolUseSGL

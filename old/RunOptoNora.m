@@ -186,6 +186,10 @@ structEP.sStimParamsSettings = sStimParamsSettings;
 structEP.sParamsSGL = sParamsSGL;
 structEP.objDAQOut = objDAQOut;
 
+%timestamp start
+structEP.strStartDate = getDate();
+structEP.strStartTime = getTime();
+
 %save parameters
 save([strOutputDir filesep strFilename], 'structEP');
 

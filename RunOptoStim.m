@@ -197,6 +197,10 @@ structEP.sStimParams = sStimParams;
 structEP.sParamsSGL = sParamsSGL;
 structEP.objDAQOut = objDAQOut;
 
+%timestamp start
+structEP.strStartDate = getDate();
+structEP.strStartTime = getTime();
+
 try
 	%% check escape
 	if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end

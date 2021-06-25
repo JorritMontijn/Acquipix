@@ -1,12 +1,17 @@
-ops.chanMap             = 'C:\Code\Acquisition\Acquipix\subfunctionsPP\neuropixPhase3B2_kilosortChanMap.mat';
+%% new Kilosort2.5 config options
+
+%% config options
+%chan map
+ops.chanMap             = 'neuropixPhase3B2_kilosortChanMap.mat';
 % ops.chanMap = 1:ops.Nchan; % treated as linear probe if no chanMap file
 
-% sample rate
-ops.fs = 30000.077498;  
-ops.CAR = 1;
+% main parameter changes from Kilosort2 to v2.5
+ops.sig        = 20;  % spatial smoothness constant for registration
+ops.fshigh     = 300; % high-pass more aggresively
+ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option. 
 
-% frequency for high pass filtering (150)
-ops.fshigh = 150;   
+% sample rate
+ops.fs = 30000;  
 
 % minimum firing rate on a "good" channel (0 to skip)
 ops.minfr_goodchannels = 0.1; 
