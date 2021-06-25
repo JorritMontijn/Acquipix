@@ -14,7 +14,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	ptrWaitbarHandle = waitbar(0, 'Clustering');
 	ptrWaitbarHandle.Name = ['Clustering "' strNiqdName '"'];
 	ptrWaitbarHandle.Children(end).Title.Interpreter = 'none';
-	intStepNum = 10;
+	intStepNum = 11;
 	strStep = 'Loading config...';
 	intStep = 0;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
@@ -80,45 +80,59 @@ function sClustered = getPreProClustering(sFile,sRP)
 		ops.chanMap = fullfile(strDataDir, fs(1).name);
 	end
 	
+	%% extract sync channel
+	strStep = 'Extracting sync channel...';
+	intStep = 2;
+	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
+	if SY>0
+		vecTypeCh = cumsum([AP,LF,SY]);
+		[strPath,strFile,strExt]=fileparts(ops.fbinary);
+		matAllData = -DP_ReadBin(-inf, inf, sMeta, strPath, [strFile,strExt]); %1=PD,2=sync pulse
+		intSyncCh = vecTypeCh(3);
+		vecSyncAp = matAllData(intSyncCh,:);
+	else
+		vecSyncAp = [];
+	end
+	
 	%% this block runs all the steps of the algorithm
 	% find the binary file
 	strStep = 'Preprocessing...';
-	intStep = 2;
+	intStep = 3;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	rez                = preprocessDataSub(ops);
 	
 	strStep = 'Datashift2...';
-	intStep = 3;
+	intStep = 4;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	rez                = datashift2(rez, 1);
 	
 	strStep = 'Extract spikes...';
-	intStep = 4;
+	intStep = 5;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	[rez, st3, tF]     = extract_spikes(rez);
 	
 	strStep = 'Template learning...';
-	intStep = 5;
+	intStep = 6;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	rez                = template_learning(rez, tF, st3);
 	
 	strStep = 'Track and sort...';
-	intStep = 6;
+	intStep = 7;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	[rez, st3, tF]     = trackAndSort(rez);
 	
 	strStep = 'Final clustering...';
-	intStep = 7;
+	intStep = 8;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	rez                = final_clustering(rez, tF, st3);
 	
 	strStep = 'Find merges...';
-	intStep = 8;
+	intStep = 9;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	rez                = find_merges(rez, 1);
 	
 	strStep = 'Exporting to phy...';
-	intStep = 9;
+	intStep = 10;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	strDataDir = fullpath(strDataDir, 'kilosort3');
 	mkdir(strDataDir)
@@ -143,7 +157,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	end
 	
 	strStep = 'Saving rez2.mat...';
-	intStep = 10;
+	intStep = 11;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	% save final results as rez2
 	fprintf('Saving final results in rez2  \n')
@@ -152,6 +166,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	
 	%get clustered file
 	sClustered = dir(fullpath(strDataDir,sRP.strEphysFindClustered));
+	sClustered.vecSyncAp = vecSyncAp;
 	
 	%delete wait bar
 	delete(ptrWaitbarHandle);
