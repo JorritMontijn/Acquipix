@@ -1,22 +1,36 @@
 function sAP = getPreProSynthesis(sFile,sRP)
 	
+	%% show msg
+	ptrMsg = dialog('Position',[600 400 250 50],'Name','Library Compilation');
+	ptrText = uicontrol('Parent',ptrMsg,...
+		'Style','text',...
+		'Position',[20 00 210 40],...
+		'FontSize',11,...
+		'String','Loading clustered data...');
+	movegui(ptrMsg,'center')
+	drawnow;
+	
 	%% get probe data
 	dblInvertLeads = true;%sFile.sProbeCoords.dblInvertLeads; %is ch1 deepest?
 	dblCh1DepthFromPia = 3500;%sFile.sProbeCoords.dblCh1DepthFromPia;
 	
 	%% get clustering data
-	sLoad = load(fullpath(sFile.sClustered.folder,'rez2.mat'));
-	%load rez
-	rez = sLoad.rez;
-	vecKilosortContamination = rez.est_contam_rate;
-	vecKilosortGood = rez.good;
-	%get chan map file
-	ops = sLoad.ops;
-	sChanMap=load(ops.chanMap);
-	
+	%load labels
+	[dummy, dummy,cellDataLabels]=tsvread(fullpath(sFile.sClustered.folder,'cluster_KSlabel.tsv'));
+	vecClustIdx_KSG = cellfun(@str2double,cellDataLabels(2:end,1));
+	vecKilosortGood = contains(cellDataLabels(2:end,2),'good');
+	%load contam
+	[dummy, dummy,cellDataContam]=tsvread(fullpath(sFile.sClustered.folder,'cluster_ContamPct.tsv'));
+	vecClustIdx_KSC = cellfun(@str2double,cellDataContam(2:end,1));
+	vecKilosortContamination = cellfun(@str2double,cellDataContam(2:end,2));
+	%get channel mapping
+	vecChanIdx = readNPY(fullpath(sFile.sClustered.folder,'channel_map.npy'));
+	matChanPos = readNPY(fullpath(sFile.sClustered.folder,'channel_positions.npy'));
 	
 	%% load eye-tracking
 	if isfield(sFile,'sPupilFiles') && ~isempty(sFile.sPupilFiles)
+		%msg
+		ptrText.String = 'Loading pupil data...';drawnow;
 		if numel(sFile.sPupilFiles) == 1
 			sLoad = load(fullpath(sFile.sPupilFiles.folder,sFile.sPupilFiles.name));
 			sPupil=sLoad.sPupil;
@@ -24,8 +38,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 			error([mfilename ':AmbiguousInput'],'Multiple video files found, please narrow search parameters');
 		end
 		
-		%% prepare pupil synchronization
-		fprintf('Filtering pupil synchronization data [%s]\n',getTime);
+		% prepare pupil synchronization
 		vecPupilFullSyncLum = sPupil.vecPupilFullSyncLum;
 		vecPupilFullSyncLumT = sPupil.vecPupilFullSyncLumT;
 		dblSampRatePupil = 1/median(diff(vecPupilFullSyncLumT));
@@ -45,9 +58,11 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%% load NI sync stream times
+	ptrText.String = 'Loading NI data...';drawnow;
+	
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
-	fprintf('Processing recording at %s%s%s [%s]\n',strPathNidq,filesep,strFileNidq,getTime);
+	%fprintf('Processing recording at %s%s%s [%s]\n',strPathNidq,filesep,strFileNidq,getTime);
 	% Parse the corresponding metafile
 	sMetaNI = sFile.sMeta;
 	dblSampRateReportedNI = DP_SampRate(sMetaNI);
@@ -63,30 +78,40 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	else
 		intSyncCh = [];
 	end
-	if isfield(sMetaVar,'pulseCh') && ~isempty(sMetaVar.pulseCh)
-		intPulseCh = sMetaVar.pulseCh; %pulse channel
-		if ischar(intPulseCh)
-			intPulseCh = str2double(intPulseCh);
-		end
-	elseif isfield(sMetaNI,'syncSourceIdx') && ~isempty(sMetaNI.syncSourceIdx) %perhaps this is syncNiChan
-		intPulseCh = sMetaNI.syncSourceIdx; %pulse channel
-		if ischar(intPulseCh)
-			intPulseCh = str2double(intPulseCh);
+	%syncSourceIdx={0=None,1=External,2=NI,3+=IM}
+	%syncNiChanType={0=digital,1=analog}
+	%sMetaNI.syncNiChan=channel # within type
+	%MN = multiplexed neural signed 16-bit channels
+	%MA = multiplexed aux analog signed 16-bit channels
+	%XA = non-muxed aux analog signed 16-bit channels
+	%XD = non-muxed aux digital unsigned 16-bit words
+	[MN,MA,XA,DW] = DP_ChannelCountsNI(sMetaNI);
+	if syncSourceIdx>0
+		vecChNr = cumsum([MN,MA,XA,DW]);
+		if sMetaNI.syncNiChanType==0
+			intPulseCh = vecChNr(4);
+		elseif sMetaNI.syncNiChanType==1
+			intPulseCh = vecChNr(3);
+		else
+			error not possible;
 		end
 	else
 		intPulseCh = [];
 	end
+	if intPulseCh == intSyncCh
+		error([mfilename ':ChannelClash'],'Pulse and sync channels are identical');
+	end
 	
 	% Get NI data
-	fprintf('   Loading raw data ... [%s]\n',getTime);
-	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strFileNidq, strPathNidq);
-	fprintf('   Calculating sync pulses ... [%s]\n',getTime);
+	%fprintf('   Loading raw data ... [%s]\n',getTime);
+	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strrep(strFileNidq,'.meta','.bin'), strPathNidq); %1=PD,2=sync pulse
+	%fprintf('   Calculating sync pulses ... [%s]\n',getTime);
 	if ~isempty(intSyncCh)
 		vecDiodeSignal = matDataNI(intSyncCh,:);
 		[boolVecScreenPhotoDiode,dblCritValPD] = DP_GetUpDown(vecDiodeSignal);
 		
 		%check screen on/off
-		fprintf('   Transforming screen diode flip times ... [%s]\n',getTime);
+		%fprintf('   Transforming screen diode flip times ... [%s]\n',getTime);
 		vecChangeScreenPD = diff(boolVecScreenPhotoDiode);
 		vecStimOnScreenPD = (find(vecChangeScreenPD == 1)+1);
 		vecStimOffScreenPD = (find(vecChangeScreenPD == -1)+1);
@@ -97,7 +122,6 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	if ~isempty(intPulseCh)
 		[boolVecSyncPulses,dblCritValSP] = DP_GetUpDown(matDataNI(intPulseCh,:));
 		clear matDataNI;
-		
 		
 		%realign IMEC time to NI stream
 		vecChangeSyncPulses = diff(boolVecSyncPulses);
@@ -121,7 +145,8 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	
 	%% load stimulus info
 	%load logging file
-	fprintf('Synchronizing multi-stream data...\n');
+	ptrText.String = 'Loading stimulation data...';drawnow;
+	%fprintf('Synchronizing multi-stream data...\n');
 	dblLastStop = 0;
 	sStimFiles = sFile.sStimFiles;
 	intLogs = numel(sStimFiles);
@@ -153,6 +178,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	cellStim = cell(1,intLogs);
 	for intLogFile = 1:intLogs
 		%% calculate stimulus times
+		ptrText.String = sprintf('Aligning data streams for block %d/%d...',intLogFile,intLogs);drawnow;
 		fprintf('>Log file "%s" [%s]\n',sStimFiles(vecReorderStimFiles(intLogFile)).name,getTime)
 		cellStim{intLogFile} = load(fullpath(sStimFiles(vecReorderStimFiles(intLogFile)).folder,sStimFiles(vecReorderStimFiles(intLogFile)).name));
 		strStimType = cellStim{intLogFile}.structEP.strExpType;%strFile
@@ -310,7 +336,6 @@ function sAP = getPreProSynthesis(sFile,sRP)
 		%vecError = vecIntervalError;
 		
 		%% plot output
-		close;
 		figure
 		subplot(2,3,1)
 		hold on
@@ -412,6 +437,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	
 	%% load clustered data into matlab using https://github.com/cortex-lab/spikes
 	%% assign cluster data
+	ptrText.String = 'Assigning cluster data...';drawnow;
 	% load some of the useful pieces of information from the kilosort and manual sorting results into a struct
 	strPathAP = sFile.sEphysAp.folder;
 	try
@@ -618,7 +644,8 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	
 	%probe data
 	sAP.sProbeCoords = sFile.sProbeCoords; %to do
-	sAP.sProbeCoords.vecChannelDepth = vecChannelDepth;
+	sAP.sProbeCoords.vecChanIdx = vecChanIdx;
+	sAP.sProbeCoords.matChanPos = matChanPos;
 	
 	%clusters & spikes
 	sAP.sCluster = sCluster;
@@ -639,6 +666,10 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	sJson.file_ni = sMetaNI.fileName;
 	%add to struct
 	sAP.sJson = sJson;
+	
+	%% delete msg
+	delete(ptrMsg);
+	return;
 	
 	%% save
 	%save AP

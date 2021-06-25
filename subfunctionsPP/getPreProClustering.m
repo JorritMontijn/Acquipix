@@ -60,6 +60,9 @@ function sClustered = getPreProClustering(sFile,sRP)
 	ops.fbinary = fullpath(strDataDir, fs(1).name);
 	
 	%load GLX data
+	%1. AP = 16-bit action potential channels
+	%2. LF = 16-bit local field potential channels (some probes)
+	%3. SY = The single 16-bit sync input channel (sync is bit #6)
 	sMeta = DP_ReadMeta(ops.fbinary);
 	ops.fs = DP_SampRate(sMeta); %sampling rate
 	[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels

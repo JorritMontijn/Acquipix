@@ -266,7 +266,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		drawnow;
 		
 		%get data
-		sRP.sFiles = RP_CompileDataLibrary(sRP);
+		sRP.sFiles = RP_CompileDataLibrary(sRP,ptrText);
 		
 		%close msg
 		delete(ptrMsg);

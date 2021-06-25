@@ -188,7 +188,6 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		sPointers(intFile).AP = uicontrol(ptrPanelChild,'style','text',...
 			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
-		
 		%sFiles(intFile).sEphysLf = sEphysLf;
 		if isfield(sFiles(intFile),'sEphysLf') && ~isempty(sFiles(intFile).sEphysLf)
 			strText = 'Y';
@@ -256,7 +255,10 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 				if strcmp(strExt,'.meta')
 					sTempFile = dir(fullpath(cellFolders{intSubFile},[strFile '.bin']));
 					if isempty(sTempFile)
-						error([mfilename ':BinaryFileNotFound'],sprintf('Binary file for %s is missing!',cellFiles{intSubFile}));
+						warning([mfilename ':BinaryFileNotFound'],sprintf('Binary file for %s is missing!',cellFiles{intSubFile}));
+						sPointers(intFile).AP.String = 'N';
+						sPointers(intFile).AP.ForegroundColor = [0.8 0 0];
+						sPointers(intFile).AP.Tooltip = 'Did not find AP channel data';
 					else
 						dblSize = dblSize + sTempFile.bytes;
 					end

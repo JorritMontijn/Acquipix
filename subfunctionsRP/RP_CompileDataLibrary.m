@@ -1,4 +1,4 @@
-function sFiles = RP_CompileDataLibrary(sRP)
+function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 	
 	%%
 	%strOutputPath: 'D:\Data\Processed\Neuropixels'
@@ -24,22 +24,33 @@ function sFiles = RP_CompileDataLibrary(sRP)
 	sPossiblePupilFiles = sAllPupilMatFiles(~cellfun(@isempty,cellPupilFiles));
 	
 	%% group files
+	indDelete=false(1,numel(sEphysFilesNidq));
 	sFiles = [];
 	for intFile=1:numel(sEphysFilesNidq)
 		%% nidq
 		sEphysNidq = sEphysFilesNidq(intFile);
 		strNidqFile = sEphysNidq.name;
 		strNidqPath = sEphysNidq.folder;
-		if ~strcmp(strNidqPath(end),filesep),strNidqPath(end+1)=filesep;end
-		sMeta = DP_ReadMeta(strNidqFile, strNidqPath);
-		[dummy,strNidqName] = fileparts(sMeta.fileName);
-		strNidqName = strrep(strNidqName,'.nidq','');
-		sMeta.strNidqName = strNidqName;
-		
-		%extract date
-		[intB,intE]=regexp(strNidqFile,'(\d{4}[-/]?(\d{2})[-/]?\d{2})');
-		strDate1 = strrep(strNidqFile(intB:intE),'-','');
-		strDate2 = strjoin({strDate1(1:4),strDate1(5:6),strDate1(7:8)},'-');
+		try
+			if ~strcmp(strNidqPath(end),filesep),strNidqPath(end+1)=filesep;end
+			sMeta = DP_ReadMeta(strNidqFile, strNidqPath);
+			[dummy,strNidqName] = fileparts(sMeta.fileName);
+			strNidqName = strrep(strNidqName,'.nidq','');
+			sMeta.strNidqName = strNidqName;
+			
+			%extract date
+			[intB,intE]=regexp(strNidqFile,'(\d{4}[-/]?(\d{2})[-/]?\d{2})');
+			strDate1 = strrep(strNidqFile(intB:intE),'-','');
+			strDate2 = strjoin({strDate1(1:4),strDate1(5:6),strDate1(7:8)},'-');
+			
+			if exist('ptrText','var') && ~isempty(ptrText)
+				ptrText.String = sprintf('Compiling data library...\nFound %d recordings',sum(~indDelete(1:intFile)));
+				drawnow;
+			end
+		catch
+			indDelete(intFile) = true;
+			continue;
+		end
 		
 		%% ap
 		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
@@ -75,10 +86,12 @@ function sFiles = RP_CompileDataLibrary(sRP)
 		%check if spikeglx run name matches
 		for intStimFile=1:numel(sSameDateStimFiles)
 			sLoad=load(fullpath(sSameDateStimFiles(intStimFile).folder,sSameDateStimFiles(intStimFile).name));
-			strRunName = sLoad.sParamsSGL.snsRunName;
-			if strcmp(strRunName,strNidqName(1:numel(strRunName)))
-				%match
-				sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
+			if isfield(sLoad,'sParamsSGL') && isfield(sLoad.sParamsSGL,'snsRunName')
+				strRunName = sLoad.sParamsSGL.snsRunName;
+				if strcmp(strRunName,strNidqName(1:numel(strRunName)))
+					%match
+					sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
+				end
 			end
 		end
 		
@@ -118,4 +131,5 @@ function sFiles = RP_CompileDataLibrary(sRP)
 		sFiles(intFile).sPupilFiles = sPupilFiles;
 		sFiles(intFile).sProbeCoords = sProbeCoords;
 	end
+	sFiles(indDelete) = [];
 end
