@@ -75,9 +75,9 @@ function sClustered = getPreProClustering(sFile,sRP)
 	ops.chanMap = fullpath(strChanMapPath, [strChanMapFile strChanMapExt]);
 	
 	% is there a channel map file in this folder?
-	fs = dir(fullfile(strDataDir, 'chan*.mat'));
-	if ~isempty(fs)
-		ops.chanMap = fullfile(strDataDir, fs(1).name);
+	fsCm = dir(fullfile(strDataDir, 'chan*.mat'));
+	if ~isempty(fsCm)
+		ops.chanMap = fullfile(strDataDir, fsCm(1).name);
 	end
 	
 	%% extract sync channel
@@ -86,10 +86,9 @@ function sClustered = getPreProClustering(sFile,sRP)
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	if SY>0
 		vecTypeCh = cumsum([AP,LF,SY]);
-		[strPath,strFile,strExt]=fileparts(ops.fbinary);
-		matAllData = -DP_ReadBin(-inf, inf, sMeta, strPath, [strFile,strExt]); %1=PD,2=sync pulse
 		intSyncCh = vecTypeCh(3);
-		vecSyncAp = matAllData(intSyncCh,:);
+		[strPath,strFile,strExt]=fileparts(ops.fbinary);
+		vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %1=PD,2=sync pulse
 	else
 		vecSyncAp = [];
 	end
