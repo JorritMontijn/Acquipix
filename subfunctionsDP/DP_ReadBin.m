@@ -17,12 +17,12 @@ function [matDataArray,intFeof] = DP_ReadBin(intSamp0, intReadSamps, sMeta, strF
 	%timepoints available]. 
 	% - intFeof; end-of-file indicator to check if the entire file was read
 	%
-	%Version 2.0 [2021-06-28]
+	%Version 1.0
 	%xxxx-xx-xx; Created by Bill Karsh.
-	%
+	%Version 2.0
 	%2021-06-28; Updated by Jorrit Montijn, based on ReadBin() by Bill
-	%Karsh. Changes include single-channel and multi-channel reads, e.g. to
-	%load only the synchronization channel
+	%Karsh. Changes include: single-channel and multi-channel reads, e.g.
+	%to load only the synchronization channel
 	
 	%% check inputs
 	if ~exist('strClass','var') || isempty(strClass)
@@ -60,8 +60,8 @@ function [matDataArray,intFeof] = DP_ReadBin(intSamp0, intReadSamps, sMeta, strF
 		intStatus=fseek(ptrFile,(vecReadCh-1)*2,'cof');
 		matDataArray = [1, intReadSamps];
 		%read samples from 1 channel while skipping all others; should be
-		%faster than read-all-and-discard, but it seems it doesn't actually
-		%make that much difference
+		%faster than read-all-and-discard, but it doesn't actually seem to
+		%make much difference 
 		hTic=tic;
 		intSampsPerRead = 10000;
 		vecStartSamp = 1:intSampsPerRead:intReadSamps;
