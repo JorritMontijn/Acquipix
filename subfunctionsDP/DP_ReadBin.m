@@ -1,59 +1,99 @@
-% =========================================================
-% Read nSamp timepoints from the binary file, starting
-% at timepoint offset samp0. The returned array has
-% dimensions [nChan,nSamp]. Note that nSamp returned
-% is the lesser of: {nSamp, timepoints available}.
-%
-function dataArray = DP_ReadBin(samp0, nSamp, meta, binName, path, strClass,vecReadCh)
-samp0 = -inf
-nSamp=inf
-meta=sMeta
-binName=[strFile,strExt]
-path=strPath
-vecReadCh=intSyncCh
-
+function [matDataArray,intFeof] = DP_ReadBin(intSamp0, intReadSamps, sMeta, strFile, strPath, strClass,vecReadCh)
+	%DP_ReadBin Reads SpikeGLX binary file
+	%   [matDataArray,intFeof] = DP_ReadBin(intSamp0, intReadSamps, sMeta, strFile, strPath, strClass,vecReadCh)
+	%
+	%Read intReadSamps timepoints from the binary file, starting at
+	%timepoint offset intSamp0.
+	%
+	%Set strClass to your preferred output class (default is int16)
+	%Specify a vector of channels to read by suppling vecReadCh is
+	%specified with starting index 1; e.g., if you have 385 channels, and
+	%you only wish to read the first channel, set vecReadCh to 1 (and not
+	%to 0)
+	%
+	%Outputs:
+	% - matDataArray; data matrix of size [numel(vecReadCh),intReadSamps].
+	%Note that intReadSamps returned is the lesser of: [intReadSamps,
+	%timepoints available]. 
+	% - intFeof; end-of-file indicator to check if the entire file was read
+	%
+	%Version 2.0 [2021-06-28]
+	%xxxx-xx-xx; Created by Bill Karsh.
+	%
+	%2021-06-28; Updated by Jorrit Montijn, based on ReadBin() by Bill
+	%Karsh. Changes include single-channel and multi-channel reads, e.g. to
+	%load only the synchronization channel
+	
+	%% check inputs
 	if ~exist('strClass','var') || isempty(strClass)
 		strClass = 'int16';
 	end
 	
-	nChan = str2double(meta.nSavedChans);
+	intChanNum = str2double(sMeta.nSavedChans);
 	if ~exist('vecReadCh','var') || isempty(vecReadCh)
-		vecReadCh = 1:nChan;
+		vecReadCh = 1:intChanNum;
 	end
 	
-    nFileSamp = str2double(meta.fileSizeBytes) / (2 * nChan);
-    samp0 = max(samp0, 0);
-    nSamp = min(nSamp, nFileSamp - samp0);
+	%% pre-allocate
+    intFileSamps = str2double(sMeta.fileSizeBytes) / (2 * intChanNum);
+    intSamp0 = max(intSamp0, 0);
+    intReadSamps = min(intReadSamps, intFileSamps - intSamp0);
+	intTotSize = intReadSamps*2*intChanNum;
+    vecSizeA = [intChanNum, intReadSamps];
 
-    sizeA = [nChan, nSamp];
-
-	strFile = fullpath(path, binName);
-    fid = fopen(strFile, 'rb');
-    status = fseek(fid, samp0 * 2 * nChan, 'bof');
-	if status == -1 %try again once
-		status = fseek(fid, samp0 * 2 * nChan, 'bof');
-		if status  == -1
-			error([mfilename 'E:ReadError'],sprintf('Cannot read file "%s"',binName));
+	strFile = fullpath(strPath, strFile);
+    ptrFile = fopen(strFile, 'rb');
+    intStatus = fseek(ptrFile, intSamp0 * 2 * intChanNum, 'bof');
+	if intStatus == -1 %try again once
+		intStatus = fseek(ptrFile, intSamp0 * 2 * intChanNum, 'bof');
+		if intStatus  == -1
+			error([mfilename 'E:ReadError'],sprintf('Cannot read file "%s"',strFile));
 		end
 	end
 	
-	if numel(vecReadCh) == nChan
-		dataArray = fread(fid, sizeA, sprintf('int16=>%s',strClass));
+	%% read
+	if numel(vecReadCh) == intChanNum
+		%read everything
+		matDataArray = fread(ptrFile, vecSizeA, sprintf('int16=>%s',strClass));
+	elseif numel(vecReadCh) == 1 %read single channel
+		%move pointer to correct channel
+		intStatus=fseek(ptrFile,(vecReadCh-1)*2,'cof');
+		matDataArray = [1, intReadSamps];
+		%read samples from 1 channel while skipping all others; should be
+		%faster than read-all-and-discard, but it seems it doesn't actually
+		%make that much difference
+		hTic=tic;
+		intSampsPerRead = 10000;
+		vecStartSamp = 1:intSampsPerRead:intReadSamps;
+		for intStartSamp=vecStartSamp
+			intReadSamps = min(intReadSamps-intStartSamp,intSampsPerRead);
+			matDataArrayTemp = fread(ptrFile, [1,intReadSamps], sprintf('int16=>%s',strClass),2*(intChanNum-1));
+			matDataArray(1,(intStartSamp:(intStartSamp+intReadSamps-1))) = matDataArrayTemp(1,:);
+			if toc(hTic) > 5
+				fprintf('Reading channel %d; sample %d/%d (%.1f%%) [%s]\n',vecReadCh,intStartSamp,intReadSamps,(intStartSamp/intReadSamps)*100,getTime());
+				hTic=tic;
+				%ftell(fid)
+			end
+		end
 	else
 		%read specific channels
-		dataArray = [numel(vecReadCh), nSamp];
+		matDataArray = [numel(vecReadCh), intReadSamps];
 		hTic=tic;
+		%read increments of 1000, then discard anything not needed
 		intSampsPerRead = 1000;
-		vecStartSamp = 1:intSampsPerRead:nSamp;
+		vecStartSamp = 1:intSampsPerRead:intReadSamps;
 		for intStartSamp=vecStartSamp
-			intReadSamps = min(nSamp-intStartSamp,intSampsPerRead);
-			dataArrayTemp = fread(fid, [nChan,intReadSamps], sprintf('int16=>%s',strClass));
-			dataArray(:,(intStartSamp:(intStartSamp+intReadSamps-1))) = dataArrayTemp(vecReadCh,:);
+			intReadSamps = min(intReadSamps-intStartSamp,intSampsPerRead);
+			matDataArrayTemp = fread(ptrFile, [intChanNum,intReadSamps], sprintf('int16=>%s',strClass));
+			matDataArray(:,(intStartSamp:(intStartSamp+intReadSamps-1))) = matDataArrayTemp(vecReadCh,:);
 			if toc(hTic) > 5
-				fprintf('Reading sample %d/%d (%.1f%%) [%s]\n',intStartSamp,nSamp,(intStartSamp/nSamp)*100,getTime());
+				fprintf('Reading sample %d/%d (%.1f%%) [%s]\n',intStartSamp,intReadSamps,(intStartSamp/intReadSamps)*100,getTime());
 				hTic=tic;
+				%ftell(fid)
 			end
 		end
 	end
-    fclose(fid);
-end % ReadBin
+	%close file
+	intFeof=feof(ptrFile);
+    fclose(ptrFile);
+end
