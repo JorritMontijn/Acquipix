@@ -404,16 +404,18 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					sSynthesis = getPreProSynthesis(sFile,sRP);
 					
 					%update library
-					if ~isempty(sClustered)
+					if ~isempty(sSynthesis)
 						%update parameter list
 						sRP.sFiles(intFile).sSynthesis = sSynthesis;
-						sFigRP.sPointers(intFile).Clustered.String = 'Y';
-						sFigRP.sPointers(intFile).Clustered.ForegroundColor = [0 0.8 0];
-						sFigRP.sPointers(intFile).Clustered.Tooltip = ['Combined data at: ' sSynthesis.folder];
+						sFigRP.sPointers(intFile).Synthesized.String = 'Y';
+						sFigRP.sPointers(intFile).Synthesized.ForegroundColor = [0 0.8 0];
+						sFigRP.sPointers(intFile).Synthesized.Tooltip = ['Combined data at: ' sSynthesis.folder];
 						drawnow;
 					end
 				catch ME
 					dispErr(ME);
+					ptrErr = errordlg(ME.message,...
+						'Synthesis Error');
 				end
 			end
 			uiunlock(sFigRP);

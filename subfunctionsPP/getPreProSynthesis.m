@@ -1,4 +1,4 @@
-function sAP = getPreProSynthesis(sFile,sRP)
+function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% show msg
 	ptrMsg = dialog('Position',[600 400 250 50],'Name','Library Compilation');
@@ -26,6 +26,19 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	%get channel mapping
 	vecChanIdx = readNPY(fullpath(sFile.sClustered.folder,'channel_map.npy'));
 	matChanPos = readNPY(fullpath(sFile.sClustered.folder,'channel_positions.npy'));
+	%load sync file if present
+	sFileSyncSY = dir(fullpath(sFile.sClustered.folder,'syncSY.mat'));
+	if ~isempty(sFileSyncSY)
+		sSyncAp = load(fullpath(sFile.sClustered.folder,'syncSY.mat'));
+		syncSY = sSyncAp.syncSY;
+		sMetaAp = sSyncAp.sMeta;
+		%check SHA1 keys
+		if ~strcmp(sMetaAp.fileCreateTime,sFile.sMeta.fileCreateTime)
+			error([mfilename ':FileOriginMismatch'],'Origins of meta file and sync data do not match!');
+		end
+	else
+		syncSY = [];
+	end
 	
 	%% load eye-tracking
 	if isfield(sFile,'sPupilFiles') && ~isempty(sFile.sPupilFiles)
@@ -58,7 +71,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%% load NI sync stream times
-	ptrText.String = 'Loading NI data...';drawnow;
+	ptrText.String = 'Loading NI & sync data...';drawnow;
 	
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
@@ -86,14 +99,14 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	%XA = non-muxed aux analog signed 16-bit channels
 	%XD = non-muxed aux digital unsigned 16-bit words
 	[MN,MA,XA,DW] = DP_ChannelCountsNI(sMetaNI);
-	if syncSourceIdx>0
+	if str2double(sMetaNI.syncSourceIdx)>0
 		vecChNr = cumsum([MN,MA,XA,DW]);
-		if sMetaNI.syncNiChanType==0
+		if str2double(sMetaNI.syncNiChanType)==0
 			intPulseCh = vecChNr(4);
-		elseif sMetaNI.syncNiChanType==1
+		elseif str2double(sMetaNI.syncNiChanType)==1
 			intPulseCh = vecChNr(3);
 		else
-			error not possible;
+			error('not possible');
 		end
 	else
 		intPulseCh = [];
@@ -119,12 +132,38 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	else
 		vecStimOnScreenPD = [];
 	end
+	%get imec sync pulses
+	if ~isempty(syncSY)
+		boolVecSyncPulsesImec = syncSY;
+		vecChangeSyncPulsesImec = diff(boolVecSyncPulsesImec);
+		vecSyncPulseOnImec = (find(vecChangeSyncPulsesImec == 1)+1);
+		vecDiffPulsesImec = sort(diff(vecSyncPulseOnImec));
+		intNumPulsePeriodsImec = numel(vecDiffPulsesImec);
+		intOneTenthImec = ceil(intNumPulsePeriodsImec/10);
+		intNineTenthImec = floor((intNumPulsePeriodsImec/10)*9);
+		dblSampRateImec = mean(vecDiffPulsesImec(intOneTenthImec:intNineTenthImec));
+		%compare real and pre-calibrated rate
+		dblCalibratedRateImec = str2double(sMetaAp.imSampRate);
+		dblImecRateError=(1-(dblSampRateImec/dblCalibratedRateImec));
+		dblImecRateErrorPercentage  = dblImecRateError*100;
+		%max deviation
+		dblMaxFault = str2double(sMetaAp.fileTimeSecs)*dblImecRateError;
+		if dblImecRateErrorPercentage < -1e-4 || dblImecRateErrorPercentage > 1e-4 || abs(dblMaxFault) > 5e-3
+			warning([mfilename 'E:SampRateFault'],'IMEC stream is badly calibrated; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, pulse-based rate is %.6f Hz!',...
+				dblImecRateErrorPercentage,dblMaxFault*1000,dblCalibratedRateImec,dblSampRateImec);
+		end
+	else
+		dblSampRateImec = str2double(sMetaAp.imSampRate);
+	end
+	
+	%get nidq sync pulses & correct by sync pulses
 	if ~isempty(intPulseCh)
-		[boolVecSyncPulses,dblCritValSP] = DP_GetUpDown(matDataNI(intPulseCh,:));
+		%get ni sync pulses
+		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intPulseCh,:));
 		clear matDataNI;
 		
 		%realign IMEC time to NI stream
-		vecChangeSyncPulses = diff(boolVecSyncPulses);
+		vecChangeSyncPulses = diff(boolVecSyncPulsesNidq);
 		vecSyncPulseOn = (find(vecChangeSyncPulses == 1)+1);
 		clear vecChangeSyncPulses boolVecSyncPulses;
 		
@@ -136,7 +175,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 		dblImecRateInNItime = mean(vecDiffPulses(intOneTenth:intNineTenth))*dblSampRateReportedNI;
 		dblMultiplyIMECby = dblImecRateInNItime/sMetaNI.syncSourcePeriod;
 		dblSampRateFaultPercentage = (1-(dblMultiplyIMECby))*100;
-		if dblSampRateFaultPercentage < -1e-3 || dblSampRateFaultPercentage > 1e-3
+		if dblSampRateFaultPercentage < -1e-4 || dblSampRateFaultPercentage > 1e-4
 			warning([mfilename 'E:SampRateFault'],sprintf('Sampling rate fault is high: %e%%. I will correct this, but your calibration is probably off!',dblSampRateFaultPercentage));
 		end
 	else
@@ -450,7 +489,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	vecClusters = unique(vecAllSpikeClust);
 	
 	%get channel depth from pia
-	vecChannelDepth = sChanMap.ycoords;
+	vecChannelDepth = sSpikes.ycoords;
 	vecChannelDepth = vecChannelDepth - max(vecChannelDepth);
 	if dblInvertLeads,vecChannelDepth = vecChannelDepth(end:-1:1);end
 	vecChannelDepth = vecChannelDepth + dblCh1DepthFromPia;
@@ -507,6 +546,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%go through cells and stim blocks
+	ptrText.String = 'Assigning metadata to clusters...';drawnow;
 	sCluster = struct;
 	parfor intCluster=1:intClustNum
 		%get cluster idx
@@ -594,6 +634,7 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	
 	%% generate json file for library
 	%define data
+	ptrText.String = 'Creating synthesis & saving to file...';drawnow;
 	if ~exist('strFileLFP','var'),strFileLFP='';end
 	
 	%required fields
@@ -624,9 +665,9 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	%% combine all data and save to post-processing data file
 	%build Acquipix post-processing structure
 	fprintf('Combining data... [%s]\n',getTime);
-	sAP = struct;
-	strFileOut = strcat(strExp,'_AP');
-	strFileAP = fullpath(sRP.strOutputPath,[strFileOut,'.mat']);
+	sSynthData = struct;
+	strFileAp = fullpath(sRP.strOutputPath,[strcat(strExp,'_AP'),'.mat']);
+	strFileSynthesis = fullpath(sFile.sEphysAp.folder,[strcat(strExp,'_Synthesis'),'.mat']);
 	
 	%save LFP separately because of large size
 	%sAP_LFP = struct;
@@ -639,43 +680,47 @@ function sAP = getPreProSynthesis(sFile,sRP)
 	%sAP_LFP.sMetaLFP = sMetaLFP;
 	
 	%stimulation & eye-tracking timings
-	sAP.cellStim = cellStim;
-	sAP.sPupil = sPupil;
+	sSynthData.cellStim = cellStim;
+	sSynthData.sPupil = sPupil;
 	
 	%probe data
-	sAP.sProbeCoords = sFile.sProbeCoords; %to do
-	sAP.sProbeCoords.vecChanIdx = vecChanIdx;
-	sAP.sProbeCoords.matChanPos = matChanPos;
+	sSynthData.sProbeCoords = sFile.sProbeCoords; %to do
+	sSynthData.sProbeCoords.vecChanIdx = vecChanIdx;
+	sSynthData.sProbeCoords.matChanPos = matChanPos;
 	
 	%clusters & spikes
-	sAP.sCluster = sCluster;
+	sSynthData.sCluster = sCluster;
 	
 	%NI meta file
-	sAP.sMetaNI = sMetaNI;
+	sSynthData.sMetaNI = sMetaNI;
 	%sAP.strFileLFP = strFileLFP;
 	
 	%source files
 	sSources = sFile;
 	sSources.sMetaVar = sRP.sMetaVar;
-	sAP.sSources = sSources;
+	sSynthData.sSources = sSources;
 	
 	% json metadata
 	%file locations
-	sJson.file_ap = strFileAP;
+	sJson.file_ap = strFileAp;
 	sJson.file_lfp = strFileLFP;
 	sJson.file_ni = sMetaNI.fileName;
 	%add to struct
-	sAP.sJson = sJson;
+	sSynthData.sJson = sJson;
+	
+	%% save synthesis
+	%save AP
+	fprintf('Saving synthesis to %s [%s]\n',strFileSynthesis,getTime);
+	save(strFileSynthesis,'sSynthData');
+	
+	%% create output structure
+	sSynthesis = dir(strFileSynthesis);
 	
 	%% delete msg
 	delete(ptrMsg);
 	return;
 	
-	%% save
-	%save AP
-	fprintf('Saving AP data to %s [%s]\n',strFileAP,getTime);
-	save(strFileAP,'sAP');
-	
+	%% save json
 	%save LFP
 	%fprintf('Saving LFP data to %s [%s]\n',strFileLFP,getTime);
 	%save(strFileLFP,'sAP_LFP','-v7.3');

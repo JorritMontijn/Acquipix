@@ -12,6 +12,8 @@ function sRP = RP_defaultValues()
 	sRP.strEphysRegExpNidq = '\d{4}[-/]?(\d{2})[-/]?\d{2}.*[n][i][d][q].*[.][m][e][t][a]$';
 	%kilosort
 	sRP.strEphysFindClustered = 'spike_clusters.npy';
+	%synthesis
+	sRP.strEphysFindSynthesis = '*_Synthesis.mat';
 	
 	% stimulus files
 	sRP.strStimLogRegExpStim = '(\d{4}[-/]?(\d{2})[-/]?\d{2}).*(\d{2}[-/_]?(\d{2})[-/_]?\d{2}).*([.][m][a][t]$)';

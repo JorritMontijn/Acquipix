@@ -67,6 +67,13 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			sClustered = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindClustered));
 		end
 		
+		%% synthesized data
+		sSynthesis = dir(strcat(strNidqPath,sRP.strEphysFindSynthesis));
+		if isempty(sSynthesis)
+			%try /kilosort3/ subfolder
+			sSynthesis = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindSynthesis));
+		end
+		
 		%% combined data synthesis
 		%{
 		to do
@@ -127,6 +134,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		sFiles(intFile).sEphysAp = sEphysAp;
 		sFiles(intFile).sEphysLf = sEphysLf;
 		sFiles(intFile).sClustered = sClustered;
+		sFiles(intFile).sSynthesis = sSynthesis;
 		sFiles(intFile).sStimFiles = sStimFiles;
 		sFiles(intFile).sPupilFiles = sPupilFiles;
 		sFiles(intFile).sProbeCoords = sProbeCoords;

@@ -80,6 +80,10 @@ function sClustered = getPreProClustering(sFile,sRP)
 		ops.chanMap = fullfile(strDataDir, fsCm(1).name);
 	end
 	
+	%make output dir
+	strDataOutputDir = fullpath(strDataDir, 'kilosort3');
+	mkdir(strDataOutputDir);
+	
 	%% extract sync channel
 	strStep = 'Extracting sync channel...';
 	intStep = 2;
@@ -88,9 +92,15 @@ function sClustered = getPreProClustering(sFile,sRP)
 		vecTypeCh = cumsum([AP,LF,SY]);
 		intSyncCh = vecTypeCh(3);
 		[strPath,strFile,strExt]=fileparts(ops.fbinary);
-		vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %1=PD,2=sync pulse
+		
+		vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %sync pulse
+		syncSY = DP_GetUpDown(vecSyncAp);
+		
+		%save file
+		strSyncSY = fullpath(strDataOutputDir, 'syncSY.mat');
+		save(strSyncSY, 'syncSY','sMeta','-v7.3');
 	else
-		vecSyncAp = [];
+		syncSY = [];
 	end
 	
 	%% this block runs all the steps of the algorithm
@@ -133,9 +143,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	strStep = 'Exporting to phy...';
 	intStep = 10;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	strDataDir = fullpath(strDataDir, 'kilosort3');
-	mkdir(strDataDir)
-	rezToPhy2(rez, strDataDir);
+	rezToPhy2(rez, strDataOutputDir);
 	
 	%% if you want to save the results to a Matlab file...
 	% discard features in final rez file (too slow to save)
@@ -154,18 +162,18 @@ function sClustered = getPreProClustering(sFile,sRP)
 			rez.(field_name) = gather(rez.(field_name));
 		end
 	end
-	
+	%add sync channel
+	rez.syncSY = syncSY;
 	strStep = 'Saving rez2.mat...';
 	intStep = 11;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	% save final results as rez2
 	fprintf('Saving final results in rez2  \n')
-	fname = fullpath(strDataDir, 'rez2.mat');
+	fname = fullpath(strDataOutputDir, 'rez2.mat');
 	save(fname, 'rez', 'ops','-v7.3');
 	
 	%get clustered file
 	sClustered = dir(fullpath(strDataDir,sRP.strEphysFindClustered));
-	sClustered.vecSyncAp = vecSyncAp;
 	
 	%delete wait bar
 	delete(ptrWaitbarHandle);

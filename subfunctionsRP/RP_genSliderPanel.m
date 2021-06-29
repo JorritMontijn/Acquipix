@@ -41,6 +41,10 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 	dblAngle = 80;
 	dblFontSize = 10;
 	text(ptrCrapHack,vecLoc(1),dblY,'Run?','Rotation',dblAngle,'FontSize',dblFontSize);
+	%synthesis
+	vecLoc = [vecLoc(1)+vecLoc(3) 0 intHorzYN/dblW];
+	vecStartHorzAt(end+1) = vecLoc(1);
+	text(ptrCrapHack,vecLoc(1),dblY,'Synthesized','Rotation',dblAngle,'FontSize',dblFontSize);
 	%Clustered
 	vecLoc = [vecLoc(1)+vecLoc(3) 0 intHorzYN/dblW];
 	vecStartHorzAt(end+1) = vecLoc(1);
@@ -102,6 +106,21 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		vecLoc = [1 4+(intFiles*30)-((intFile-1)*30) intHorzCheck dblH];
 		sPointers(intFile).CheckRun = uicontrol(ptrPanelChild,'style','checkbox',...
 			'Position',vecLoc,'String','','Tooltip',strTip);
+		dblLastX = vecLoc(1) + vecLoc(3);
+		
+		%sFiles(intFile).sSynthesis = sSynthesis;
+		if isfield(sFiles(intFile),'sSynthesis') && ~isempty(sFiles(intFile).sSynthesis)
+			strText = 'Y';
+			vecColor = [0 0.8 0];
+			strTip = ['Combined data at: ' sFiles(intFile).sSynthesis.folder];
+		else
+			strText = 'N';
+			vecColor = [0.8 0 0];
+			strTip = 'Not yet synthesized';
+		end
+		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
+		sPointers(intFile).Synthesized = uicontrol(ptrPanelChild,'style','text',...
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sClustered = sClustered;
