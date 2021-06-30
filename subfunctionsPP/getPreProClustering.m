@@ -174,7 +174,9 @@ function sClustered = getPreProClustering(sFile,sRP)
 	
 	%get clustered file
 	sClustered = dir(fullpath(strDataDir,sRP.strEphysFindClustered));
-	
+	if isempty(sClustered)
+		sClustered = dir(fullpath(strDataDir,'kilosort3',sRP.strEphysFindClustered));
+	end
 	%delete wait bar
 	delete(ptrWaitbarHandle);
 		
