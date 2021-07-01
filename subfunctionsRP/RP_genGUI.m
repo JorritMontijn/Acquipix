@@ -392,7 +392,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					%get file
 					intFile = vecRunFiles(intFileIdx);
 					sFile = sRP.sFiles(intFile);
-					sFile.sMeta
+					
 					% other variables
 					sMetaVar.pulseCh = sFile.sMeta.syncSourceIdx; %pulse channel
 					sMetaVar.pulsePeriod = sFile.sMeta.syncSourcePeriod; %pulse period
