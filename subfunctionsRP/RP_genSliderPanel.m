@@ -1,6 +1,13 @@
 function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(ptrMasterFigure,vecLocation,sFiles)
 	
 	%% set constants
+	% check which version of matlab this is; naming of tooltips changed between R2019a and R2019b.
+	if verLessThan('matlab','9.7')
+		strTooltipField = 'TooltipString';
+	else
+		strTooltipField = 'Tooltip';
+	end
+	
 	%unpack location vector
 	dblTitleHeight = 0.15;
 	dblTitleY = vecLocation(2)+vecLocation(4)-dblTitleHeight;
@@ -105,7 +112,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		strTip = 'Select to process';
 		vecLoc = [1 4+(intFiles*30)-((intFile-1)*30) intHorzCheck dblH];
 		sPointers(intFile).CheckRun = uicontrol(ptrPanelChild,'style','checkbox',...
-			'Position',vecLoc,'String','','Tooltip',strTip);
+			'Position',vecLoc,'String','',strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sSynthesis = sSynthesis;
@@ -120,7 +127,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).Synthesized = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sClustered = sClustered;
@@ -135,7 +142,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).Clustered = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		
@@ -155,7 +162,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).Pupil = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sProbeCoords = sProbeCoords;
@@ -170,7 +177,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).Coords = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sStimFiles = sStimFiles;
@@ -189,7 +196,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).Stim = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		
@@ -205,7 +212,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).AP = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		%sFiles(intFile).sEphysLf = sEphysLf;
 		if isfield(sFiles(intFile),'sEphysLf') && ~isempty(sFiles(intFile).sEphysLf)
@@ -219,7 +226,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).LFP = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sEphysNidq = sEphysNidq;
@@ -234,7 +241,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
 		sPointers(intFile).NI = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3)*2;
 		
 		%sFiles.name %file name
@@ -245,7 +252,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		strTip = [sFiles(intFile).sMeta.strNidqName ' at ' sFiles(intFile).sEphysNidq.folder];
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzName dblH];
 		sPointers(intFile).Name = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles.date %date
@@ -254,7 +261,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		strTip = sFiles(intFile).sEphysNidq.date;
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzDate dblH];
 		sPointers(intFile).Date = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%compile total size of all files
@@ -277,7 +284,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 						warning([mfilename ':BinaryFileNotFound'],sprintf('Binary file for %s is missing!',cellFiles{intSubFile}));
 						sPointers(intFile).AP.String = 'N';
 						sPointers(intFile).AP.ForegroundColor = [0.8 0 0];
-						sPointers(intFile).AP.Tooltip = 'Did not find AP channel data';
+						sPointers(intFile).AP.(strTooltipField) = 'Did not find AP channel data';
 					else
 						dblSize = dblSize + sTempFile.bytes;
 					end
@@ -292,7 +299,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		strTip = [sprintf('Size per component:\n') strSize];
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzBytes dblH];
 		sPointers(intFile).Bytes = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,'Tooltip',strTip);
+			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
 	end
 	

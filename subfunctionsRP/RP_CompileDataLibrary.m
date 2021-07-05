@@ -7,7 +7,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
     %    strStimLogPath: 'D:\Data\Raw\Neuropixels'
     %strEyeTrackingPath: 'D:\Data\Raw\Neuropixels'
     %   strProbeLocPath: 'D:\Data\Raw\Neuropixels'
-	  
+	
 	%% compile potential raw SpikeGLX ephys files (using Nidq as master)
 	sPossibleEphysFiles = dir(fullfile(sRP.strEphysPath, '**','*.meta'));
 	cellEphysFilesNidq = regexp({sPossibleEphysFiles.name},sRP.strEphysRegExpNidq);
@@ -54,11 +54,11 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		
 		%% ap
 		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
-		sEphysAp = dir(strcat(strNidqPath,strApFile));
+		sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strApFile));
 		
 		%% lf
 		strLfFile = strrep(strNidqFile,'nidq','imec*.lf');
-		sEphysLf = dir(strcat(strNidqPath,strLfFile));
+		sEphysLf = dir(fullfile(sRP.strEphysPath, '**',strLfFile));
 		
 		%% processed kilosort data
 		sClustered = dir(strcat(strNidqPath,sRP.strEphysFindClustered));
@@ -73,16 +73,6 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			%try /kilosort3/ subfolder
 			sSynthesis = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindSynthesis));
 		end
-		
-		%% combined data synthesis
-		%{
-		to do
-		sClustered = dir(strcat(strNidqPath,sRP.strEphysFindClustered));
-		if isempty(sClustered)
-			%try /kilosort3/ subfolder
-			sClustered = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindClustered));
-		end
-		%}
 		
 		%% raw stimulus files
 		cellPossibleStimFiles = {sPossibleStimFiles.name};
