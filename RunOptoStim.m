@@ -299,7 +299,7 @@ try
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
 	structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 	structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-	save(fullfile(strLogDir,strFilename), 'structEP');
+	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 	
 	%% end-wait
 	hTicExpStop = tic;
@@ -338,7 +338,7 @@ catch ME
 		structEP.cellPulseDur = cellPulseDur(1:intTrial);
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-		save(fullfile(strLogDir,strFilename), 'structEP');
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 		
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
@@ -362,7 +362,7 @@ catch ME
 		structEP.cellPulseDur = cellPulseDur(1:intTrial);
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-		save(fullfile(strLogDir,strFilename), 'structEP');
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))

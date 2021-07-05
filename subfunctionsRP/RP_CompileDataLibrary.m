@@ -2,11 +2,11 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 	
 	%%
 	%strOutputPath: 'D:\Data\Processed\Neuropixels'
-    %       strTempPath: 'E:\_TempData'
-    %      strEphysPath: 'D:\Data\Raw\Neuropixels'
-    %    strStimLogPath: 'D:\Data\Raw\Neuropixels'
-    %strEyeTrackingPath: 'D:\Data\Raw\Neuropixels'
-    %   strProbeLocPath: 'D:\Data\Raw\Neuropixels'
+	%       strTempPath: 'E:\_TempData'
+	%      strEphysPath: 'D:\Data\Raw\Neuropixels'
+	%    strStimLogPath: 'D:\Data\Raw\Neuropixels'
+	%strEyeTrackingPath: 'D:\Data\Raw\Neuropixels'
+	%   strProbeLocPath: 'D:\Data\Raw\Neuropixels'
 	
 	%% compile potential raw SpikeGLX ephys files (using Nidq as master)
 	sPossibleEphysFiles = dir(fullfile(sRP.strEphysPath, '**','*.meta'));
@@ -85,11 +85,19 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			sLoad=load(fullpath(sSameDateStimFiles(intStimFile).folder,sSameDateStimFiles(intStimFile).name));
 			if isfield(sLoad,'sParamsSGL') && isfield(sLoad.sParamsSGL,'snsRunName')
 				strRunName = sLoad.sParamsSGL.snsRunName;
-				if strcmp(strRunName,strNidqName(1:numel(strRunName)))
-					%match
-					sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
-				end
+			elseif isfield(sLoad,'structEP') && isfield(sLoad.structEP,'strRecording')
+				strRunName = sLoad.structEP.strRecording;
+			else
+				continue;
 			end
+			if strcmp(strRunName,strNidqName(1:numel(strRunName))) || strcmp(strRunName,strNidqName(4:(numel(strRunName)+3)))
+				%match
+				sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
+			end
+		end
+		if isempty(sStimFiles) && ~isempty(sSameDateStimFiles)
+			warning([mfilename ':MatchingByDate'],'No matching stim file names were found; matching by date only. Please double-check the matched files.');
+			sStimFiles = sSameDateStimFiles;
 		end
 		
 		%% processed eye-tracking data
