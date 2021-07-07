@@ -90,7 +90,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			else
 				continue;
 			end
-			if strcmp(strRunName,strNidqName(1:numel(strRunName))) || strcmp(strRunName,strNidqName(4:(numel(strRunName)+3)))
+			if strcmp(strRunName,strNidqName(1:numel(strRunName))) || (numel(strNidqName) > (numel(strRunName)+2) && strcmp(strRunName,strNidqName(4:(numel(strRunName)+3))))
 				%match
 				sStimFiles(end+1) = sSameDateStimFiles(intStimFile);
 			end
