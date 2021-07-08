@@ -80,6 +80,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sMetaNI = sFile.sMeta;
 	dblSampRateReportedNI = DP_SampRate(sMetaNI);
 	intFirstSample = str2double(sMetaNI.firstSample);
+	dblT0_NI = intFirstSample/dblSampRateReportedNI;
 	
 	% get recording configuration variables
 	sMetaVar = sRP.sMetaVar;
@@ -361,57 +362,75 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		%rename & align
 		vecReferenceT = vecStimActOnNI;
 		vecNoisyHighResT = vecPupilSignalOnNI;
-		[dblStartT,intFlagOut,vecTotErr] = SyncEvents(vecReferenceT,vecNoisyHighResT);
-		dblInterStimT = median(diff(vecReferenceT));
-		dblLowerCutOff = dblStartT-dblInterStimT;
-		vecReferenceT0 = vecReferenceT - vecReferenceT(1) + dblStartT;
-		[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT0,vecNoisyHighResT(vecNoisyHighResT>dblLowerCutOff));
-		vecLag = vecRefinedT-vecReferenceT;
-		intP10 = ceil(numel(vecLag)*(1/10));
-		intP90 = floor(numel(vecLag)*(9/10));
-		dblDelayInPupilSignal = mean(vecLag(intP10:intP90));
-		
-		
-		vecPupilStimOnTime = vecStimActOnNI + dblDelayInPupilSignal;
-		vecDiffPupilOnT = vecLag;
-		vecError = vecTotErr;
-		intStartStim=find(dblStartT==vecNoisyHighResT);
+		%check if pupil time overlaps NI time
+		if vecReferenceT(round(numel(vecReferenceT)/3)) < vecNoisyHighResT(1) ...
+				|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end) 
+			%insufficient overlap
+			vecPupilStimOnTime = vecStimActOnNI;
+			vecDiffPupilOnT = zeros(size(vecPupilStimOnTime));
+			vecError = zeros(size(vecNoisyHighResT));
+			vecTotErr = vecError;
+			vecIntervalError = vecError;
+			intStartStim=1;
+			strTitle = 'Insufficient overlap';
+		else
+			%overlap seems fine
+			[dblStartT,intFlagOut,vecTotErr] = SyncEvents(vecReferenceT,vecNoisyHighResT);
+			dblInterStimT = median(diff(vecReferenceT));
+			dblLowerCutOff = dblStartT-dblInterStimT;
+			vecReferenceT0 = vecReferenceT - vecReferenceT(1) + dblStartT;
+			[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT0,vecNoisyHighResT(vecNoisyHighResT>dblLowerCutOff));
+			vecLag = vecRefinedT-vecReferenceT;
+			intP10 = ceil(numel(vecLag)*(1/10));
+			intP90 = floor(numel(vecLag)*(9/10));
+			dblDelayInPupilSignal = mean(vecLag(intP10:intP90));
+			
+			
+			vecPupilStimOnTime = vecStimActOnNI + dblDelayInPupilSignal;
+			vecDiffPupilOnT = vecLag;
+			vecError = vecTotErr;
+			intStartStim=find(dblStartT==vecNoisyHighResT);
+			strTitle = 'Refined /w pulses';
+		end
 		
 		%% plot output
 		figure
 		subplot(2,3,1)
 		hold on
-		plot(vecPupilTimeNI-vecTimeVid(1),vecPupilSyncLum - mean(vecPupilSyncLum));
+		plot(vecPupilTimeNI,vecPupilSyncLum - mean(vecPupilSyncLum));
 		hold off
 		xlabel('NI-based time (s)');
 		ylabel('Screen signal (raw)');
 		hold off;
-		fixfig(gca,[],1);
-		vecLimX = [-max(get(gca,'xlim'))/20 max(get(gca,'xlim'))];
-		xlim(vecLimX);
+		drawnow;fixfig(gca,[],1);
+		%vecLimX = [-max(get(gca,'xlim'))/20 max(get(gca,'xlim'))];
+		vecLimX1 = [min(get(gca,'xlim')) max(get(gca,'xlim'))];
+		xlim(vecLimX1);
 		
 		subplot(2,3,2)
 		hold on
 		boolPupilSync = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
-		plot(vecPupilTimeNI,vecFiltSyncLum./std(vecFiltSyncLum));
-		plot(vecPupilTimeNI,boolPupilSync);
+		plot(vecPupilTimeNI-dblT0_NI,vecFiltSyncLum./std(vecFiltSyncLum));
+		plot(vecPupilTimeNI-dblT0_NI,boolPupilSync);
 		hold off
-		xlabel('NI-based time (s)');
+		xlabel('NI-time after T0 (s)');
 		ylabel('Screen signal (smoothed)');
-		fixfig(gca,[],1);
+		title(strTitle);
+		drawnow;fixfig(gca,[],1);
+		vecLimX = [min([get(gca,'xlim') 0]) max(get(gca,'xlim'))];
 		xlim(vecLimX);
 		
 		subplot(2,3,3)
 		hold on
-		plot(vecPupilTimeNI,vecFiltSyncLum./std(vecFiltSyncLum));
-		scatter(vecNoisyHighResT,1.05*ones(size(vecNoisyHighResT)),'kx');
-		scatter(vecReferenceT,1.1*ones(size(vecReferenceT)),'rx');
-		scatter(vecPupilStimOnTime,1.15*ones(size(vecPupilStimOnTime)),'bx');
+		plot(vecPupilTimeNI-dblT0_NI,vecFiltSyncLum./std(vecFiltSyncLum));
+		scatter(vecNoisyHighResT-dblT0_NI,1.05*ones(size(vecNoisyHighResT)),'kx');
+		scatter(vecReferenceT-dblT0_NI,1.1*ones(size(vecReferenceT)),'rx');
+		scatter(vecPupilStimOnTime-dblT0_NI,1.15*ones(size(vecPupilStimOnTime)),'bx');
 		hold off
-		xlabel('Time (s)');
+		xlabel('Time after T0 (s)');
 		ylabel('Screen signal (smoothed)');
-		title('Black=all events, red=reference, blue=synthesis');
-		fixfig(gca);
+		title('Black=Pulses, red=NI, blue=synthesis');
+		drawnow;fixfig(gca);
 		xlim(vecLimX);
 		
 		subplot(2,3,4)
@@ -424,14 +443,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		xlim(vecLimX);
 		ylabel('Total alignment error (SSE)');
 		xlabel('Synchronization event #');
-		fixfig(gca);grid off
+		drawnow;fixfig(gca);grid off
 		
 		
 		subplot(2,3,5)
 		plot(vecDiffPupilOnT)
 		ylabel('Inter-stimulus interval error (s)');
 		xlabel('Inter-trial #');
-		fixfig(gca);
+		drawnow;fixfig(gca);
 		
 		subplot(2,3,6)
 		hold on
@@ -440,7 +459,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		title(sprintf('Error for sync event %d',intStartStim));
 		ylabel('Residual error (s)');
 		xlabel('Trial #');
-		fixfig(gca);
+		drawnow;fixfig(gca);
 		maxfig;drawnow;
 		
 		%save output
