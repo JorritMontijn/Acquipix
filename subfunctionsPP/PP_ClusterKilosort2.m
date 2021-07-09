@@ -65,5 +65,5 @@ function rez = PP_ClusterKilosort2(ops,strDataOutputDir,sWaitbar)
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
 	end
-	rezToPhy2(rez, strDataOutputDir);
+	rezToPhy(rez, strDataOutputDir);
 end

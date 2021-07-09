@@ -1,5 +1,5 @@
 %% Slice Histology Alignment, Registration, and Probe Track analysis (SHARP-Track)
-strPathAllenCCF = 'C:\Users\user4\Documents\AllenCCF\';
+strPathAllenCCF = 'D:\Data\AllenCCF\';
 tv = readNPY(strcat(strPathAllenCCF,'template_volume_10um.npy')); % grey-scale "background signal intensity"
 av = readNPY(strcat(strPathAllenCCF,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
 st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
@@ -7,6 +7,21 @@ st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); 
 allen_ccf_npx(tv,av,st); 
 
 %% albino: -2.88 AP
+probe_vector_ccf
+
+%probe_vector_ccf =
+
+%   862   -20   732
+%   815   359   690
+
+%corresponds to:
+
+%-3159 AP, 1563 ML, 3305 depth, 42 degs midline, -80 horizontal
+
+%% 
+vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
+vecPoint1 = (probe_vector_ccf(1,:) - vecBregma)*10; %in microns
+vecPoint2 = (probe_vector_ccf(2,:) - vecBregma)*10; %in microns
 
 %% angle 5 degrees
 %{
