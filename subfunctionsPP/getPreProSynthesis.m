@@ -394,7 +394,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		end
 		
 		%% plot output
-		figure
+		hFig=figure;
 		subplot(2,3,1)
 		hold on
 		plot(vecPupilTimeNI,vecPupilSyncLum - mean(vecPupilSyncLum));
@@ -448,8 +448,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		
 		subplot(2,3,5)
 		plot(vecDiffPupilOnT)
-		ylabel('Inter-stimulus interval error (s)');
-		xlabel('Inter-trial #');
+		ylabel('NI start - pulse start lag (s)');
+		xlabel('Trial #');
 		drawnow;fixfig(gca);
 		
 		subplot(2,3,6)
@@ -457,8 +457,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		plot(vecIntervalError,'r')
 		hold off
 		title(sprintf('Error for sync event %d',intStartStim));
-		ylabel('Residual error (s)');
-		xlabel('Trial #');
+		ylabel('Inter-trial error (s)');
+		xlabel('Inter-trial #');
 		drawnow;fixfig(gca);
 		maxfig;drawnow;
 		
@@ -473,6 +473,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		export_fig(strFileSyncMetrics1);
 		strFileSyncMetrics2 = fullpath(strSyncMetricPath,[strFileOut,'.pdf']);
 		export_fig(strFileSyncMetrics2);
+		%pause(0.1);
+		%close(hFig);
 		
 		%% off & save
 		%get OFF times
