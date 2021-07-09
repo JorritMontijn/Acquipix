@@ -27,6 +27,14 @@ function sClustered = getPreProClustering(sFile,sRP)
 	%get chan map file
 	[strChanMapPath,strChanMapFile,strChanMapExt]=fileparts(ops.chanMap);
 	
+	%check config params & make sure defaults for kilosort2&3 aren't used the wrong way round
+	dblV = RP_AssertKilosort();
+	if dblV==3 && all(ops.Th==[10 4])
+		ops.Th = [9 9];
+	elseif dblV==2 && all(ops.Th==[9 9])
+		ops.Th = [10 4]; 
+	end
+	
 	%% check which temp folder to use & clear data
 	sTempFiles = dir(fullpath(strTempDirSSD,'*.dat'));
 	for intTempFile=1:numel(sTempFiles)
@@ -103,47 +111,16 @@ function sClustered = getPreProClustering(sFile,sRP)
 		syncSY = [];
 	end
 	
-	%% this block runs all the steps of the algorithm
-	% find the binary file
-	strStep = 'Preprocessing...';
-	intStep = 3;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rez                = preprocessDataSub(ops);
-	
-	strStep = 'Datashift2...';
-	intStep = 4;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rez                = datashift2(rez, 1);
-	
-	strStep = 'Extract spikes...';
-	intStep = 5;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	[rez, st3, tF]     = extract_spikes(rez);
-	
-	strStep = 'Template learning...';
-	intStep = 6;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rez                = template_learning(rez, tF, st3);
-	
-	strStep = 'Track and sort...';
-	intStep = 7;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	[rez, st3, tF]     = trackAndSort(rez);
-	
-	strStep = 'Final clustering...';
-	intStep = 8;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rez                = final_clustering(rez, tF, st3);
-	
-	strStep = 'Find merges...';
-	intStep = 9;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rez                = find_merges(rez, 1);
-	
-	strStep = 'Exporting to phy...';
-	intStep = 10;
-	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	rezToPhy2(rez, strDataOutputDir);
+	%% run clustering
+	sWaitbar = struct;
+	sWaitbar.intStartStep = 3;
+	sWaitbar.intStepNum = intStepNum;
+	sWaitbar.ptrWaitbarHandle = ptrWaitbarHandle;
+	if dblV==3
+		rez = PP_ClusterKilosort3(ops,strDataOutputDir,sWaitbar);
+	elseif dblV==2
+		rez = PP_ClusterKilosort2(ops,strDataOutputDir,sWaitbar);
+	end
 	
 	%% if you want to save the results to a Matlab file...
 	% discard features in final rez file (too slow to save)
