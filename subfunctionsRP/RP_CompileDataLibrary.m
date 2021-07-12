@@ -70,7 +70,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			%if still empty, try any subfolder
 			sClustered = dir(fullpath(strNidqPath,'**',sRP.strEphysFindClustered));
 			if numel(sClustered) > 1
-				error([mfilename ':MultipleSortedFiles'],sprintf('Multiple sorted cluster files found in subdirectories of "%s"',strNidqPath));
+				error([mfilename ':MultipleSortedFiles'],'Multiple sorted cluster files found in subdirectories of "%s"',strNidqPath);
 			end
 		end
 		
