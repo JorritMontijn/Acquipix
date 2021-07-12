@@ -7,7 +7,7 @@ st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); 
 allen_ccf_npx(tv,av,st); 
 
 %% albino: -2.88 AP
-probe_vector_ccf
+
 %{
 %probe_vector_ccf =[...
    862   -20   732;...

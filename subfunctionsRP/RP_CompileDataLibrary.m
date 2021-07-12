@@ -80,6 +80,13 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			%try /kilosort3/ subfolder
 			sSynthesis = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindSynthesis));
 		end
+		if isempty(sSynthesis)
+			%if still empty, try any subfolder
+			sSynthesis = dir(fullpath(strNidqPath,'**',sRP.strEphysFindSynthesis));
+			if numel(sSynthesis) > 1
+				error([mfilename ':MultipleSortedFiles'],'Multiple synthesis files found in subdirectories of "%s"',strNidqPath);
+			end
+		end
 		
 		%% raw stimulus files
 		cellPossibleStimFiles = {sPossibleStimFiles.name};
