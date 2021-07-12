@@ -66,6 +66,13 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			%try /kilosort3/ subfolder
 			sClustered = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindClustered));
 		end
+		if isempty(sClustered)
+			%if still empty, try any subfolder
+			sClustered = dir(fullpath(strNidqPath,'**',sRP.strEphysFindClustered));
+			if numel(sClustered) > 1
+				error([mfilename ':MultipleSortedFiles'],sprintf('Multiple sorted cluster files found in subdirectories of "%s"',strNidqPath));
+			end
+		end
 		
 		%% synthesized data
 		sSynthesis = dir(strcat(strNidqPath,sRP.strEphysFindSynthesis));

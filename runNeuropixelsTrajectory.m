@@ -17,6 +17,9 @@ probe_vector_ccf
 
 %-3159 AP, 1563 ML, 3305 depth, 42 degs midline, -80 horizontal
 
+%% plot atlas
+
+
 %% 
 vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
 vecPoint1 = (probe_vector_ccf(1,:) - vecBregma)*10; %in microns
