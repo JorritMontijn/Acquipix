@@ -229,7 +229,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			strStimType = cellStim{intLogFile}.structEP.strFile;
 			cellStim{intLogFile}.structEP.strExpType = strStimType;
 		end
-		intThisNumTrials = numel(~isnan(cellStim{intLogFile}.structEP.ActOffSecs));
 		if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI;
