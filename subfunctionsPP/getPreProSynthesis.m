@@ -300,6 +300,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		end
 		%remove missing stimuli
 		vecRem = isnan(vecStimActOnNI) | isnan(vecStimActOffNI);
+		vecStimActOnNI(vecRem) = [];
+		vecStimActOffNI(vecRem) = [];
 		dblLastStop = max(vecStimActOffNI);
 		cellStim{intLogFile}.structEP = remStimAP(cellStim{intLogFile}.structEP,vecRem);
 		
@@ -377,7 +379,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecNoisyHighResT = vecPupilSignalOnNI;
 		%check if pupil time overlaps NI time
 		if vecReferenceT(round(numel(vecReferenceT)/3)) < vecNoisyHighResT(1) ...
-				|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end) 
+				|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end)
 			%insufficient overlap
 			vecPupilStimOnTime = vecStimActOnNI;
 			vecDiffPupilOnT = zeros(size(vecPupilStimOnTime));
