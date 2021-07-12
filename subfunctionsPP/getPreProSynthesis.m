@@ -685,7 +685,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sJson.subjecttype = strSubjectType;
 	sJson.nstims = num2str(numel(cellStim));
 	sJson.stims = strjoin(cellfun(@(x) x.structEP.strExpType,cellStim,'uniformoutput',false),';');
-	sJson.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.ActOnSecs)),cellStim,'uniformoutput',false),';');
+	sJson.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.vecStimOnTime)),cellStim,'uniformoutput',false),';');
 	sJson.nclust = numel(vecKilosortGood);
 	sJson.ngood = sum(vecKilosortGood);
 	
