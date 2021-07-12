@@ -235,6 +235,13 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
+		elseif isfield(cellStim{intLogFile}.structEP,'vecStimOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.vecStimOnNI))
+			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
+			cellStim{intLogFile}.structEP.ActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI;
+			cellStim{intLogFile}.structEP.ActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
+			vecStimActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI;
+			vecStimActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
+			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif ~isempty(vecStimOnScreenPD) %backup sync
 			warning([mfilename ':NoTimestampsNiqd'],'No NI timestamps were found in the stimulus log; attempting back-up synchronization procedure...');
 			cellStim{intLogFile}.structEP.strSyncType = 'Bad: only onset pulses';
