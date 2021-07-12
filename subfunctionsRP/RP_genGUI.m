@@ -172,7 +172,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	%% check if external dependencies (kilosort, npy and spikes) are installed
 	dblKilosortVersion = RP_AssertKilosort();
 	strInstallMsg = '';
-	if isempty(dblKilosortVersion) || dblKilosortVersion ~= 3
+	if isempty(dblKilosortVersion) || dblKilosortVersion < 2
 		%build message
 		strInstallMsg = [strInstallMsg 'Kilosort v3 not found; please install from "https://github.com/MouseLand/Kilosort"' newline];
 		%https://github.com/MouseLand/Kilosort
