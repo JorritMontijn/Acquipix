@@ -319,10 +319,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		end
 		
 		%get OFF times: ON + dur
-		vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
-		vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
-		vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
-		vecStimOffTime = vecStimOnTime + vecStimActDurSecs;
+		if isfield(cellStim{intLogFile}.structEP,'ActOnSecs')
+			vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
+			vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
+			vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
+			vecStimOffTime = vecStimOnTime + vecStimActDurSecs;
+		else
+			vecStimActOnSecs = cellStim{intLogFile}.structEP.vecStimOnNI;
+			vecStimActOffSecs = cellStim{intLogFile}.structEP.vecStimOffNI;
+			vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
+			vecStimOffTime = vecStimOnTime + vecStimActDurSecs;
+		end
 		
 		% save to cell array
 		cellStim{intLogFile}.structEP.vecStimOnTime = vecStimOnTime;
