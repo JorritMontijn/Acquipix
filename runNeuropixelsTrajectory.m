@@ -1,59 +1,33 @@
-%% Slice Histology Alignment, Registration, and Probe Track analysis (SHARP-Track)
-strPathAllenCCF = 'D:\Data\AllenCCF\';
-tv = readNPY(strcat(strPathAllenCCF,'template_volume_10um.npy')); % grey-scale "background signal intensity"
-av = readNPY(strcat(strPathAllenCCF,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
-st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
+%% load allen brain atlas
+if ~exist('tv','var')
+	strPathAllenCCF = 'D:\Data\AllenCCF\';
+	tv = readNPY(strcat(strPathAllenCCF,'template_volume_10um.npy')); % grey-scale "background signal intensity"
+	av = readNPY(strcat(strPathAllenCCF,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
+	st = loadStructureTree(strcat(strPathAllenCCF,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
+end
 
-allen_ccf_npx(tv,av,st); 
-
-%% albino: -2.88 AP
-
-%{
+%% set initial probe location
 %probe_vector_ccf =[...
-   862   -20   732;...
-   815   359   690];
-%}
-%corresponds to:
-
-%-3159 AP, 1563 ML, 3305 depth, 42 degs midline, -80 horizontal
-
-%% plot atlas
-
-
-%% 
+%   862   -20   732;...AP depth ML (wrt atlas at (0,0,0))
+%   815   359   690];
+probe_vector_ccf =[...
+	0   0   0;...AP depth ML (wrt atlas at (0,0,0))
+	0   384   0];
 vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
-vecPoint1 = (probe_vector_ccf(1,:) - vecBregma)*10; %in microns
-vecPoint2 = (probe_vector_ccf(2,:) - vecBregma)*10; %in microns
+matProbeLoc = bsxfun(@plus,probe_vector_ccf,vecBregma);
 
-%% angle 5 degrees
-%{
-NOT + PM lies between (Bregma)
-ML=1.4 - 1.6
-AP=-2.9 - -3.15
+%% plot grid
+[hMain,axes_atlas,axes_probe_areas,probe_areas_plot] = PH_GenGUI(av,tv,st,matProbeLoc);
 
-Center: ML=1.5, AP=-3.05
-%}
-%return
-%% save figure
-strSavePath = 'D:\_Data\TrajectoriesProbes\';
-strView = 'Coronal';
-strAreas = 'PM-NOT';
-strPosition = 'Rec1-3';
-export_fig(strcat(strSavePath,strView,'_',strAreas,'_',strPosition,'.tif'));
-export_fig(strcat(strSavePath,strView,'_',strAreas,'_',strPosition,'.pdf'));
+%set initial position
+PH_LoadProbeLocation(hMain,matProbeLoc);
 
-%%
-%{
-NOT is at the very anterior end of visually responsive subcortex
-So assuming we're >500 microns from midline:
-1) if cortex is not visual, and subcortex is not visual: we're too anterior (move 200 microns posteriorly)
-2) if cortex is visual, but subcortex is not: we're too lateral (move 200 microns medially)
-3) if cortex is not visual, but subcortex is: we're too posterior (move 200 microns anteriorly)
-4) if both are visual, you may be correct => move anteriorly; if next (more anterior) location is subcortically non-visual you measured NOT! If it's still visual, this may instead be NOT.
+% Display the first slice and update the probe position
+PH_UpdateSlice(hMain);
+PH_UpdateProbeCoordinates(hMain);
 
-1) in general, if subcortical responses are not visual, and the probe is rather medial, then we're too anterior
-	=> moreover, the cortical region is retrosplenial, and we're going
-	through HPF/subiculum
-2) NOT should be around 2500 microns (2700 at most lateral tip), and lies 500 - 1600 microns from midline
-3) NOT is mostly around -2.8 AP bregma (500 - 1500 microns)
-%}
+% Display controls
+PH_DisplayControls;
+
+%get data
+sGUI = guidata(hMain);
