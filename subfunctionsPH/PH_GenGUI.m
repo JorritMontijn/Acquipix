@@ -16,24 +16,25 @@ function [hMain,axes_atlas,axes_probe_areas,probe_areas_plot] = PH_GenGUI(av,tv,
 	bp(sum(bp,2)==0,:) = NaN; % when saved to uint16, NaN's become zeros. There aren't any real vertices at (0,0,0) and it shouldn't look much different if there were
 	
 	% Set up the atlas axes
-	axes_atlas = subplot(1,2,1);
+	axes_atlas = subplot(2,3,[1 2 4 5]);
 	h = plot3(axes_atlas, bp(:,1), bp(:,2), bp(:,3), 'Color', [0 0 0 0.3]);
 	set(axes_atlas, 'ZDir', 'reverse')
 	hold(axes_atlas,'on');
-	axis vis3d equal off manual
-	view([-30,25]);
+	axis vis3d equal manual off
+	
+	%view([-30,25]);
 	caxis([0 300]);
 	[ap_max,dv_max,ml_max] = size(tv);
-	xlim([-10,ap_max+10])
-	ylim([-10,ml_max+10])
-	zlim([-10,dv_max+10])
+	xlim([-1,ap_max+1])
+	ylim([-1,ml_max+1])
+	zlim([-1,dv_max+1])
 	h = rotate3d(axes_atlas);
 	h.Enable = 'on';
 	h.ActionPostCallback = @PH_UpdateSlice;
 	
 	
 	% Set up the probe area axes
-	axes_probe_areas = subplot(1,2,2);
+	axes_probe_areas = subplot(2,3,3);
 	axes_probe_areas.ActivePositionProperty = 'position';
 	set(axes_probe_areas,'FontSize',11);
 	yyaxis(axes_probe_areas,'left');
@@ -47,8 +48,10 @@ function [hMain,axes_atlas,axes_probe_areas,probe_areas_plot] = PH_GenGUI(av,tv,
 	title(axes_probe_areas,'Probe areas');
 	
 	% Position the axes
-	set(axes_atlas,'Position',[-0.15,-0.1,1,1.2]);
-	set(axes_probe_areas,'Position',[0.7,0.1,0.03,0.8]);
+	%set(axes_atlas,'Position',[-0.15,-0.1,1,1.2]);
+	%set(axes_probe_areas,'Position',[0.7,0.45,0.03,0.5]);
+	set(axes_atlas,'Position',[-0.15,-0.1,0.8,1.2]);
+	set(axes_probe_areas,'Position',[0.7,0.45,0.02,0.45]);
 	
 	% Set up the text to display coordinates
 	probe_coordinates_text = uicontrol('Style','text','String','', ...
@@ -84,6 +87,7 @@ function [hMain,axes_atlas,axes_probe_areas,probe_areas_plot] = PH_GenGUI(av,tv,
 	sGUI.handles.probe_intersect = scatter3(-100,-100,-100,100,'rx','linewidth',2);
 	sGUI.handles.probe_areas_plot = probe_areas_plot; % Color-coded probe regions
 	sGUI.probe_coordinates_text = probe_coordinates_text; % Probe coordinates text
+	sGUI.lastPress = tic;
 	
 	% Set functions for key presses
 	hManager = uigetmodemanager(hMain);

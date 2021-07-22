@@ -88,6 +88,24 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			end
 		end
 		
+		%% probe coord file
+		sProbeCoords = dir(strcat(strNidqPath,sRP.strEphysFindProbeCoords));
+		if isempty(sProbeCoords)
+			%try /kilosort3/ subfolder
+			sProbeCoords = dir(fullpath(strNidqPath,'kilosort3',sRP.strEphysFindProbeCoords));
+		end
+		if isempty(sProbeCoords)
+			%if still empty, try any subfolder
+			sProbeCoords = dir(fullpath(strNidqPath,'**',sRP.strEphysFindProbeCoords));
+			if numel(sProbeCoords) > 1
+				error([mfilename ':MultipleSortedFiles'],'Multiple synthesis files found in subdirectories of "%s"',strNidqPath);
+			end
+		end
+		if ~isempty(sProbeCoords)
+			sLoad = load(fullpath(sProbeCoords.folder,sProbeCoords.name));
+			sProbeCoords = catstruct(sProbeCoords,sLoad.sProbeCoords);
+		end
+		
 		%% raw stimulus files
 		cellPossibleStimFiles = {sPossibleStimFiles.name};
 		indPossFiles = contains(cellPossibleStimFiles,strDate1) | contains(cellPossibleStimFiles,strDate2);
@@ -136,9 +154,6 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			end
 		end
 		warning('on','MATLAB:elementsNowStruc');
-		
-		%% histology/probe location data
-		sProbeCoords = []; %to do
 		
 		%% assign data
 		sFiles(intFile).sMeta = sMeta;

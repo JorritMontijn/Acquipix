@@ -167,17 +167,18 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		
 		%sFiles(intFile).sProbeCoords = sProbeCoords;
 		if isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords)
-			strText = 'Y';
+			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [0 0.8 0];
-			strTip = ['Probe track/coordinate data at: ' sFiles(intFile).sProbeCoords.name];
+			strTip = ['Probe track/coordinate data at: ' sFiles(intFile).sProbeCoords.folder];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
 			strTip = 'Did not find probe track/coordinate data';
 		end
 		vecLoc = [dblLastX+1 (intFiles*30)-((intFile-1)*30) intHorzYN dblH];
-		sPointers(intFile).Coords = uicontrol(ptrPanelChild,'style','text',...
-			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
+		sPointers(intFile).Coords = uicontrol(ptrPanelChild,'style','pushbutton',...
+			'Position',vecLoc+[-5 4 0 0],'String',strText,'FontSize',10,'ForegroundColor',vecColor,strTooltipField,strTip,...
+			'Callback',{@RP_FindCoordsFile_Callback,intFile});
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sStimFiles = sStimFiles;

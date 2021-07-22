@@ -6,6 +6,7 @@ function sRP = RP_defaultValues()
 	sRP.strStimLogPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strEyeTrackingPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strProbeLocPath = 'D:\Data\Raw\Neuropixels';
+	sRP.strAllenCCFPath = 'F:\Data\AllenCCF';
 	
 	%% default search keys
 	%spikeglx
@@ -14,6 +15,8 @@ function sRP = RP_defaultValues()
 	sRP.strEphysFindClustered = 'spike_clusters.npy';
 	%synthesis
 	sRP.strEphysFindSynthesis = '*_Synthesis.mat';
+	%probe coords
+	sRP.strEphysFindProbeCoords = '*_ProbeCoords.mat';
 	
 	% stimulus files
 	sRP.strStimLogRegExpStim = '(\d{4}[-/]?(\d{2})[-/]?\d{2}).*(\d{2}[-/_]?(\d{2})[-/_]?\d{2}).*([.][m][a][t]$)';

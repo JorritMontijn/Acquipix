@@ -2,6 +2,10 @@ function PH_KeyPress(hMain,eventdata)
 	
 	% Get guidata
 	gui_data = guidata(hMain);
+	if toc(gui_data.lastPress) < 0.1;return;end
+	gui_data.lastPress = tic;
+	guidata(hMain, gui_data);
+	
 	if strcmp(eventdata.Key,'uparrow') || strcmp(eventdata.Key,'downarrow')
 		dblSign = double(strcmp(eventdata.Key,'downarrow'))*2-1; 
 		
@@ -13,7 +17,7 @@ function PH_KeyPress(hMain,eventdata)
 		elseif any(strcmp(eventdata.Modifier,'shift'))
 			% Ctrl-up: increase DV angle
 			angle_change = [1;0]*dblSign;
-			gui_data = PH_UpdateProbeAngle(hMain,angle_change);
+			PH_UpdateProbeAngle(hMain,angle_change);
 		elseif any(strcmp(eventdata.Modifier,'alt'))
 			% Alt-up: raise probe
 			probe_offset = 10*dblSign;
@@ -38,7 +42,7 @@ function PH_KeyPress(hMain,eventdata)
 		elseif any(strcmp(eventdata.Modifier,'shift'))
 			% Ctrl-right: increase vertical angle
 			angle_change = [0;1]*dblSign;
-			gui_data = PH_UpdateProbeAngle(hMain,angle_change);
+			PH_UpdateProbeAngle(hMain,angle_change);
 		end
 		
 	elseif strcmp(eventdata.Key,'c')
@@ -51,13 +55,15 @@ function PH_KeyPress(hMain,eventdata)
 		current_visibility = gui_data.handles.cortex_outline.Visible;
 		switch current_visibility; case 'on'; new_visibility = 'off'; case 'off'; new_visibility = 'on'; end;
 		set(gui_data.handles.cortex_outline,'Visible',new_visibility);
-		
+		guidata(hMain, gui_data);
+	
 	elseif strcmp(eventdata.Key,'a')
 		% Toggle plotted structure visibility
 		if ~isempty(gui_data.structure_plot_idx)
 			current_visibility = get(gui_data.handles.structure_patch(1),'Visible');
 			switch current_visibility; case 'on'; new_visibility = 'off'; case 'off'; new_visibility = 'on'; end;
 			set(gui_data.handles.structure_patch,'Visible',new_visibility);
+			guidata(hMain, gui_data);
 		end
 		
 	elseif strcmp(eventdata.Key,'s')
@@ -83,7 +89,8 @@ function PH_KeyPress(hMain,eventdata)
 		switch current_visibility; case 'on'; new_visibility = 'off'; case 'off'; new_visibility = 'on'; end;
 		set(gui_data.handles.probe_ref_line,'Visible',new_visibility);
 		set(gui_data.handles.probe_line,'Visible',new_visibility);
-		
+		guidata(hMain, gui_data);
+	
 	elseif strcmp(eventdata.Key,'r')
 		% Toggle 3D rotation
 		h = rotate3d(gui_data.handles.axes_atlas);
@@ -103,8 +110,6 @@ function PH_KeyPress(hMain,eventdata)
 	elseif strcmp(eventdata.Key,'m')
 		% Set probe angle
 		PH_SetProbePosition(hMain);
-		% Get updated guidata
-		gui_data = guidata(hMain);
 		
 	elseif strcmp(eventdata.Key,'equal') || strcmp(eventdata.Key,'add')
 		% Add structure(s) to display
@@ -158,6 +163,8 @@ function PH_KeyPress(hMain,eventdata)
 						'Faces',structure_3d.faces, ...
 						'FaceColor',plot_structure_color,'EdgeColor','none','FaceAlpha',structure_alpha);
 				end
+				guidata(hMain, gui_data);
+	
 			end
 			
 		elseif any(strcmp(eventdata.Modifier,'shift'))
@@ -181,7 +188,7 @@ function PH_KeyPress(hMain,eventdata)
 				gui_data.handles.structure_patch(end+1) = patch('Vertices',structure_3d.vertices*slice_spacing, ...
 					'Faces',structure_3d.faces, ...
 					'FaceColor',plot_structure_color,'EdgeColor','none','FaceAlpha',structure_alpha);
-				
+				guidata(hMain, gui_data);
 			end
 			
 			
@@ -195,6 +202,8 @@ function PH_KeyPress(hMain,eventdata)
 			delete(gui_data.handles.structure_patch(remove_structures))
 			gui_data.structure_plot_idx(remove_structures) = [];
 			gui_data.handles.structure_patch(remove_structures) = [];
+			guidata(hMain, gui_data);
+	
 		end
 		
 	elseif strcmp(eventdata.Key,'x')
@@ -206,9 +215,5 @@ function PH_KeyPress(hMain,eventdata)
 		% Load probe histology points, plot line of best fit
 		PH_LoadProbeLocation(hMain);
 	end
-	
-	% Upload gui_data
-	%guidata(probe_atlas_gui, gui_data);
-	
 end
 

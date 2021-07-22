@@ -129,21 +129,21 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		sFigRP.strTooltipField,'Align & combine data from multiple sources to a single clock',...
 		'Callback',@ptrButtonCombine_Callback);
 	
-	vecLocAssignAreaButton = [vecLocCombineButton(1)+vecLocCombineButton(3)+5 vecLocCombineButton(2:4)];
+	vecLocAdjustCoordsButton = [vecLocCombineButton(1)+vecLocCombineButton(3)+5 vecLocCombineButton(2:4)];
+	sFigRP.ptrButtonCheckResults = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
+		'String','Adjust coords',...
+		'Position',vecLocAdjustCoordsButton,...
+		sFigRP.strTooltipField,'Fine-tune probe location using ephys markers',...
+		'Callback',@ptrButtonAdjustCoords_Callback);
+	
+	vecLocAssignAreaButton = [vecLocAdjustCoordsButton(1)+vecLocAdjustCoordsButton(3)+5 vecLocAdjustCoordsButton(2:4)];
 	sFigRP.ptrButtonAutopilot = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
 		'String','Assign areas',...
 		'Position',vecLocAssignAreaButton,...
 		sFigRP.strTooltipField,'Assign Allen Brain Atlas areas to putative units',...
 		'Callback',@ptrButtonAssignArea_Callback);
 	
-	vecLocCheckResultsButton = [vecLocAssignAreaButton(1)+vecLocAssignAreaButton(3)+5 vecLocAssignAreaButton(2:4)];
-	sFigRP.ptrButtonCheckResults = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
-		'String','Check results',...
-		'Position',vecLocCheckResultsButton,...
-		sFigRP.strTooltipField,'Check responsiveness and location of all units',...
-		'Callback',@ptrButtonCheckResults_Callback);
-	
-	vecLocExportDataButton = [vecLocCheckResultsButton(1)+vecLocCheckResultsButton(3)+5 vecLocCheckResultsButton(2:4)];
+	vecLocExportDataButton = [vecLocAssignAreaButton(1)+vecLocAssignAreaButton(3)+5 vecLocAssignAreaButton(2:4)];
 	sFigRP.ptrButtonExportData = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
 		'String','Export files',...
 		'Position',vecLocExportDataButton,...
@@ -174,7 +174,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	strInstallMsg = '';
 	if isempty(dblKilosortVersion) || dblKilosortVersion < 2
 		%build message
-		strInstallMsg = [strInstallMsg 'Kilosort v3 not found; please install from "https://github.com/MouseLand/Kilosort"' newline];
+		strInstallMsg = [strInstallMsg 'Kilosort not found; please install from "https://github.com/MouseLand/Kilosort"' newline];
 		%https://github.com/MouseLand/Kilosort
 	end
 	dblNpyVersion = RP_AssertNpy();
@@ -445,8 +445,62 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	function ptrButtonAssignArea_Callback(hObject, eventdata)
 		
 	end
-	function ptrButtonCheckResults_Callback(hObject, eventdata)
+	function ptrButtonAdjustCoords_Callback(hObject, eventdata)
+		%get checked
+		indUseFiles = RP_CheckSelection(sFigRP);
+		if ~any(indUseFiles),return;end
 		
+		%check if all files have ephys data
+		vecRunFiles = find(indUseFiles);
+		indReady = false(size(vecRunFiles));
+		for intFileIdx=1:numel(vecRunFiles)
+			intFile = vecRunFiles(intFileIdx);
+			if isfield(sRP.sFiles(intFile),'sProbeCoords') && ~isempty(sRP.sFiles(intFile).sProbeCoords)
+				indReady(intFileIdx) = true;
+			end
+		end
+		if ~all(indReady)
+			ptrMsg = dialog('Position',[600 400 250 100],'Name','Not all files ready');
+			ptrText = uicontrol('Parent',ptrMsg,...
+				'Style','text',...
+				'Position',[20 50 210 40],...
+				'FontSize',11,...
+				'String','Some files are missing pre-processed probe coordinates');
+			ptrButton = uicontrol('Parent',ptrMsg,...
+				'Position',[100 20 50 30],...
+				'String','OK',...
+				'FontSize',10,...
+				'Callback','delete(gcf)');
+			movegui(ptrMsg,'center')
+			drawnow;
+			return
+		else
+			%run
+			uilock(sFigRP);
+			drawnow;
+			
+			for intFileIdx=1:numel(vecRunFiles)
+				try
+					intFile = vecRunFiles(intFileIdx);
+					sFile = sRP.sFiles(intFile);
+					sProbeCoords = getProbeHistology(sFile,sRP,sFigRP);
+					%sFiles(intFile).sProbeCoords = sProbeCoords;
+					%update library
+					if ~isempty(sProbeCoords)
+						%update parameter list
+						vecColor = [0 0.8 0];
+						sRP.sFiles(intFile).sProbeCoords = sProbeCoords;
+						sFigRP.sPointers(intFile).Coords.String = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
+						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ['Probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
+						sFigRP.sPointers(intFile).Coords.ForegroundColor = vecColor;
+						drawnow;
+					end
+				catch ME
+					dispErr(ME);
+				end
+			end
+			uiunlock(sFigRP);
+		end
 	end
 	function ptrButtonExportData_Callback(hObject, eventdata)
 		
