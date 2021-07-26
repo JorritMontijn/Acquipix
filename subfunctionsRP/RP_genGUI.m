@@ -136,14 +136,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		sFigRP.strTooltipField,'Fine-tune probe location using ephys markers',...
 		'Callback',@ptrButtonAdjustCoords_Callback);
 	
-	vecLocAssignAreaButton = [vecLocAdjustCoordsButton(1)+vecLocAdjustCoordsButton(3)+5 vecLocAdjustCoordsButton(2:4)];
-	sFigRP.ptrButtonAutopilot = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
-		'String','Assign areas',...
-		'Position',vecLocAssignAreaButton,...
-		sFigRP.strTooltipField,'Assign Allen Brain Atlas areas to putative units',...
-		'Callback',@ptrButtonAssignArea_Callback);
-	
-	vecLocExportDataButton = [vecLocAssignAreaButton(1)+vecLocAssignAreaButton(3)+5 vecLocAssignAreaButton(2:4)];
+	vecLocExportDataButton = [vecLocAdjustCoordsButton(1)+vecLocAdjustCoordsButton(3)+5 vecLocAdjustCoordsButton(2:4)];
 	sFigRP.ptrButtonExportData = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
 		'String','Export files',...
 		'Position',vecLocExportDataButton,...
@@ -442,9 +435,6 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 			uiunlock(sFigRP);
 		end
 	end
-	function ptrButtonAssignArea_Callback(hObject, eventdata)
-		
-	end
 	function ptrButtonAdjustCoords_Callback(hObject, eventdata)
 		%get checked
 		indUseFiles = RP_CheckSelection(sFigRP);
@@ -483,15 +473,34 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 				try
 					intFile = vecRunFiles(intFileIdx);
 					sFile = sRP.sFiles(intFile);
-					sProbeCoords = getProbeHistology(sFile,sRP,sFigRP);
+					
+					%load AllenCCF
+					if ~isfield(sRP,'st') || isempty(sRP.st)
+						[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
+						if isempty(tv),return;end
+						sRP.tv = tv;
+						sRP.av = av;
+						sRP.st = st;
+					end
+					
+					%% plot grid
+					hMain = PH_GenGUI(sRP.av,sRP.tv,sRP.st,sFile);
+					
+					%% wait until done
+					waitfor(hMain,'UserData','close');
+					sGUI = guidata(hMain);
+					close(hMain);
+					
 					%sFiles(intFile).sProbeCoords = sProbeCoords;
-					%update library
-					if ~isempty(sProbeCoords)
+					%check if output is present
+					if isfield(sGUI,'sProbeAdjusted') && ~isempty(sGUI.sProbeAdjusted) && isfield(sGUI.sProbeAdjusted,'probe_vector')
 						%update parameter list
 						vecColor = [0 0.8 0];
+						sProbeCoords = sRP.sFiles(intFile).sProbeCoords;
+						sProbeCoords.sProbeAdjusted = sGUI.sProbeAdjusted;
 						sRP.sFiles(intFile).sProbeCoords = sProbeCoords;
 						sFigRP.sPointers(intFile).Coords.String = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
-						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ['Probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
+						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ['Probe track/coordinate data at: ' fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name)];
 						sFigRP.sPointers(intFile).Coords.ForegroundColor = vecColor;
 						drawnow;
 					end
@@ -503,6 +512,52 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		end
 	end
 	function ptrButtonExportData_Callback(hObject, eventdata)
+		%get checked
+		indUseFiles = RP_CheckSelection(sFigRP);
+		if ~any(indUseFiles),return;end
 		
+		%check if all files have ephys data
+		vecRunFiles = find(indUseFiles);
+		indReady = false(size(vecRunFiles));
+		for intFileIdx=1:numel(vecRunFiles)
+			intFile = vecRunFiles(intFileIdx);
+			if (isfield(sRP.sFiles(intFile),'sProbeCoords') && isfield(sRP.sFiles(intFile).sProbeCoords,'sProbeAdjusted') && ~isempty(sRP.sFiles(intFile).sProbeCoords.sProbeAdjusted)) && (isfield(sRP.sFiles(intFile),'sSynthesis') && ~isempty(sRP.sFiles(intFile).sSynthesis))
+				indReady(intFileIdx) = true;
+			end
+		end
+		if ~all(indReady)
+			ptrMsg = dialog('Position',[600 400 250 100],'Name','Not all files ready');
+			ptrText = uicontrol('Parent',ptrMsg,...
+				'Style','text',...
+				'Position',[20 50 210 40],...
+				'FontSize',11,...
+				'String','Some files are missing pre-processed data');
+			ptrButton = uicontrol('Parent',ptrMsg,...
+				'Position',[100 20 50 30],...
+				'String','OK',...
+				'FontSize',10,...
+				'Callback','delete(gcf)');
+			movegui(ptrMsg,'center')
+			drawnow;
+			return
+		else
+			%run
+			uilock(sFigRP);
+			drawnow;
+			
+			for intFileIdx=1:numel(vecRunFiles)
+				try
+					intFile = vecRunFiles(intFileIdx);
+					sFile = sRP.sFiles(intFile);
+					
+					%export file as AP file & save json
+					intResultFlag = RP_ExportFile(sFile,sRP);
+					
+				catch ME
+					dispErr(ME);
+				end
+			end
+			uiunlock(sFigRP);
+		end
 	end
 end

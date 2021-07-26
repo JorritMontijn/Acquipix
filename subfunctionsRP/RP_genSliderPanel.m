@@ -119,7 +119,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sSynthesis') && ~isempty(sFiles(intFile).sSynthesis)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['Combined data at: ' sFiles(intFile).sSynthesis.folder];
+			strTip = ['Combined data at: ' fullpath(sFiles(intFile).sSynthesis.folder,sFiles(intFile).sSynthesis.name)];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -134,7 +134,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sClustered') && ~isempty(sFiles(intFile).sClustered)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['Clustered data at: ' sFiles(intFile).sClustered.folder];
+			strTip = ['Clustered data at: ' fullpath(sFiles(intFile).sClustered.folder,sFiles(intFile).sClustered.name)];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -169,7 +169,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords)
 			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [0 0.8 0];
-			strTip = ['Probe track/coordinate data at: ' sFiles(intFile).sProbeCoords.folder];
+			strTip = ['Probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name)];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];

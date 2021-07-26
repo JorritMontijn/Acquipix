@@ -3,71 +3,36 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 	global sRP;
 	global sFigRP;
 	
-	%find file
-	strOldPath = cd(sRP.strProbeLocPath);
-	[strFile,strPath]=uigetfile('probe_ccf.mat','Select probe coordinate file');
-	cd(strOldPath);
-	if isempty(strFile) || (numel(strFile)==1 && strFile==0)
-		return;
+	%open coords file
+	strDefaultPath = sRP.strProbeLocPath;
+	[cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath);
+	if isempty(cellPoints),return;end
+	
+	%load AllenCCF
+	if ~isfield(sRP,'st') || isempty(sRP.st)
+		[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
+		if isempty(tv),return;end
+		sRP.tv = tv;
+		sRP.av = av;
+		sRP.st = st;
 	end
 	
-	%load
+	% get probe nr
 	strRec = sRP.sFiles(intFile).sMeta.strNidqName;
-	sLoad = load(fullpath(strPath,strFile));
-	if isfield(sLoad,'probe_ccf') && isstruct(sLoad.probe_ccf) && isfield(sLoad.probe_ccf,'points')
-		probe_ccf = sLoad.probe_ccf;
-		intProbeNum = numel(probe_ccf);
-		if intProbeNum > 1
-			%load AllenCCF
-			if ~isfield(sRP,'st') || isempty(sRP.st)
-				try
-					sRP.tv = readNPY(fullpath(sRP.strAllenCCFPath,'template_volume_10um.npy')); % grey-scale "background signal intensity"
-					sRP.av = readNPY(fullpath(sRP.strAllenCCFPath,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
-					sRP.st = PH_loadStructureTree(fullpath(sRP.strAllenCCFPath,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
-				catch ME
-					strStack = sprintf('Error in %s (Line %d)',ME.stack(1).name,ME.stack(1).line);
-					errordlg(sprintf('%s\n%s',ME.message,strStack),'AllenCCF load error')
-					return;
-				end
-			end
-			
-			%generate selection options
-			cellProbes = cell(1,intProbeNum);
-			for intProbe=1:intProbeNum
-				intIntersectArea = probe_ccf(intProbe).trajectory_areas(find(probe_ccf(intProbe).trajectory_areas>1,1,'first'));
-				cellAreas = string(sRP.st.name);
-				strArea = cellAreas{intIntersectArea};
-				cellProbes{intProbe} = sprintf('Probe %d, starting at %s',intProbe,strArea);
-			end
-			
-			%show probes
-			intProbeIdx = listdlg('Name','Select probe','PromptString',sprintf('Select probe # for %s',strRec),...
-				'SelectionMode','single','ListString',cellProbes,'ListSize',[300 20*intProbeNum]);
-			if isempty(intProbeIdx),return;end
-		else
-			intProbeIdx = 1;
-		end
-	else
-		try
-			error([mfilename ':FileTypeNotRecognized'],'File is of unknown format');
-		catch ME
-			strStack = sprintf('Error in %s (Line %d)',ME.stack(1).name,ME.stack(1).line);
-			errordlg(sprintf('%s\n%s',ME.message,strStack),'Probe coord error')
-			return;
-		end
-	end
+	intProbeIdx = PH_SelectProbeNr(cellPoints,strRec,sRP.tv,sRP.av,sRP.st);
+	if isempty(intProbeIdx),return;end
 	
 	%set file name & folder
-	strExp = sRP.sFiles(intFile).sMeta.strNidqName;
-	strProbeFile = [strcat(strExp,'_ProbeCoords'),'.mat'];
+	strProbeFile = [strcat(strRec,'_ProbeCoords'),'.mat'];
 	strFullFileProbeCoords = fullpath(sRP.sFiles(intFile).sEphysNidq.folder,strProbeFile);
 	
 	%which probe number?
+	if isempty(sRP.sFiles(intFile).sProbeCoords),sRP.sFiles(intFile).sProbeCoords=[];end
 	sRP.sFiles(intFile).sProbeCoords.folder = sRP.sFiles(intFile).sEphysNidq.folder;
 	sRP.sFiles(intFile).sProbeCoords.name = strProbeFile;
 	sRP.sFiles(intFile).sProbeCoords.sourcefolder = strPath;
 	sRP.sFiles(intFile).sProbeCoords.sourcefile = strFile;
-	sRP.sFiles(intFile).sProbeCoords.probe_ccf = probe_ccf;
+	sRP.sFiles(intFile).sProbeCoords.cellPoints = cellPoints;
 	sRP.sFiles(intFile).sProbeCoords.intProbeIdx = intProbeIdx;
 	
 	%export probe coord file

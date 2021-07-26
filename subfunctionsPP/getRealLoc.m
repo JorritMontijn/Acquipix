@@ -1,6 +1,8 @@
 function [vecRealLoc] = getRealLoc(vecRefLoc,matAnnotationVolume)
-	%UNTITLED3 Summary of this function goes here
-	%   Detailed explanation goes here
+	%getRealLoc Get position of brain intersect relative to bregma
+	%vecRealLoc = getRealLoc(vecRefLoc,matAnnotationVolume)
+	%
+	%   vecRefLoc: [AP, ML, depth, AP-angle, ML-angle]
 	
 	%% check inputs
 	if nargin < 2

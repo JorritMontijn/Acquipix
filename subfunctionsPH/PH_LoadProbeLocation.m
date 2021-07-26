@@ -12,8 +12,9 @@ function PH_LoadProbeLocation(probe_atlas_gui,probe_vector_ccf,intProbeIdx)
 	%check if input is supplied; otherwise open file
 	if ~exist('probe_vector_ccf','var') || isempty(probe_vector_ccf)
 		[strFile,strPath] = uigetfile('*.mat','Select probe location file');
+		if isempty(strFile) || strFile==0,return;end
 		sLoad = load(fullpath(strPath,strFile));
-		if isnumeric(sLoad) && all(size(sLoad) == [3 2])
+		if isnumeric(sLoad) && (all(size(sLoad) == [3 2]) || all(size(sLoad) == [2 3]))
 			probe_vector_ccf = sLoad;
 		elseif isstruct(sLoad) && isfield(sLoad,'probe_vector_ccf')
 			probe_vector_ccf = sLoad.probe_vector_ccf;
@@ -26,40 +27,29 @@ function PH_LoadProbeLocation(probe_atlas_gui,probe_vector_ccf,intProbeIdx)
 	%check format
 	if isstruct(probe_vector_ccf) && isfield(probe_vector_ccf,'points')
 		probe_vector_ccf = probe_vector_ccf(intProbeIdx).points;
+	elseif iscell(probe_vector_ccf)
+		probe_vector_ccf = probe_vector_ccf{intProbeIdx};
 	end
+	
+	%rotate if necessary
+	%if size(probe_vector_ccf,1) == 3 && size(probe_vector_ccf,2) ~= 3
+	%	probe_vector_ccf = probe_vector_ccf';
+	%end
 	
 	% Get guidata
 	sGUI = guidata(probe_atlas_gui);
 	
-	r0 = mean(probe_vector_ccf,1);
-	xyz = bsxfun(@minus,probe_vector_ccf,r0);
-	[~,~,V] = svd(xyz,0);
-	histology_probe_direction = V(:,1);
+	%plot points
+	delete(sGUI.handles.probe_points);
+	sGUI.handles.probe_points = scatter3(probe_vector_ccf(:,1),probe_vector_ccf(:,3),probe_vector_ccf(:,2),20,[0 0 0.8],'.','Linewidth',1);
 	
-	probe_eval_points = [-1000,1000];
-	probe_line_endpoints = bsxfun(@plus,bsxfun(@times,probe_eval_points',histology_probe_direction'),r0);
+	%get vector from points
+	[probe_vector,trajectory_brain_intersect,probe_ref_vector] = PH_Points2vec(probe_vector_ccf,sGUI.av);
 	
-	% Place the probe on the histology best-fit axis
-	probe_ref_top = probe_line_endpoints(1,[1,3,2]);
-	probe_ref_bottom = probe_line_endpoints(2,[1,3,2]);
-	probe_ref_vector = [probe_ref_top;probe_ref_bottom]';
-	sGUI.probe_ref_line=probe_ref_vector;
-	
-	%get intersection
-	trajectory_brain_intersect = PH_GetBrainIntersection(probe_ref_vector,sGUI.av)';
-	
-	%get angle
-	[theta,phi] = cart2sph(diff(probe_ref_vector(1,:)),diff(probe_ref_vector(2,:)),diff(probe_ref_vector(3,:)));
-	%sGUI.probe_angle = ([theta,phi]/(2*pi))*360;
-	
-	r = 384;
-	[dx,dy,dz] = sph2cart(theta,phi,r);
-	probe_vector = [trajectory_brain_intersect;trajectory_brain_intersect + [dx,dy,dz]]';
-	
+	% update gui
 	set(sGUI.handles.probe_line,'XData',probe_vector(1,:), ...
 		'YData',probe_vector(2,:),'ZData',probe_vector(3,:));
-	
-	% Upload gui_data
+	sGUI.probe_ref_line=probe_ref_vector;
 	guidata(probe_atlas_gui, sGUI);
 	
 	% Update the slice and probe coordinates

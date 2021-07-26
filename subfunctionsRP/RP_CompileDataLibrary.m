@@ -98,7 +98,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			%if still empty, try any subfolder
 			sProbeCoords = dir(fullpath(strNidqPath,'**',sRP.strEphysFindProbeCoords));
 			if numel(sProbeCoords) > 1
-				error([mfilename ':MultipleSortedFiles'],'Multiple synthesis files found in subdirectories of "%s"',strNidqPath);
+				error([mfilename ':MultipleSortedFiles'],'Multiple probe coordinate files found in subdirectories of "%s"',strNidqPath);
 			end
 		end
 		if ~isempty(sProbeCoords)

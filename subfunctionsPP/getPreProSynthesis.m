@@ -10,10 +10,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	movegui(ptrMsg,'center')
 	drawnow;
 	
-	%% get probe data
-	dblInvertLeads = true;%sFile.sProbeCoords.dblInvertLeads; %is ch1 deepest?
-	dblCh1DepthFromPia = 3500;%sFile.sProbeCoords.dblCh1DepthFromPia;
-	
 	%% get clustering data
 	%load labels
 	[dummy, dummy,cellDataLabels]=tsvread(fullpath(sFile.sClustered.folder,'cluster_KSlabel.tsv'));
@@ -522,16 +518,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	vecAllSpikeClust = sSpikes.clu;
 	vecClusters = unique(vecAllSpikeClust);
 	
-	%get channel depth from pia
-	vecChannelDepth = sSpikes.ycoords;
-	vecChannelDepth = vecChannelDepth - max(vecChannelDepth);
-	if dblInvertLeads,vecChannelDepth = vecChannelDepth(end:-1:1);end
-	vecChannelDepth = vecChannelDepth + dblCh1DepthFromPia;
-	
 	%get cluster data
 	fprintf('Assigning spikes to clusters... [%s]\n',getTime);
 	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
-	vecAllSpikeDepth = dblCh1DepthFromPia - vecAllSpikeDepth;
 	
 	%remove nans
 	for intStim=1:numel(cellStim)
@@ -717,11 +706,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sSynthData.cellStim = cellStim;
 	sSynthData.sPupil = sPupil;
 	
-	%probe data
-	sSynthData.sProbeCoords = sFile.sProbeCoords; %to do
-	sSynthData.sProbeCoords.vecChanIdx = vecChanIdx;
-	sSynthData.sProbeCoords.matChanPos = matChanPos;
-	
 	%clusters & spikes
 	sSynthData.sCluster = sCluster;
 	
@@ -752,21 +736,4 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% delete msg
 	delete(ptrMsg);
-	return;
-	
-	%% save json
-	%save LFP
-	%fprintf('Saving LFP data to %s [%s]\n',strFileLFP,getTime);
-	%save(strFileLFP,'sAP_LFP','-v7.3');
-	%fprintf('Done\n');!
-	
-	%save json file
-	strJsonData = jsonencode(sJson);
-	strJsonFileOut = strcat(strExp,'_',strSubject,'_session.json');
-	strJsonTarget = fullpath(sRP.strOutputPath,strJsonFileOut);
-	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
-	ptrFile = fopen(strJsonTarget,'w');
-	fprintf(ptrFile,strJsonData);
-	fclose(ptrFile);
-	%savejson('', sJsonTemp, strJsonTarget);
 end
