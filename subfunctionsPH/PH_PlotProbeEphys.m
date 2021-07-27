@@ -1,6 +1,7 @@
 function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	%% get data
 	sEphysData = PH_LoadEphys(sFile);
+	max_depths = 3840; % (hardcode, sometimes kilosort2 drops channels)
 	try
 		sLoad = load(fullpath(sFile.sSynthesis.folder,sFile.sSynthesis.name));
 		sSynthData = sLoad.sSynthData;
@@ -9,11 +10,10 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 		vecZeta = norminv(1-(vecZetaP/2));
 		strZetaTit = 'ZETA (z-score)';
 	catch
-		vecDepth = sEphysData.templateDepths;
+		vecDepth = max_depths-sEphysData.templateDepths;
 		vecZeta = sEphysData.ContamP;
 		strZetaTit = 'Contamination';
 	end
-	max_depths = 3840; % (hardcode, sometimes kilosort2 drops channels)
 	
 	%% plot zeta
 	scatter(hAxZeta,vecZeta,vecDepth,15,'b','filled');
@@ -30,7 +30,7 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	% Get multiunit correlation
 	n_corr_groups = 40;
 	depth_group_edges = linspace(0,max_depths,n_corr_groups+1);
-	depth_group = discretize(sEphysData.templateDepths,depth_group_edges);
+	depth_group = discretize(max_depths-sEphysData.templateDepths,depth_group_edges);
 	depth_group_centers = depth_group_edges(1:end-1)+(diff(depth_group_edges)/2);
 	unique_depths = 1:length(depth_group_edges)-1;
 	
@@ -50,7 +50,7 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	mua_corr(mua_corr<0)=0;
 	
 	%% Plot spike depth vs rate
-	scatter(hAxClust,norm_template_spike_n,sEphysData.templateDepths(vecTemplateIdx+1),15,'k','filled');
+	scatter(hAxClust,norm_template_spike_n,max_depths-sEphysData.templateDepths(vecTemplateIdx+1),15,'k','filled');
 	set(hAxClust,'YDir','reverse');
 	ylim(hAxClust,[0,max_depths]);
 	xlabel(hAxClust,'N spikes')

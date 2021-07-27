@@ -50,7 +50,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	intClustNum = numel(vecClusters);
 	for intClust=1:intClustNum
 		intClustIdx = vecClusters(intClust);
-		intDepth = round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
+		intDepth = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
 		intDominantChannel = ceil(intDepth/10);
 		sCluster(intClust).Depth = intDepth;
 		sCluster(intClust).Area = cellDepthArea{intDominantChannel};

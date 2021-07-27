@@ -1,4 +1,9 @@
 function [probe_vector,trajectory_brain_intersect,probe_ref_vector] = PH_Points2vec(probe_vector_ccf,av)
+	%assume the probe is pointed downward
+	if size(probe_vector_ccf,2)>3,probe_vector_ccf=probe_vector_ccf';end
+	[dummy,vecReorder]=sort(probe_vector_ccf(:,2),'ascend');
+	probe_vector_ccf = probe_vector_ccf(vecReorder,:);
+	
 	%get probe vector from points
 	r0 = mean(probe_vector_ccf,1);
 	xyz = bsxfun(@minus,probe_vector_ccf,r0);
