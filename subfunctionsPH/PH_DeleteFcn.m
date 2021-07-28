@@ -23,10 +23,21 @@ function PH_DeleteFcn(hObject,varargin)
 			sProbeCoords.sProbeAdjusted = sProbeAdjusted;
 			
 			%export probe coord file
-			save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
-	
+			try
+				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
+			catch
+				[strFile,strPath]=uiputfile('*.*','Save file as',sProbeCoords.name);
+				if isempty(strFile) || (numel(strFile)==1 && strFile==0)
+					return;
+				end
+				sProbeCoords.folder = strPath;
+				sProbeCoords.name = strFile;
+				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
+			end
+			
 			%update gui &close
 			hObject.UserData = 'close';
+			sGUI.sProbeCoords = sProbeCoords;
 			guidata(hObject,sGUI);
 		case 'Exit & Discard data'
 			sGUI.output = [];

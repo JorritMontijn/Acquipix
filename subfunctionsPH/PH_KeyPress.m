@@ -7,20 +7,20 @@ function PH_KeyPress(hMain,eventdata)
 	guidata(hMain, gui_data);
 	
 	if strcmp(eventdata.Key,'uparrow') || strcmp(eventdata.Key,'downarrow')
-		dblSign = double(strcmp(eventdata.Key,'downarrow'))*2-1; 
-		
+		dblSign = double(strcmp(eventdata.Key,'downarrow'))*2-1;
+		dblStep = gui_data.step_size;
 		if isempty(eventdata.Modifier)
 			% Up: move probe anterior
-			ap_offset = 10*dblSign;
+			ap_offset = 10*dblSign*dblStep;
 			vecNewLoc = PH_GetProbeVector(hMain) + [ap_offset 0 0; ap_offset 0 0];
 			PH_SetProbeLocation(hMain,vecNewLoc);
 		elseif any(strcmp(eventdata.Modifier,'shift'))
-			% Ctrl-up: increase DV angle
-			angle_change = [1;0]*dblSign;
+			% Shift-up: increase DV angle
+			angle_change = [1;0]*dblSign*dblStep;
 			PH_UpdateProbeAngle(hMain,angle_change);
 		elseif any(strcmp(eventdata.Modifier,'alt'))
 			% Alt-up: raise probe
-			probe_offset = 10*dblSign;
+			probe_offset = 10*dblSign*dblStep;
 			old_probe_vector = PH_GetProbeVector(hMain);
 			
 			move_probe_vector = diff(old_probe_vector,[],1)./ ...
@@ -32,16 +32,17 @@ function PH_KeyPress(hMain,eventdata)
 		end
 		
 	elseif strcmp(eventdata.Key,'rightarrow') || strcmp(eventdata.Key,'leftarrow')
-		dblSign = double(strcmp(eventdata.Key,'rightarrow'))*2-1; 
+		dblSign = double(strcmp(eventdata.Key,'rightarrow'))*2-1;
+		dblStep = gui_data.step_size;
 		if isempty(eventdata.Modifier)
 			% Right: move probe right
-			ml_offset = 10*dblSign;
+			ml_offset = 10*dblSign*dblStep;
 			old_probe_vector = PH_GetProbeVector(hMain);
 			new_probe_vector = old_probe_vector + [0 0 ml_offset; 0 0 ml_offset];
 			PH_SetProbeLocation(hMain,new_probe_vector);
 		elseif any(strcmp(eventdata.Modifier,'shift'))
 			% Ctrl-right: increase vertical angle
-			angle_change = [0;1]*dblSign;
+			angle_change = [0;1]*dblSign*dblStep;
 			PH_UpdateProbeAngle(hMain,angle_change);
 		end
 		
@@ -56,7 +57,7 @@ function PH_KeyPress(hMain,eventdata)
 		switch current_visibility; case 'on'; new_visibility = 'off'; case 'off'; new_visibility = 'on'; end;
 		set(gui_data.handles.cortex_outline,'Visible',new_visibility);
 		guidata(hMain, gui_data);
-	
+		
 	elseif strcmp(eventdata.Key,'a')
 		% Toggle plotted structure visibility
 		if ~isempty(gui_data.structure_plot_idx)
@@ -90,7 +91,7 @@ function PH_KeyPress(hMain,eventdata)
 		set(gui_data.handles.probe_ref_line,'Visible',new_visibility);
 		set(gui_data.handles.probe_line,'Visible',new_visibility);
 		guidata(hMain, gui_data);
-	
+		
 	elseif strcmp(eventdata.Key,'r')
 		% Toggle 3D rotation
 		h = rotate3d(gui_data.handles.axes_atlas);
@@ -118,11 +119,43 @@ function PH_KeyPress(hMain,eventdata)
 		% Prompt for which structures to show (only structures which are
 		% labelled in the slice-spacing downsampled annotated volume)
 		
-		if ~any(strcmp(eventdata.Modifier,'shift'))
-			% (no shift: list in native CCF order)
+		if any(strcmp(eventdata.Modifier,'shift'))
+			%increase step size
+			gui_data.step_size = gui_data.step_size/0.9;
+			guidata(hMain, gui_data);
+			PH_UpdateProbeCoordinates(hMain);
+			
+		elseif any(strcmp(eventdata.Modifier,'control'))
+			% (shift: use hierarchy search)
+			plot_structures = hierarchicalSelect(gui_data.st);
+			
+			if ~isempty(plot_structures) % will be empty if dialog was cancelled
+				% get all children of this one
+				thisID = gui_data.st.id(plot_structures);
+				idStr = sprintf('/%d/', thisID);
+				theseCh = find(cellfun(@(x)contains(x,idStr), gui_data.st.structure_id_path));
+				
+				% plot the structure
+				slice_spacing = 5;
+				plot_structure_color = hex2dec(reshape(gui_data.st.color_hex_triplet{plot_structures},3,[]))./255;
+				structure_3d = isosurface(permute(ismember(gui_data.av(1:slice_spacing:end, ...
+					1:slice_spacing:end,1:slice_spacing:end),theseCh),[3,1,2]),0);
+				
+				structure_alpha = 0.2;
+				gui_data.structure_plot_idx(end+1) = plot_structures;
+				gui_data.handles.structure_patch(end+1) = patch('Vertices',structure_3d.vertices*slice_spacing, ...
+					'Faces',structure_3d.faces, ...
+					'FaceColor',plot_structure_color,'EdgeColor','none','FaceAlpha',structure_alpha);
+				guidata(hMain, gui_data);
+			end
+			
+		else
+			% (no shift/control: list in native CCF order)
 			
 			parsed_structures = unique(reshape(gui_data.av(1:slice_spacing:end, ...
 				1:slice_spacing:end,1:slice_spacing:end),[],1));
+			
+			eventdata.Modifier
 			
 			if ~any(strcmp(eventdata.Modifier,'alt'))
 				% (no alt: list all)
@@ -164,46 +197,27 @@ function PH_KeyPress(hMain,eventdata)
 						'FaceColor',plot_structure_color,'EdgeColor','none','FaceAlpha',structure_alpha);
 				end
 				guidata(hMain, gui_data);
-	
-			end
-			
-		elseif any(strcmp(eventdata.Modifier,'shift'))
-			% (shift: use hierarchy search)
-			plot_structures = hierarchicalSelect(gui_data.st);
-			
-			if ~isempty(plot_structures) % will be empty if dialog was cancelled
-				% get all children of this one
-				thisID = gui_data.st.id(plot_structures);
-				idStr = sprintf('/%d/', thisID);
-				theseCh = find(cellfun(@(x)contains(x,idStr), gui_data.st.structure_id_path));
 				
-				% plot the structure
-				slice_spacing = 5;
-				plot_structure_color = hex2dec(reshape(gui_data.st.color_hex_triplet{plot_structures},3,[]))./255;
-				structure_3d = isosurface(permute(ismember(gui_data.av(1:slice_spacing:end, ...
-					1:slice_spacing:end,1:slice_spacing:end),theseCh),[3,1,2]),0);
-				
-				structure_alpha = 0.2;
-				gui_data.structure_plot_idx(end+1) = plot_structures;
-				gui_data.handles.structure_patch(end+1) = patch('Vertices',structure_3d.vertices*slice_spacing, ...
-					'Faces',structure_3d.faces, ...
-					'FaceColor',plot_structure_color,'EdgeColor','none','FaceAlpha',structure_alpha);
-				guidata(hMain, gui_data);
 			end
-			
-			
 		end
 		
 	elseif strcmp(eventdata.Key,'hyphen') || strcmp(eventdata.Key,'subtract')
-		% Remove structure(s) already plotted
-		if ~isempty(gui_data.structure_plot_idx)
-			remove_structures = listdlg('PromptString','Select a structure to remove:', ...
-				'ListString',gui_data.st.safe_name(gui_data.structure_plot_idx));
-			delete(gui_data.handles.structure_patch(remove_structures))
-			gui_data.structure_plot_idx(remove_structures) = [];
-			gui_data.handles.structure_patch(remove_structures) = [];
+		if any(strcmp(eventdata.Modifier,'shift'))
+			%decrease step size
+			gui_data.step_size = gui_data.step_size*0.9;
 			guidata(hMain, gui_data);
-	
+			PH_UpdateProbeCoordinates(hMain);
+			
+		else
+			% Remove structure(s) already plotted
+			if ~isempty(gui_data.structure_plot_idx)
+				remove_structures = listdlg('PromptString','Select a structure to remove:', ...
+					'ListString',gui_data.st.safe_name(gui_data.structure_plot_idx));
+				delete(gui_data.handles.structure_patch(remove_structures))
+				gui_data.structure_plot_idx(remove_structures) = [];
+				gui_data.handles.structure_patch(remove_structures) = [];
+				guidata(hMain, gui_data);
+			end
 		end
 		
 	elseif strcmp(eventdata.Key,'x')

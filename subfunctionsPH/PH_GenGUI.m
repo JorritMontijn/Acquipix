@@ -19,13 +19,19 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sProbeCoords = sFile.sProbeCoords;
 	if isfield(sProbeCoords,'probe_ccf')
 		%AP_histology output
-		probe_vector_ccf = sProbeCoords.probe_ccf(sProbeCoords.intProbeIdx);
+		matProbeVector = sProbeCoords.probe_ccf(sProbeCoords.intProbeIdx);
 	elseif isfield(sProbeCoords,'cellPoints')
 		%cell array of points per probe
-		probe_vector_ccf = sProbeCoords.cellPoints{sProbeCoords.intProbeIdx};
+		matProbeVector = sProbeCoords.cellPoints{sProbeCoords.intProbeIdx};
 	else
 		%file not recognized
 		error([mfilename ':UnknownFormat'],'Probe location file format is not recognized');
+	end
+	matProbePoints = matProbeVector;
+	%overwrite probe location if adjusted position is present
+	if isfield(sProbeCoords,'sProbeAdjusted') && isfield(sProbeCoords.sProbeAdjusted,'probe_vector')
+		%this gui's output
+		matProbeVector = sProbeCoords.sProbeAdjusted.probe_vector([1 3 2],:)';
 	end
 	
 	%probe_vector_ccf =[...
@@ -133,7 +139,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%build gui data
 	sGUI=struct;
 	sGUI.sProbeCoords = sProbeCoords;
-	sGUI.probe_vector_ccf = probe_vector_ccf;
+	sGUI.probe_vector_ccf = matProbePoints;
 	sGUI.tv = tv;
 	sGUI.av = av;
 	sGUI.st = st;
@@ -142,6 +148,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sGUI.probe_length = 384; % Length of probe
 	sGUI.structure_plot_idx = []; % Plotted structures
 	sGUI.probe_angle = [0;90]; % Probe angles in ML/DV
+	sGUI.step_size = 1;
 	
 	%Store handles
 	sGUI.handles.cortex_outline = bp;
@@ -183,14 +190,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	guidata(hMain, sGUI);
 	
 	%% run initial functions
-	sGUI = guidata(hMain);
-	probe_vector_ccf = sGUI.probe_vector_ccf;
-	
 	%plot ephys
 	PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClusters,sFile);
 	
 	%set initial position
-	PH_LoadProbeLocation(hMain,probe_vector_ccf);
+	PH_LoadProbeLocation(hMain,matProbeVector);
 	
 	%update angle
 	PH_UpdateProbeAngle(hMain,[0 0]);

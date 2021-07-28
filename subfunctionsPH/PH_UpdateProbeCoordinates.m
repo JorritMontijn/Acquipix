@@ -10,7 +10,7 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 		linspace(probe_vector(1,1),probe_vector(1,2),probe_n_coords), ...
 		linspace(probe_vector(2,1),probe_vector(2,2),probe_n_coords), ...
 		linspace(probe_vector(3,1),probe_vector(3,2),probe_n_coords));
-
+	
 	% Get the positions of the probe and trajectory reference
 	trajectory_brain_intersect = PH_GetBrainIntersection(probe_vector,sGUI.av);
 	
@@ -55,7 +55,8 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 		num2str(-probe_bregma_coordinate(2)) ' ML; ', ...
 		'Probe depth ' num2str(probe_depth) ', ' ...
 		num2str(round(sGUI.probe_angle(1))) char(176) ' AP angle, ' ...
-		num2str(round(sGUI.probe_angle(2))) char(176) ' ML angle'];
+		num2str(round(sGUI.probe_angle(2))) char(176) ' ML angle, ' ...
+		num2str(round(sGUI.step_size*100)) '% step size'];
 	set(sGUI.probe_coordinates_text,'String',probe_text);
 	
 	% Update the probe areas
@@ -80,13 +81,23 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 		hAx = cellAxesHandles{intPlot};
 		boundary_lines = gobjects;
 		vecLimX = get(hAx,'xlim');
-		vecBoundY = probe_area_boundaries_parent*10;
+		%vecBoundY = probe_area_boundaries_parent*10;
+		vecBoundY = probe_area_boundaries*10;
 		for intBound = 1:length(vecBoundY)
-			boundary_lines(intBound,1) = line(hAx,vecLimX, ...
-				repmat(vecBoundY(intBound),1,2),'color','b','linewidth',1);
+			%boundary_lines(intBound,1) = line(hAx,vecLimX, ...
+			%	repmat(vecBoundY(intBound),1,2),'color','b','linewidth',1);
+			boundary_lines(intBound,1) = cline(hAx,vecLimX, ...
+				repmat(vecBoundY(intBound),1,2),[],0.5*[1 1 1],1);
+			boundary_lines(intBound,1).EdgeAlpha = 0.5;
+			boundary_lines(intBound,1).LineWidth = 1;
 			if intPlot==3
-				boundary_lines(intBound+length(vecBoundY),1) = line(hAx,repmat(vecBoundY(intBound),1,2), ...
-				vecLimX,'color','b','linewidth',1);
+				%boundary_lines(intBound+length(vecBoundY),1) = line(hAx,repmat(vecBoundY(intBound),1,2), ...
+				%	vecLimX,'color','b','linewidth',1);
+				boundary_lines(intBound+length(vecBoundY),1) = cline(hAx,repmat(vecBoundY(intBound),1,2), ...
+					vecLimX,[],0.5*[1 1 1],1);
+				boundary_lines(intBound+length(vecBoundY),1).EdgeAlpha = 0.5;
+				boundary_lines(intBound+length(vecBoundY),1).LineWidth = 1;
+				
 			end
 		end
 		sGUI.handles.(cellHandleName{intPlot}) = boundary_lines;
