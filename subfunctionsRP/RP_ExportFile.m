@@ -69,8 +69,9 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	
 	%build output name & check if it exists
 	strSubject = sJson.subject;
+	strRecDate = sJson.date;
 	strRecording = sJson.recording;
-	strOutputRoot = strcat(strSubject,'_',strRecording);
+	strOutputRoot = strcat(strSubject,'_',strRecDate);
 	strAPFileOut = strcat(strOutputRoot,'_AP.mat');
 	strOutputPath = sRP.strOutputPath;
 	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
