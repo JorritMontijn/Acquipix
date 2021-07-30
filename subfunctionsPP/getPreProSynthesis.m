@@ -80,13 +80,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	% get recording configuration variables
 	sMetaVar = sRP.sMetaVar;
-	if isfield(sMetaVar,'syncCh') && ~isempty(sMetaVar.syncCh)
-		intSyncCh = sMetaVar.syncCh; %screen diode channel
-		if ischar(intSyncCh)
-			intSyncCh = str2double(intSyncCh);
+	sNiCh = PP_GetNiCh(sMetaVar,sMetaNI);
+	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh)
+		intStimOnsetCh = sNiCh.intStimOnsetCh + 1; %screen diode channel
+		if ischar(intStimOnsetCh)
+			intStimOnsetCh = str2double(intStimOnsetCh);
 		end
 	else
-		intSyncCh = [];
+		intStimOnsetCh = [];
 	end
 	%syncSourceIdx={0=None,1=External,2=NI,3+=IM}
 	%syncNiChanType={0=digital,1=analog}
@@ -108,7 +109,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	else
 		intPulseCh = [];
 	end
-	if intPulseCh == intSyncCh
+	if intPulseCh == intStimOnsetCh
 		error([mfilename ':ChannelClash'],'Pulse and sync channels are identical');
 	end
 	
@@ -116,8 +117,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%fprintf('   Loading raw data ... [%s]\n',getTime);
 	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strrep(strFileNidq,'.meta','.bin'), strPathNidq); %1=PD,2=sync pulse
 	%fprintf('   Calculating sync pulses ... [%s]\n',getTime);
-	if ~isempty(intSyncCh)
-		vecDiodeSignal = matDataNI(intSyncCh,:);
+	if ~isempty(intStimOnsetCh)
+		vecDiodeSignal = matDataNI(intStimOnsetCh,:);
 		[boolVecScreenPhotoDiode,dblCritValPD] = DP_GetUpDown(vecDiodeSignal);
 		
 		%check screen on/off
@@ -179,6 +180,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		end
 	else
 		warning([mfilename 'E:NoSyncPulseCh'],sprintf('No sync pulse channel found'));
+	end
+	
+	%% process misc channels
+	vecProcCh = sNiCh.vecProcCh;
+	cellProcFunc = sNiCh.cellProcFunc;
+	sMiscNI = struct;
+	for intChIdx=1:numel(vecProcCh)
+		intProcCh = vecProcCh(intChIdx) + 1;
+		strFunc = cellProcFunc{intChIdx};
+		if strcmp(strFunc(1),'@'),strFunc(1)=[];end
+		sMiscNI.(strFunc) = feval(strFunc,matDataNI(intProcCh,:),sMetaNI);
 	end
 	
 	%% load stimulus info
@@ -518,7 +530,27 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	vecAllSpikeClust = sSpikes.clu;
 	vecClusters = unique(vecAllSpikeClust);
 	
-	%get cluster data
+	%% load chanmap file
+	if isfield(sFile.sClustered,'ops') && isfield(sFile.sClustered.ops,'chanMap')
+		%get customized chan map file
+		strChanMapFile = sFile.sClustered.ops.chanMap;
+	else
+		%otherwise get default
+		strPathToConfigFile = sRP.strConfigFilePath;
+		strConfigFileName = sRP.strConfigFileName;
+		
+		% get config file data
+		%get initial ops struct
+		ops = struct;
+		run(fullpath(strPathToConfigFile, strConfigFileName));
+		strChanMapFile = ops.chanMap;
+	end
+	sChanMap = load(strChanMapFile);
+	dblLength = range(sChanMap.ycoords) + median(diff(sort(unique(sChanMap.ycoords))));
+	%invert channel depth
+	sSpikes.ycoords = dblLength - sSpikes.ycoords;
+	
+	%% get cluster data
 	fprintf('Assigning spikes to clusters... [%s]\n',getTime);
 	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
 	
@@ -709,8 +741,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%clusters & spikes
 	sSynthData.sCluster = sCluster;
 	
-	%NI meta file
+	%NI meta file &  misc data
 	sSynthData.sMetaNI = sMetaNI;
+	sSynthData.sMiscNI = sMiscNI;
 	%sAP.strFileLFP = strFileLFP;
 	
 	%source files

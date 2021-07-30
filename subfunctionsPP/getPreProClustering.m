@@ -92,7 +92,13 @@ function sClustered = getPreProClustering(sFile,sRP)
 	strDataOutputDir = fullpath(strDataDir, 'kilosort3');
 	mkdir(strDataOutputDir);
 	
-	%% extract sync channel
+	%% check NI channel information
+	%retrieve sync channel from meta file and metavar structure
+	sMetaNI = sFile.sMeta;
+	sMetaVar = sRP.sMetaVar;
+	sNiCh = PP_GetNiCh(sMetaVar,sMetaNI);
+	
+	%% extract IM sync channel
 	strStep = 'Extracting sync channel...';
 	intStep = 2;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
@@ -156,6 +162,8 @@ function sClustered = getPreProClustering(sFile,sRP)
 	if isempty(sClustered)
 		sClustered = dir(fullpath(strDataDir,'kilosort3',sRP.strEphysFindClustered));
 	end
+	sClustered.ops = ops;
+	sClustered.sNiCh = sNiCh;
 	%delete wait bar
 	delete(ptrWaitbarHandle);
 		

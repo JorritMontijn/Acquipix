@@ -275,7 +275,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 			
 			%add to global
 			sRP.sMetaVar = sMetaVar;
-		catch
+		catch ME
 			dispErr(ME);
 			errordlg(ME.message,'Error during variable editing');
 		end

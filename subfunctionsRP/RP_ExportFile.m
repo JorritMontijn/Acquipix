@@ -105,6 +105,13 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sAP.sSources = sSources;
 	sAP.sJson = sJson;
 	sAP.vecProbeCoords = [vecLoc_AP_ML intProbeDepth vecAngles]; %AP, ML, depth, AP-angle, ML-angle
+	%add misc NI channels to AP structure
+	if isfield(sSynthData,'sMiscNI')
+		cellFields = fieldnames(sSynthData.sMiscNI);
+		for intField=1:numel(cellFields)
+			sAP.(cellFields{intField}) = sSynthData.sMiscNI.(cellFields{intField});
+		end
+	end
 	
 	%save
 	fprintf('Saving AP data to %s [%s]\n',strAPFileTarget,getTime);
