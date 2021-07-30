@@ -60,6 +60,26 @@ function rez = PP_ClusterKilosort2(ops,strDataOutputDir,sWaitbar)
 	end
 	rez.good = get_good_units(rez);
 	
+	%check if we want to save temp_wh.dat
+	if ops.intPermaSaveOfTempWh == 1
+		if ~isempty(ptrWaitbarHandle)
+			strStep = 'Copying temp_wh.dat...';
+			intStep = intStep + 0.5;
+			waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
+		end
+		
+		%copy temp_wh
+		[strPath,strFile,strExt]=fileparts(rez.ops.fproc);
+		strPermaTempWh = fullpath(strDataOutputDir,strcat(strFile,strExt));
+		[status,message,messageId] = copyfile(rez.ops.fproc,strPermaTempWh);
+		if status == 0
+			warndlg(message,'File copy failure');
+		else
+			%save new location to rez/ops
+			rez.ops.fproc = strPermaTempWh;
+		end
+	end
+	
 	if ~isempty(ptrWaitbarHandle)
 		strStep = 'Exporting to phy...';
 		intStep = intStep + 1;

@@ -27,6 +27,14 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 		cellSpikes = [];
 	end
 	
+	%check if depth is the same
+	dblDepthR = corr(vecDepth(:),vecTemplateDepths(:));
+	if dblDepthR > -0.95 && dblDepthR < 0.95
+		error([mfilename ':DepthInconsistency'],'Depth information from templates and synthesis data do not match! Pearson r=%.3f',dblDepthR);
+	elseif dblDepthR < -0.95
+		warndlg('Depth information from templates and synthesis data are mirrored, please check the source data','Depths mirrored');
+	end
+	
 	%% plot zeta
 	scatter(hAxZeta,vecZeta,vecDepth,15,'b','filled');
 	title(hAxZeta,strZetaTit);
@@ -56,6 +64,7 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	mua_corr = corrcoef(binned_spikes_depth');
 	mua_corr(diag(diag(true(size(mua_corr)))))=0;
 	mua_corr(mua_corr<0)=0;
+	mua_corr(isnan(mua_corr))=0;
 	
 	%% Plot spike depth vs rate
 	scatter(hAxClust,vecNormSpikeCounts,vecTemplateDepths,15,'k','filled');

@@ -74,12 +74,12 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	%%{
 	%variables button
 	vecLocVariablesButton = [vecLocSetPath(1) vecLocSetPath(2)-30 120 25];
-		sFigRP.ptrButtonEditVariables = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',11,...
+	sFigRP.ptrButtonEditVariables = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',11,...
 		'String','Edit variables',...
 		'Position',vecLocVariablesButton,...
 		sFigRP.strTooltipField,'Set recording variables and meta data',...
 		'Callback',@ptrButtonEditVariables_Callback);
-
+	
 	%compile button
 	vecLocCompileButton = [vecLocVariablesButton(1)+vecLocVariablesButton(3)+5 vecLocVariablesButton(2) 120 25];
 	sFigRP.ptrButtonCompileLibrary = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',12,...
@@ -112,7 +112,16 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		'String',strSorter,...
 		sFigRP.strTooltipField,strKilosortPath,...
 		'Position',vecLocSorter,'BackgroundColor',[1 1 1]);
-
+	
+	%switch to save temp data to permanent folder
+	vecLocCheckTempWh = [vecLocSorter(1)+vecLocSorter(3)+5 vecLocSorter(2) 100 20];
+	sFigRP.ptrCheckTempWh = uicontrol(sFigRP.ptrPanelPaths,'style','checkbox',...
+			'Position',vecLocCheckTempWh,'String','Keep temp','FontSize',10,'BackgroundColor',vecMainColor,'Callback',@ptrCheckTempWh_Callback,...
+			strTooltipField,sprintf(['Running phy requires temp_wh.dat, but this file is about as large as your whole recording.\n',...
+			'You can still run phy without this check, but then you will only be able to access the most recently clustered recording.']));
+	sFigRP.ptrCheckTempWh.Value = sRP.intPermaSaveOfTempWh;
+	
+	
 	%% actions
 	%set tracking parameters
 	vecLocClusterButton = [20 20 150 25];
@@ -260,13 +269,16 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		end
 	end
 	function ptrButtonEditVariables_Callback(hObject, eventdata)
-		
-		%generate gui so user can change fields
-		sMetaVar = RP_genMetaVarWindow();
-		
-		%add to global
-		sRP.sMetaVar = sMetaVar;
-		
+		try
+			%generate gui so user can change fields
+			sMetaVar = RP_genMetaVarWindow();
+			
+			%add to global
+			sRP.sMetaVar = sMetaVar;
+		catch
+			dispErr(ME);
+			errordlg(ME.message,'Error during variable editing');
+		end
 	end
 	function ptrButtonCompileLibrary_Callback(hObject, eventdata)
 		%message
@@ -278,33 +290,36 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 			'String','Compiling data library...');
 		movegui(ptrMsg,'center')
 		drawnow;
-		
-		%get data
-		sRP.sFiles = RP_CompileDataLibrary(sRP,ptrText);
-		
-		%close msg
-		delete(ptrMsg);
-		
-		%populate gui
-		if isfield(sFigRP,'ptrPanelLibrary') && ~isempty(sFigRP.ptrPanelLibrary)
-			delete(sFigRP.ptrPanelLibrary);
-			delete(sFigRP.ptrSliderLibrary);
-			delete(sFigRP.ptrTitleLibrary);
-			sFigRP.ptrPanelLibrary=[];
+		try
+			%get data
+			sRP.sFiles = RP_CompileDataLibrary(sRP,ptrText);
+			
+			%close msg
+			delete(ptrMsg);
+			
+			%populate gui
+			if isfield(sFigRP,'ptrPanelLibrary') && ~isempty(sFigRP.ptrPanelLibrary)
+				delete(sFigRP.ptrPanelLibrary);
+				delete(sFigRP.ptrSliderLibrary);
+				delete(sFigRP.ptrTitleLibrary);
+				sFigRP.ptrPanelLibrary=[];
+			end
+			
+			
+			%% populate new panel
+			%get main GUI size and define subpanel size
+			dblPanelX = 0.01;
+			dblPanelY = 0.12;
+			dblPanelHeight = vecLocPanelMP(2)/vecPosGUI(4)-dblPanelY;
+			dblPanelWidth = 0.94;
+			vecLocation = [dblPanelX dblPanelY dblPanelWidth dblPanelHeight];
+			
+			%generate slider panel
+			[sFigRP.ptrPanelLibrary,sFigRP.ptrSliderLibrary,sFigRP.ptrTitleLibrary,sFigRP.sPointers] = RP_genSliderPanel(ptrMainGUI,vecLocation,sRP.sFiles);
+		catch ME
+			dispErr(ME);
+			errordlg(ME.message,'Error during library compilation');
 		end
-		
-		
-		%% populate new panel
-		%get main GUI size and define subpanel size
-		dblPanelX = 0.01;
-		dblPanelY = 0.12;
-		dblPanelHeight = vecLocPanelMP(2)/vecPosGUI(4)-dblPanelY;
-		dblPanelWidth = 0.94;
-		vecLocation = [dblPanelX dblPanelY dblPanelWidth dblPanelHeight];
-		
-		%generate slider panel
-		[sFigRP.ptrPanelLibrary,sFigRP.ptrSliderLibrary,sFigRP.ptrTitleLibrary,sFigRP.sPointers] = RP_genSliderPanel(ptrMainGUI,vecLocation,sRP.sFiles);
-		
 	end
 	function ptrButtonCluster_Callback(hObject, eventdata, strSorter)
 		%get checked
@@ -357,6 +372,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					end
 				catch ME
 					dispErr(ME);
+					errordlg(ME.message,'Error during clustering');
 				end
 			end
 			uiunlock(sFigRP);
@@ -428,8 +444,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					end
 				catch ME
 					dispErr(ME);
-					ptrErr = errordlg(ME.message,...
-						'Synthesis Error');
+					errordlg(ME.message,'Error during synthesis');
 				end
 			end
 			uiunlock(sFigRP);
@@ -506,6 +521,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					end
 				catch ME
 					dispErr(ME);
+					errordlg(ME.message,'Error during probe histology');
 				end
 			end
 			uiunlock(sFigRP);
@@ -555,9 +571,13 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					
 				catch ME
 					dispErr(ME);
+					errordlg(ME.message,'Error during file export');
 				end
 			end
 			uiunlock(sFigRP);
 		end
+	end
+	function ptrCheckTempWh_Callback(hObject, eventdata)
+		sRP.intPermaSaveOfTempWh = sFigRP.ptrCheckTempWh.Value;
 	end
 end

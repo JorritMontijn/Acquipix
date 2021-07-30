@@ -116,6 +116,8 @@ function sClustered = getPreProClustering(sFile,sRP)
 	sWaitbar.intStartStep = 3;
 	sWaitbar.intStepNum = intStepNum;
 	sWaitbar.ptrWaitbarHandle = ptrWaitbarHandle;
+	%check if we want to save temp_wh to the data folder
+	ops.intPermaSaveOfTempWh = sRP.intPermaSaveOfTempWh;
 	if dblV==3
 		rez = PP_ClusterKilosort3(ops,strDataOutputDir,sWaitbar);
 	elseif dblV==2

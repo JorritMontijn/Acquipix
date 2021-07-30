@@ -41,4 +41,6 @@ function sRP = RP_defaultValues()
 	sRP.strMetaVarFile = 'AcquipixMetavars.mat';
 	sRP.strMetaVarFolder = sRP.strEphysPath;
 	
+	%% optional variables
+	sRP.intPermaSaveOfTempWh = 0;
 end

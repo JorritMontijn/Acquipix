@@ -304,7 +304,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		%get ON times
 		if exist('vecStimOnScreenPD','var') && ~isempty(vecStimOnScreenPD)
 			dblMaxErr = 0.1;
-			vecPresStimOnT = vecStimActOnNI(~vecRem) - intFirstSample/dblSampRateReportedNI;
+			vecPresStimOnT = vecStimActOnNI - intFirstSample/dblSampRateReportedNI;
 			vecSignalOnT = vecStimOnScreenPD/dblSampRateReportedNI;
 			[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
 			indReplace = abs(vecDiffOnT) > dblMaxErr;
@@ -313,7 +313,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - intFirstSample/dblSampRateReportedNI;
 			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		else
-			vecStimOnTime = vecStimActOnNI;
+			vecStimOnTime = vecStimActOnNI - intFirstSample/dblSampRateReportedNI;
 		end
 		
 		%get OFF times: ON + dur
