@@ -35,7 +35,7 @@ function trajectory_brain_intersect = PH_GetBrainIntersection(probe_vector,av)
 	dblAngleML = rad2deg(elevation) + 0;
 	vecAngles = mod([dblAngleAP dblAngleML]+180,360);
 	
-	if vecRefVector(1) > 0
+	if vecRefVector(1) >= 0
 		trajectory_brain_idx = find(trajectory_areas > 1,1,'first');
 	else
 		trajectory_brain_idx = find(trajectory_areas > 1,1,'last');

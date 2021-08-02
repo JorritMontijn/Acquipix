@@ -22,11 +22,16 @@ function PH_DeleteFcn(hObject,varargin)
 			sGUI.sProbeAdjusted = sProbeAdjusted;
 			sProbeCoords.sProbeAdjusted = sProbeAdjusted;
 			
+			if isfield(sProbeCoords,'name')
+				strDefName = sProbeCoords.name;
+			else
+				strDefName = 'RecXXX_ProbeCoords.mat';
+			end
 			%export probe coord file
 			try
 				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
 			catch
-				[strFile,strPath]=uiputfile('*.*','Save file as',sProbeCoords.name);
+				[strFile,strPath]=uiputfile('*.*','Save file as',strDefName);
 				if isempty(strFile) || (numel(strFile)==1 && strFile==0)
 					return;
 				end
@@ -42,6 +47,7 @@ function PH_DeleteFcn(hObject,varargin)
 		case 'Exit & Discard data'
 			sGUI.output = [];
 			sGUI.sProbeAdjusted = [];
+			sGUI.sProbeCoords = [];
 			hObject.UserData = 'close';
 			guidata(hObject,sGUI);
 		case 'Cancel'

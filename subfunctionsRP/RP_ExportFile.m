@@ -3,7 +3,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%load ABA
 	intResultFlag = -1;
 	if (~isfield(sRP,'tv') || isempty(sRP.tv)) || (~isfield(sRP,'av') || isempty(sRP.av)) || (~isfield(sRP,'st') || isempty(sRP.st))
-		[tv,av,st] = RP_LoadABA(strAllenCCFPath);
+		[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
 		if isempty(tv),return;end
 		sRP.tv = tv;
 		sRP.av = av;
@@ -63,6 +63,10 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	
 	%get json data
 	sJson = sSynthData.sJson;
+	if isempty(sJson.subject)
+		cellRec = strsplit(sJson.recording,'_');
+		sJson.subject = cellRec{1};
+	end
 	sJson.probe_coords = sprintf('AP=%d;ML=%d;Depth=%d;AP-ang=%d;ML-ang=%d',round([vecLoc_AP_ML intProbeDepth vecAngles]));
 	sJson.entry_structure = strrep(strEntryStructure,' ','_');
 	if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end

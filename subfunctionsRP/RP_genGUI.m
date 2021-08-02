@@ -460,9 +460,21 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		indReady = false(size(vecRunFiles));
 		for intFileIdx=1:numel(vecRunFiles)
 			intFile = vecRunFiles(intFileIdx);
-			if isfield(sRP.sFiles(intFile),'sProbeCoords') && ~isempty(sRP.sFiles(intFile).sProbeCoords) && isfield(sRP.sFiles(intFile),'sSynthesis') && ~isempty(sRP.sFiles(intFile).sSynthesis)
+			if isfield(sRP.sFiles(intFile),'sSynthesis') && ~isempty(sRP.sFiles(intFile).sSynthesis)
 				indReady(intFileIdx) = true;
 			end
+			%assign default coordinates
+			if ~isfield(sRP.sFiles(intFile),'sProbeCoords') || isempty(sRP.sFiles(intFile).sProbeCoords)
+				matProbeLoc =[...
+					0   0   0;...AP depth ML (wrt atlas at (0,0,0))
+					0   384   0];
+				vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
+				matProbeLoc = bsxfun(@plus,matProbeLoc,vecBregma);
+				sRP.sFiles(intFile).sProbeCoords = struct;
+				sRP.sFiles(intFile).sProbeCoords.intProbeIdx = 1;
+				sRP.sFiles(intFile).sProbeCoords.cellPoints = {matProbeLoc};
+			end
+	
 		end
 		if ~all(indReady)
 			ptrMsg = dialog('Position',[600 400 270 100],'Name','Not all files ready');
@@ -508,10 +520,10 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					
 					%sFiles(intFile).sProbeCoords = sProbeCoords;
 					%check if output is present
-					if isfield(sGUI,'sProbeAdjusted') && ~isempty(sGUI.sProbeAdjusted) && isfield(sGUI.sProbeAdjusted,'probe_vector')
+					if isfield(sGUI,'sProbeCoords') && ~isempty(sGUI.sProbeCoords) && isfield(sGUI,'sProbeAdjusted') && isfield(sGUI.sProbeAdjusted,'probe_vector')
 						%update parameter list
 						vecColor = [0 0.8 0];
-						sProbeCoords = sRP.sFiles(intFile).sProbeCoords;
+						sProbeCoords = sGUI.sProbeCoords;
 						sProbeCoords.sProbeAdjusted = sGUI.sProbeAdjusted;
 						sRP.sFiles(intFile).sProbeCoords = sProbeCoords;
 						sFigRP.sPointers(intFile).Coords.String = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
@@ -567,7 +579,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					sFile = sRP.sFiles(intFile);
 					
 					%export file as AP file & save json
-					intResultFlag = RP_ExportFile(sFile,sRP);
+					[intResultFlag,sRP] = RP_ExportFile(sFile,sRP);
 					
 				catch ME
 					dispErr(ME);

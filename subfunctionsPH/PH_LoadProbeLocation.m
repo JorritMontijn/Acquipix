@@ -1,4 +1,4 @@
-function PH_LoadProbeLocation(hMain,matProbeVector,intProbeIdx)
+function PH_LoadProbeLocation(hMain,matProbeVector,intProbeIdx,sProbeAdjusted)
 	% Load histology points
 	
 	% Philip's GUI: not saved in native CCF order?
@@ -42,17 +42,15 @@ function PH_LoadProbeLocation(hMain,matProbeVector,intProbeIdx)
 		matProbeVector = probe_vector_ccf;
 	end
 	
-	%rotate if necessary
-	%if size(probe_vector_ccf,1) == 3 && size(probe_vector_ccf,2) ~= 3
-	%	probe_vector_ccf = probe_vector_ccf';
-	%end
-	
 	%plot points
 	delete(sGUI.handles.probe_points);
 	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,probe_vector_ccf(:,1),probe_vector_ccf(:,3),probe_vector_ccf(:,2),20,[0 0 0.8],'.','Linewidth',1);
 	
 	%get vector from points
 	[probe_vector,trajectory_brain_intersect,probe_ref_vector] = PH_Points2vec(matProbeVector,sGUI.av);
+	if exist('sProbeAdjusted','var') && isfield(sProbeAdjusted,'probe_vector')
+		probe_vector = sProbeAdjusted.probe_vector;
+	end
 	
 	% update gui
 	set(sGUI.handles.probe_line,'XData',probe_vector(1,:), ...

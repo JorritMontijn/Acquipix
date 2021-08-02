@@ -8,6 +8,7 @@ function RP_DeleteFcn
 	
 	%close
 	sFigRP.IsRunning = false;
+	if isempty(sRP),return;end
 	
 	%save config to ini
 	strPathFile = mfilename('fullpath');

@@ -32,6 +32,9 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	if isfield(sProbeCoords,'sProbeAdjusted') && isfield(sProbeCoords.sProbeAdjusted,'probe_vector')
 		%this gui's output
 		matProbeVector = sProbeCoords.sProbeAdjusted.probe_vector([1 3 2],:)';
+		sProbeAdjusted = sProbeCoords.sProbeAdjusted;
+	else
+		sProbeAdjusted = [];
 	end
 	
 	%probe_vector_ccf =[...
@@ -194,7 +197,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClusters,sFile);
 	
 	%set initial position
-	PH_LoadProbeLocation(hMain,matProbeVector);
+	PH_LoadProbeLocation(hMain,matProbeVector,sProbeCoords.intProbeIdx,sProbeAdjusted);
 	
 	%update angle
 	PH_UpdateProbeAngle(hMain,[0 0]);
