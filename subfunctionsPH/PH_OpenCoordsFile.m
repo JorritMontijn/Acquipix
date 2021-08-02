@@ -1,7 +1,12 @@
-function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
+function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath,strName)
 	
 	%% pre-allocate output
 	cellPoints = [];
+	if ~exist('strName','var') || isempty(strName)
+		strPrompt = 'Select probe coordinate file';
+	else
+		strPrompt = ['Select probe coordinate file for ' strName];
+	end
 	
 	%% select file
 	try
@@ -9,7 +14,7 @@ function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
 	catch
 		strOldPath = cd();
 	end
-	[strFile,strPath]=uigetfile('probe_ccf.mat','Select probe coordinate file');
+	[strFile,strPath]=uigetfile('probe_ccf.mat',strPrompt);
 	cd(strOldPath);
 	if isempty(strFile) || (numel(strFile)==1 && strFile==0)
 		return;

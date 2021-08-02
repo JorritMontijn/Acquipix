@@ -11,9 +11,16 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 	catch
 	end
 	
+	%get name
+	if isfield(sRP.sFiles(intFile).sMeta,'strNidqName')
+		strName = sRP.sFiles(intFile).sMeta.strNidqName;
+	else
+		strName = [];
+	end
+	
 	%open coords file
 	strDefaultPath = sRP.strProbeLocPath;
-	[cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath);
+	[cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath,strName);
 	if ~isempty(cellPoints)
 		%load AllenCCF
 		if ~isfield(sRP,'st') || isempty(sRP.st)
