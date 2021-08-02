@@ -30,6 +30,9 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	set(ptrMainGUI,'DeleteFcn','RP_DeleteFcn')
 	set(ptrMainGUI, 'MenuBar', 'none','ToolBar', 'none');
 	
+	% set scroll wheel callback
+	set(ptrMainGUI,'windowscrollWheelFcn',@RP_Scrollwheel);
+	
 	%set output
 	sFigRP.output = ptrMainGUI;
 	
