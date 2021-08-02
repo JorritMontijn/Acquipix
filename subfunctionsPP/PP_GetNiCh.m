@@ -1,11 +1,9 @@
 function sNiCh = PP_GetNiCh(sMetaVar,sMetaNI)
-	%%
-	intSynNiChan = str2double(sMetaNI.syncNiChan);
-	
+	%% retrieve info
 	cellFields = fieldnames(sMetaVar);
 	vecNiFields = find(contains(cellFields,'niCh'));
-	intSyncPulseCh = nan;
-	intStimOnsetCh = nan;
+	intSyncPulseChMv = nan;
+	intStimOnsetChMv = nan;
 	vecAssignedChannels = nan(1,numel(vecNiFields));
 	vecProcCh = [];
 	cellProcFunc = {};
@@ -14,18 +12,15 @@ function sNiCh = PP_GetNiCh(sMetaVar,sMetaNI)
 		intThisCh = str2double(strField(5:end));
 		vecAssignedChannels(intFieldIdx)=intThisCh;
 		if strcmp(sMetaVar.(strField),'sync')
-			if ~isnan(intSyncPulseCh)
+			if ~isnan(intSyncPulseChMv)
 				error([mfilename 'E:MultiSyncAssigned'],'Multiple NI channels are set to "sync", please edit your variables');
 			end
-			intSyncPulseCh = intThisCh;
-			if intSyncPulseCh ~= intSynNiChan
-				error([mfilename 'E:SyncChInconsistent'],sprintf('You specified niCh%d as "sync", but the NI meta file specifies syncNiChan=%d',intSyncPulseCh,intSynNiChan));
-			end
+			intSyncPulseChMv = intThisCh + 1; %start at 1
 		elseif strcmp(sMetaVar.(strField),'onset')
-			if ~isnan(intStimOnsetCh)
+			if ~isnan(intStimOnsetChMv)
 				error([mfilename 'E:MultiSyncAssigned'],'Multiple NI channels are set to "onset", please edit your variables');
 			end
-			intStimOnsetCh = intThisCh;
+			intStimOnsetChMv = intThisCh + 1; %start at 1
 		else
 			%check if function exists
 			strFunc = sMetaVar.(strField);
@@ -40,15 +35,34 @@ function sNiCh = PP_GetNiCh(sMetaVar,sMetaNI)
 	end
 	%check if channel numbers match
 	[MN,MA,XA,DW] = DP_ChannelCountsNI(sMetaNI);
+	intSynNiChan = str2double(sMetaNI.syncNiChan);
 	intTotNiCh = sum([MN,MA,XA,DW]);
 	intMaxAssigned = max(vecAssignedChannels);
 	if intMaxAssigned >= intTotNiCh
 		error([mfilename 'E:NiChMismatch'],sprintf('You specified niCh%d, but you recorded only %d channels. Did you forget niCh starts at 0?',intMaxAssigned,intTotNiCh));
 	end
+	if str2double(sMetaNI.syncSourceIdx)>0
+		vecChNr = cumsum([MN,MA,XA,DW]);
+		if str2double(sMetaNI.syncNiChanType)==0
+			intPulseChNi = vecChNr(4) + intSynNiChan;
+		elseif str2double(sMetaNI.syncNiChanType)==1
+			intPulseChNi = vecChNr(3) + intSynNiChan;
+		else
+			error('not possible');
+		end
+	else
+		intPulseChNi = [];
+	end
+	if intPulseChNi ~= intSyncPulseChMv
+		error([mfilename 'E:SyncChInconsistent'],sprintf('You specified niCh%d as "sync", but the NI meta file specifies the sync pulse ch=%d',intSyncPulseChMv,intPulseChNi));
+	end
+	if intSyncPulseChMv == intStimOnsetChMv
+		error([mfilename 'E:ChannelClash'],'Pulse and sync channels are identical');
+	end
 	
 	%build output
-	sNiCh.intSyncPulseCh = intSyncPulseCh;
-	sNiCh.intStimOnsetCh = intStimOnsetCh;
+	sNiCh.intSyncPulseCh = intSyncPulseChMv;
+	sNiCh.intStimOnsetCh = intStimOnsetChMv;
 	sNiCh.vecAssignedChannels = vecAssignedChannels;
 	sNiCh.vecProcCh = vecProcCh;
 	sNiCh.cellProcFunc = cellProcFunc;

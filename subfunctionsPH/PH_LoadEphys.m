@@ -1,5 +1,5 @@
 function sEphysData = PH_LoadEphys(sFile)
-	
+	global sFile
 	%get location
 	strPathKS = sFile.sClustered.folder;
 	

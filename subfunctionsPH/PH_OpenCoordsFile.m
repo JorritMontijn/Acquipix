@@ -1,9 +1,9 @@
 function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
 	
-	%pre-allocate output
+	%% pre-allocate output
 	cellPoints = [];
 	
-	%select file
+	%% select file
 	try
 		strOldPath = cd(strDefaultPath);
 	catch
@@ -15,7 +15,7 @@ function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
 		return;
 	end
 	
-	%load
+	%% load
 	sLoad = load(fullpath(strPath,strFile));
 	if isfield(sLoad,'probe_ccf') && isstruct(sLoad.probe_ccf) && isfield(sLoad.probe_ccf,'points')
 		%AP_histology
@@ -24,8 +24,8 @@ function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
 		%sharp track
 		cellPoints = sLoad.pointList.pointList(:,1); %cell arrays
 		
-		%invert x/y & depth
-		cellPoints = cellfun(@(x) (x(end:-1:1,[3 2 1])),cellPoints,'UniformOutput',false);
+		%invert x/y
+		cellPoints = cellfun(@(x) (x(:,[3 2 1])),cellPoints,'UniformOutput',false);
 		
 	else
 		try
@@ -37,3 +37,10 @@ function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath)
 		end
 	end
 	
+	%% assume the probe is coming from above
+	%sort y
+	for intProbe=1:numel(cellPoints)
+		matPoints = cellPoints{intProbe};
+		[a,vecReorder]=sort(matPoints(:,2),'ascend');
+		cellPoints{intProbe} = matPoints(vecReorder,:);
+	end

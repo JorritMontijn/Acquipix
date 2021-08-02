@@ -1,5 +1,6 @@
 function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	%% get data
+	%global sFile
 	hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
 	sEphysData = PH_LoadEphys(sFile);
 	
@@ -7,7 +8,7 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);
 	vecNormSpikeCounts = mat2gray(log10(accumarray(spike_templates_reidx,1)+1));
 	max_depths = 3840; % (hardcode, sometimes kilosort2 drops channels)
-	vecTemplateDepths = sEphysData.templateDepths(vecTemplateIdx+1);
+	vecTemplateDepths = max_depths-sEphysData.templateDepths(vecTemplateIdx+1);
 	
 	%retrieve zeta
 	try

@@ -82,35 +82,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sMetaVar = sRP.sMetaVar;
 	sNiCh = PP_GetNiCh(sMetaVar,sMetaNI);
 	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh)
-		intStimOnsetCh = sNiCh.intStimOnsetCh + 1; %screen diode channel
-		if ischar(intStimOnsetCh)
-			intStimOnsetCh = str2double(intStimOnsetCh);
-		end
+		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
 	else
 		intStimOnsetCh = [];
 	end
-	%syncSourceIdx={0=None,1=External,2=NI,3+=IM}
-	%syncNiChanType={0=digital,1=analog}
-	%sMetaNI.syncNiChan=channel # within type
-	%MN = multiplexed neural signed 16-bit channels
-	%MA = multiplexed aux analog signed 16-bit channels
-	%XA = non-muxed aux analog signed 16-bit channels
-	%XD = non-muxed aux digital unsigned 16-bit words
-	[MN,MA,XA,DW] = DP_ChannelCountsNI(sMetaNI);
-	if str2double(sMetaNI.syncSourceIdx)>0
-		vecChNr = cumsum([MN,MA,XA,DW]);
-		if str2double(sMetaNI.syncNiChanType)==0
-			intPulseCh = vecChNr(4);
-		elseif str2double(sMetaNI.syncNiChanType)==1
-			intPulseCh = vecChNr(3);
-		else
-			error('not possible');
-		end
+	if isfield(sNiCh,'intSyncPulseCh') && ~isempty(sNiCh.intSyncPulseCh)
+		intSyncPulseCh = sNiCh.intSyncPulseCh; %screen diode channel
 	else
-		intPulseCh = [];
-	end
-	if intPulseCh == intStimOnsetCh
-		error([mfilename ':ChannelClash'],'Pulse and sync channels are identical');
+		intSyncPulseCh = [];
 	end
 	
 	% Get NI data
@@ -157,9 +136,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%get nidq sync pulses & correct by sync pulses
-	if ~isempty(intPulseCh)
+	if ~isempty(intSyncPulseCh)
 		%get ni sync pulses
-		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intPulseCh,:));
+		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intSyncPulseCh,:));
 		clear matDataNI;
 		
 		%realign IMEC time to NI stream

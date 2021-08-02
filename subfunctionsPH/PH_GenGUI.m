@@ -40,6 +40,14 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
 	%matProbeLoc = bsxfun(@plus,probe_vector_ccf,vecBregma);
 	
+	%% load source data
+	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
+	matBrainGrid = sLoad.brainGridData;
+	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
+	cmap=sLoad.cmap;
+	
+	bp = double(matBrainGrid);
+	bp(sum(bp,2)==0,:) = NaN; % when saved to uint16, NaN's become zeros. There aren't any real vertices at (0,0,0) and it shouldn't look much different if there were
 	
 	%% Set up the gui
 	%bregma location
@@ -49,14 +57,6 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	hMain = figure('Toolbar','none','Menubar','none','color','w', ...
 		'Name','Coordinate adjuster','Units','normalized','Position',[0.05,0.05,0.9,0.9],...
 		'CloseRequestFcn',@PH_DeleteFcn);
-	
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
-	matBrainGrid = sLoad.brainGridData;
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
-	cmap=sLoad.cmap;
-	
-	bp = double(matBrainGrid);
-	bp(sum(bp,2)==0,:) = NaN; % when saved to uint16, NaN's become zeros. There aren't any real vertices at (0,0,0) and it shouldn't look much different if there were
 	
 	% Set up the atlas axes
 	hAxAtlas = subplot(2,3,1);
@@ -159,9 +159,9 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sGUI.handles.slice_plot = surface('EdgeColor','none'); % Slice on 3D atlas
 	sGUI.handles.slice_volume = 'av'; % The volume shown in the slice
 	sGUI.probe_ref_line = []; % Probe reference line on 3D atlas
-	sGUI.handles.probe_points = scatter3(-100,-100,-100,100,'g.','linewidth',1); % placeholder
+	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',1); % placeholder
 	sGUI.handles.probe_line = line([-100 -200],[-100 -200],[-100 -200],'Color','b'); % placeholder
-	sGUI.handles.probe_intersect = scatter3(-100,-100,-100,100,'rx','linewidth',2);
+	sGUI.handles.probe_intersect = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'rx','linewidth',2);
 	sGUI.handles.probe_areas_plot = hAxAreasPlot; % Color-coded probe regions
 	sGUI.handles.probe_areas_plot2 = hAxAreasPlot2; % Color-coded probe regions
 	sGUI.handles.probe_intersect = scatter3(-100,-100,-100,100,'rx','linewidth',2);
