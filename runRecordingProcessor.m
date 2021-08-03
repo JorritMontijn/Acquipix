@@ -11,6 +11,7 @@
 %	Created by Jorrit Montijn
 
 %% add subfolder to path
+sWarn = warning('on');
 cellPaths = strsplit(path(),';');
 strPathFile=mfilename('fullpath');
 cellCodePath = strsplit(strPathFile,filesep);
@@ -44,4 +45,5 @@ sFigRP.IsRunning = true;
 %generate gui
 [sFigRP,sRP] = RP_genGUI(sFigRP,sRP);
 
-
+%reset warning state
+warning(sWarn);

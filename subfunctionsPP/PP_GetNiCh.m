@@ -29,7 +29,7 @@ function sNiCh = PP_GetNiCh(sMetaVar,sMetaNI)
 				error([mfilename 'E:FunctionNotFound'],sprintf('You specified data transformer "%s" for niCh%d, but it does not exist: please edit your variables',strFunc,intThisCh));
 			end
 			%add
-			vecProcCh(end+1) = intThisCh;
+			vecProcCh(end+1) = intThisCh + 1;
 			cellProcFunc{end+1} = strFunc;
 		end
 	end
@@ -44,9 +44,9 @@ function sNiCh = PP_GetNiCh(sMetaVar,sMetaNI)
 	if str2double(sMetaNI.syncSourceIdx)>0
 		vecChNr = cumsum([MN,MA,XA,DW]);
 		if str2double(sMetaNI.syncNiChanType)==0
-			intPulseChNi = vecChNr(4) + intSynNiChan;
+			intPulseChNi = vecChNr(3) + intSynNiChan + 1;
 		elseif str2double(sMetaNI.syncNiChanType)==1
-			intPulseChNi = vecChNr(3) + intSynNiChan;
+			intPulseChNi = vecChNr(2) + intSynNiChan + 1;
 		else
 			error('not possible');
 		end

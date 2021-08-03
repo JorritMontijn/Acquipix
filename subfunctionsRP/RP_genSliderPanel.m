@@ -166,10 +166,14 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		dblLastX = vecLoc(1) + vecLoc(3);
 		
 		%sFiles(intFile).sProbeCoords = sProbeCoords;
-		if isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords)
+		if isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords) && isfield(sFiles(intFile).sProbeCoords,'sProbeAdjusted') && ~isempty(sFiles(intFile).sProbeCoords.sProbeAdjusted)
 			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [0 0.8 0];
-			strTip = ['Probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name)];
+			strTip = ['Adjusted probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name)];
+		elseif isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords)
+			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
+			vecColor = [1 0.5 0];
+			strTip = ['Raw probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name)];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];

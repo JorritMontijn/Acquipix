@@ -103,12 +103,15 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%build AP structure
 	sAP = struct;
 	sAP.cellStim = sSynthData.cellStim;
-	sAP.sPupil = sSynthData.sPupil;
+	if isfield(sSynthData,'sPupil')
+		sAP.sPupil = sSynthData.sPupil;
+	end
 	sAP.sCluster = sCluster;
 	sAP.sMetaNI = sSynthData.sMetaNI;
 	sAP.sSources = sSources;
 	sAP.sJson = sJson;
 	sAP.vecProbeCoords = [vecLoc_AP_ML intProbeDepth vecAngles]; %AP, ML, depth, AP-angle, ML-angle
+	sAP.ProbeCoordsDesc = 'AP, ML, depth, AP-angle, ML-angle';
 	%add misc NI channels to AP structure
 	if isfield(sSynthData,'sMiscNI')
 		cellFields = fieldnames(sSynthData.sMiscNI);

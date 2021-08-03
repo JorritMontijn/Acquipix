@@ -68,7 +68,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% load NI sync stream times
 	ptrText.String = 'Loading NI & sync data...';drawnow;
-	
+	%%
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
 	%fprintf('Processing recording at %s%s%s [%s]\n',strPathNidq,filesep,strFileNidq,getTime);
@@ -139,7 +139,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	if ~isempty(intSyncPulseCh)
 		%get ni sync pulses
 		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intSyncPulseCh,:));
-		clear matDataNI;
 		
 		%realign IMEC time to NI stream
 		vecChangeSyncPulses = diff(boolVecSyncPulsesNidq);
@@ -166,7 +165,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	cellProcFunc = sNiCh.cellProcFunc;
 	sMiscNI = struct;
 	for intChIdx=1:numel(vecProcCh)
-		intProcCh = vecProcCh(intChIdx) + 1;
+		intProcCh = vecProcCh(intChIdx);
 		strFunc = cellProcFunc{intChIdx};
 		if strcmp(strFunc(1),'@'),strFunc(1)=[];end
 		sMiscNI.(strFunc) = feval(strFunc,matDataNI(intProcCh,:),sMetaNI);
@@ -715,7 +714,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%stimulation & eye-tracking timings
 	sSynthData.cellStim = cellStim;
-	sSynthData.sPupil = sPupil;
+	if exist('sPupil','var') && ~isempty(sPupil)
+		sSynthData.sPupil = sPupil;
+	end
 	
 	%clusters & spikes
 	sSynthData.sCluster = sCluster;

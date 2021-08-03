@@ -62,8 +62,8 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 		%update button
 		if isfield(sRP.sFiles(intFile),'sProbeCoords') && ~isempty(sRP.sFiles(intFile).sProbeCoords)
 			strText = num2str(intProbeIdx);
-			vecColor = [0 0.8 0];
-			strTip = ['Probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
+			vecColor = [1 0.5 0];
+			strTip = ['Raw probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];

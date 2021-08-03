@@ -6,9 +6,10 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	
 	%define depths and spike numbers
 	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);
+	vecUseClusters = vecTemplateIdx+1;
 	vecNormSpikeCounts = mat2gray(log10(accumarray(spike_templates_reidx,1)+1));
 	max_depths = 3840; % (hardcode, sometimes kilosort2 drops channels)
-	vecTemplateDepths = max_depths-sEphysData.templateDepths(vecTemplateIdx+1);
+	vecTemplateDepths = max_depths-sEphysData.templateDepths(vecUseClusters);
 	
 	%retrieve zeta
 	try
@@ -21,11 +22,19 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 		cellSpikes = {sSynthData.sCluster.SpikeTimes};
 	catch
 		vecDepth = vecTemplateDepths;
-		vecZeta = sEphysData.ContamP;
+		vecZeta = sEphysData.ContamP(vecUseClusters);
 		strZetaTit = 'Contamination';
 		
 		%build spikes per cluster
-		cellSpikes = [];
+		vecAllSpikeTimes = sEphysData.st;
+		vecAllSpikeClust = sEphysData.clu;
+		intClustNum = numel(vecUseClusters);
+		cellSpikes = cell(1,intClustNum);
+		for intCluster=1:intClustNum
+			intClustIdx = vecUseClusters(intCluster);
+			cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx);
+		end
+		
 	end
 	
 	%check if depth is the same
