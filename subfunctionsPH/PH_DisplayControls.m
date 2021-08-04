@@ -1,4 +1,4 @@
-function PH_DisplayControls
+function PH_DisplayControls(varargin)
 
 % Print controls
 CreateStruct.Interpreter = 'tex';

@@ -155,6 +155,13 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		sFigRP.strTooltipField,'Export synchronized data & area-assigned units to aggregate output file',...
 		'Callback',@ptrButtonExportData_Callback);
 	
+	vecLocTransformToNwbButton = [vecLocExportDataButton(1)+vecLocExportDataButton(3)+5 vecLocExportDataButton(2:4)];
+	sFigRP.ptrButtonExportData = uicontrol(ptrMainGUI,'Style','pushbutton','FontSize',11,...
+		'String','Transform to NWB',...
+		'Position',vecLocTransformToNwbButton,...
+		sFigRP.strTooltipField,'Transform data to NWB format (neuroscience without borders)',...
+		'Callback',@ptrButtonExportToNwb_Callback);
+	
 	%% run initial callbacks
 	for intPathButton=1:intPathNum
 		ptrButtonSetPath_Callback(sRP.(sprintf('str%sPath',cellPathVarNames{intPathButton})),[],cellPathVarNames{intPathButton});
@@ -587,6 +594,56 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 				catch ME
 					dispErr(ME);
 					errordlg(ME.message,'Error during file export');
+				end
+			end
+			uiunlock(sFigRP);
+		end
+	end
+	function ptrButtonExportToNwb_Callback(hObject, eventdata)
+		%get checked
+		indUseFiles = RP_CheckSelection(sFigRP);
+		if ~any(indUseFiles),return;end
+		
+		%check if all files have ephys data
+		vecRunFiles = find(indUseFiles);
+		indReady = false(size(vecRunFiles));
+		for intFileIdx=1:numel(vecRunFiles)
+			intFile = vecRunFiles(intFileIdx);
+			if (isfield(sRP.sFiles(intFile),'sProbeCoords') && isfield(sRP.sFiles(intFile).sProbeCoords,'sProbeAdjusted') && ~isempty(sRP.sFiles(intFile).sProbeCoords.sProbeAdjusted)) && (isfield(sRP.sFiles(intFile),'sSynthesis') && ~isempty(sRP.sFiles(intFile).sSynthesis))
+				indReady(intFileIdx) = true;
+			end
+		end
+		if ~all(indReady)
+			ptrMsg = dialog('Position',[600 400 250 100],'Name','Not all files ready');
+			ptrText = uicontrol('Parent',ptrMsg,...
+				'Style','text',...
+				'Position',[20 50 210 40],...
+				'FontSize',11,...
+				'String','Some files are missing pre-processed data');
+			ptrButton = uicontrol('Parent',ptrMsg,...
+				'Position',[100 20 50 30],...
+				'String','OK',...
+				'FontSize',10,...
+				'Callback','delete(gcf)');
+			movegui(ptrMsg,'center')
+			drawnow;
+			return
+		else
+			%run
+			uilock(sFigRP);
+			drawnow;
+			
+			for intFileIdx=1:numel(vecRunFiles)
+				try
+					intFile = vecRunFiles(intFileIdx);
+					sFile = sRP.sFiles(intFile);
+					
+					%export file as AP file & save json
+					[intResultFlag,sRP] = RP_TransformToNwb(sFile,sRP);
+					
+				catch ME
+					dispErr(ME);
+					errordlg(ME.message,'Error during file reformatting');
 				end
 			end
 			uiunlock(sFigRP);
