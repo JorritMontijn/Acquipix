@@ -145,7 +145,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecSyncPulseOn = (find(vecChangeSyncPulses == 1)+1);
 		clear vecChangeSyncPulses boolVecSyncPulses;
 		
-		%take middle 80% in case some pulses are missed or counted double
+		%take mean of middle 80% in case some pulses are missed or counted double
 		vecDiffPulses = sort(diff(vecSyncPulseOn));
 		intNumPulsePeriods = numel(vecDiffPulses);
 		intOneTenth = ceil(intNumPulsePeriods/10);

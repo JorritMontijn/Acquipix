@@ -72,6 +72,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end
 	
 	%build output name & check if it exists
+	if numel(sJson.subject) > 5 && strcmp(sJson.subject(1:5),'RecMA'),sJson.subject=strrep(sJson.subject,'RecMA','MA');end
 	strSubject = sJson.subject;
 	strRecDate = sJson.date;
 	strRecording = sJson.recording;
@@ -90,6 +91,14 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	end
 	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
 	
+	%% prune cellStim and move originals to sSources
+	cellBlock = sSynthData.cellStim;
+	sSources.cellBlock = cellBlock;
+	for intBlock=1:numel(cellBlock)
+		cellBlock{intBlock} = PP_TransformStimToAP(cellBlock{intBlock});
+	end
+	sSources.sMetaNI = sSynthData.sMetaNI;
+	
 	%% save json
 	%save json file
 	strJsonData = jsonencode(sJson);
@@ -102,12 +111,11 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	
 	%build AP structure
 	sAP = struct;
-	sAP.cellStim = sSynthData.cellStim;
+	sAP.cellBlock = cellBlock;
 	if isfield(sSynthData,'sPupil')
 		sAP.sPupil = sSynthData.sPupil;
 	end
 	sAP.sCluster = sCluster;
-	sAP.sMetaNI = sSynthData.sMetaNI;
 	sAP.sSources = sSources;
 	sAP.sJson = sJson;
 	sAP.vecProbeCoords = [vecLoc_AP_ML intProbeDepth vecAngles]; %AP, ML, depth, AP-angle, ML-angle
