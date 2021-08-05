@@ -1,7 +1,7 @@
-function intPresetsCreated = assertPresets()
+function [intPresetsCreated,cellExperiments] = assertPresets()
 	% get target path
 	intPresetsCreated = 0;
-	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim'};
+	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim','RunFlash'};
 	
 	%% generate data & pre-allocate
 	for intExp=1:numel(cellExperiments)
@@ -91,6 +91,21 @@ function intPresetsCreated = assertPresets()
 				sStimPresets.vecPulseDur = dblPulseDur*ones(size(sStimPresets.vecPulseITI));%secs
 				sStimPresets.dblPulseWaitSignal = sStimPresets.dblPulseWait/2;
 				sStimPresets.dblPulseWaitPause = sStimPresets.dblPulseWait - sStimPresets.dblPulseWaitSignal;
+				intPresetIdx = saveStimPreset(sStimPresets,strExp);
+				intPresetsCreated = intPresetsCreated + 1;
+			elseif strcmp(strExp,'RunFlash')
+				
+				sStimPresets = struct;
+				sStimPresets.strExpType = strExp;
+				sStimPresets.intNumRepeats = 60;
+				sStimPresets.dblSecsBlankAtStart = 1;
+				sStimPresets.dblSecsBlankPre = 0.5;
+				sStimPresets.dblSecsStimDur = 1;
+				sStimPresets.dblSecsBlankPost = 0.5;
+				sStimPresets.dblSecsBlankAtEnd = 1;
+				sStimPresets.vecLuminance = 1;
+				sStimPresets.dblBackground = 0.5;
+	
 				intPresetIdx = saveStimPreset(sStimPresets,strExp);
 				intPresetsCreated = intPresetsCreated + 1;
 			else

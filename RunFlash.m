@@ -38,10 +38,10 @@ end
 
 %% input params
 fprintf('Loading settings...\n');
-if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~(strcmpi(sStimParamsSettings.strStimType,'SquareGrating') || ~strcmpi(sStimParamsSettings.strStimType,'SineGrating'))
+if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcmpi(sStimParamsSettings.strStimType,'FullFlash')
 	%general
 	sStimParamsSettings = struct;
-	sStimParamsSettings.strStimType = 'SquareGrating';
+	sStimParamsSettings.strStimType = 'FullFlash';
 	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
 	sStimParamsSettings.strTempObjectPath = 'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 	
@@ -67,16 +67,11 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~(strc
 	sStimParamsSettings.intUseScreen = 2; %which screen to use
 	
 	%stimulus control variables
-	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
 	sStimParamsSettings.intUseParPool = 0; %number of workers in parallel pool; [2]
 	sStimParamsSettings.intUseGPU = 1;
 	sStimParamsSettings.intAntiAlias = 0;
-	sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
-	sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
-	sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
-	sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
-	sStimParamsSettings.vecSpatialFrequencies = 0.05; %Spat Frequency in cyc/deg 0.08
-	sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
+	sStimParamsSettings.intUseDaqDevice = 1; %ID of DAQ device
+	sStimParamsSettings.dblBackground = 0.5; %background intensity (dbl, 0-1)
 else
 	% evaluate and assign pre-defined values to structure
 	cellFields = fieldnames(sStimParamsSettings);
@@ -100,7 +95,7 @@ strOutputPath = sStimParamsSettings.strOutputPath;
 strTempObjectPath = sStimParamsSettings.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
 [strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
-fprintf('Saving output in directory %s; loading textures from %s\n',strLogDir,strTexDir);
+fprintf('Saving output in directory %s\n',strLogDir);
 
 %% initialize connection with SpikeGLX
 if boolUseSGL
@@ -136,6 +131,9 @@ end
 %% build structEP
 %load presets
 if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
+	%assert preset presence
+	intPresetsCreated = assertPresets();
+	%load
 	sStimPresets = loadStimPreset(intStimSet,mfilename);
 end
 
@@ -153,50 +151,21 @@ end
 
 %% prepare stimuli
 %build fields for getCombos
-if ~isfield(sStimPresets,'boolGenNoise')
-	sStimPresets.boolGenNoise = false;
-end
-if ~isfield(sStimPresets,'vecOrientationNoise')
-	sStimPresets.vecOrientationNoise = 0;
-end
-if ~isfield(sStimParamsSettings,'strRecording')
-	sStimParamsSettings.strRecording = strRecording;
-end
 sStimParams = catstruct(sStimParamsSettings,sStimPresets);
 cellFields = fieldnames(sStimParams);
 indRem = cellfun(@(x) strcmp(x(1:7),'dblSecs'),cellFields);
 sStimParamsCombosReduced = rmfield(sStimParams,cellFields(indRem));
 cellParamFields = fieldnames(sStimParamsCombosReduced);
-cellAllRemFields = {'boolGenNoise','intNumRepeats','vecOrientationNoise','strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
+cellAllRemFields = {'intNumRepeats','strRecording','strExpType','strOutputPath','strTempObjectPath','intUseDaqDevice'}';
 indKeepRemFields = contains(cellAllRemFields,cellParamFields);
 cellRemFields = cellAllRemFields(indKeepRemFields);
 sStimParamsCombosReduced = rmfield(sStimParamsCombosReduced,cellRemFields);
 
 %get stimuli
-[sStimParamsEvaluated,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParamsCombosReduced);
-if isfield(sStimParams,'boolGenNoise') && sStimParams.boolGenNoise
-	for intObject=1:numel(sStimObject)
-		sStimObject(intObject).OrientationNoise = sStimParams.vecOrientationNoise(intObject);
-	end
-end
+[sStimParamsEvaluated,sStimObject,sStimTypeList] = getFlashObjects(sStimParamsCombosReduced);
 warning('off','catstruct:DuplicatesFound');
 sStimParams = catstruct(sStimParamsEvaluated,sStimParams);
 warning('on','catstruct:DuplicatesFound');
-
-%get noise stimuli
-cellStimObjectNoise = cell(1,numel(sStimObject));
-vecStimsWithNoise = find(sStimParams.vecOrientationNoise > 0);
-for intNoiseStim=1:numel(vecStimsWithNoise)
-	intStim = vecStimsWithNoise(intNoiseStim);
-	dblOri = sStimParams.vecOrientations(intStim);
-	dblNoise = sStimParams.vecOrientationNoise(intStim);
-	vecNoiseStims = [dblOri-dblNoise*3:0.1:dblOri+dblNoise*3];
-	intNoiseStims = numel(vecNoiseStims);
-	fprintf('Loading %d noise stimuli for stim %d [%s]\n',intNoiseStims,numel(vecStimsWithNoise),getTime);
-	sStimParamsNoiseStim.vecOrientations = vecNoiseStims;
-	[dummy,sThisStimObjectNoise,dummy2] = getDriftingGratingCombos(sStimParamsNoiseStim);
-	cellStimObjectNoise{intStim} = sThisStimObjectNoise;
-end
 
 %% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
@@ -279,6 +248,7 @@ try
 	sStimParams.vecRect = vecRect;
 	sStimParams.intScreenWidth_pix = vecRect(3)-vecRect(1);
 	sStimParams.intScreenHeight_pix = vecRect(4)-vecRect(2);
+	sStimParams.intWhite = WhiteIndex(sStimParams.ptrWindow);
 	
 	%% MAXIMIZE PRIORITY
 	intOldPriority = 0;
@@ -299,71 +269,11 @@ try
 	%% check escape
 	if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 	
-	%% CHECK TEXTURES
-	%create base texture
-	fprintf('\nChecking base textures... ');
-	hTic = tic;
-	boolPreLoadTextures = true;
-	for intStimType = 1:structEP.intStimTypes
-		sStimObject(intStimType).FrameRate = intStimFrameRate;
-		matGrating = loadStimulusTexture(sStimObject(intStimType),strTexDir,sStimParams);
-		if toc(hTic) > 5
-			hTic = tic;
-			fprintf('[%d/%d]',intStimType,structEP.intStimTypes);
-		end
-	end
-	fprintf('\nChecking noise textures... ');
-	hTic = tic;
-	for intNoiseStimType=1:numel(cellStimObjectNoise)
-		if isempty(cellStimObjectNoise{intNoiseStimType}),continue;end
-		fprintf('\nChecking noise stimuli for base stim %d/%d... ',intNoiseStimType,numel(cellStimObjectNoise));
-		hTic = tic;
-		sStimObjectNoise = cellStimObjectNoise{intNoiseStimType};
-		for intNoiseStim = 1:numel(sStimObjectNoise)
-			sStimObjectNoise(intNoiseStim).FrameRate = intStimFrameRate;
-			matGrating = loadStimulusTexture(sStimObjectNoise(intNoiseStim),strTexDir,sStimParams);
-			if toc(hTic) > 5
-				hTic = tic;
-				fprintf('[%d/%d]',intNoiseStim,numel(sStimObjectNoise));
-			end
-		end
-		cellStimObjectNoise{intNoiseStimType} = sStimObjectNoise;
-	end
-	fprintf('\n   Done\n');
-	
-	%% attempt to pre-load textures
-	fprintf('\nAttempting texture pre-loading...');
-	if boolPreLoadTextures
-		try
-			%draw textures
-			matGrating = loadStimulusTexture(sStimObject(1),strTexDir,sStimParams);
-			intTotFrames = size(matGrating,3);
-			intOptimizeForDrawAngle = 0; %optimize for upright
-			intSpecialFlags = 0; %1 to put into square opengl texture
-			vecTex = nan(1,intTotFrames);
-			for intFrame=1:intTotFrames
-				vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matGrating(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
-			end
-			clear matGrating;
-			
-			%pre-load
-			[boolResident,vecTexResident] = Screen('PreloadTextures', ptrWindow, vecTex);
-			fprintf('   Done!\n');
-		catch
-			%set switch to false
-			boolPreLoadTextures = false;
-			warning([mfilename ':PreloadError'],'Could not pre-load all textures for one trial; please upgrade your GPU!');
-			
-			%restart PTB
-			[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground);
-			sStimParams.ptrWindow = ptrWindow;
-		end
-	end
-	
 	%% PRESENT STIMULI
 	%stim-based logs
 	structEP.intStimNumber = structEP.intTrialNum;
 	structEP.TrialNumber = nan(1,structEP.intStimNumber);
+	structEP.Luminance = nan(1,structEP.intStimNumber);
 	structEP.ActStimType = nan(1,structEP.intStimNumber);
 	structEP.ActOnSecs = nan(1,structEP.intStimNumber);
 	structEP.ActOffSecs = nan(1,structEP.intStimNumber);
@@ -404,6 +314,21 @@ try
 	structEP.strStartDate = getDate();
 	structEP.strStartTime = getTime();
 	
+	%% calculate diode rectangle location
+	if sStimParams.intCornerTrigger > 0
+		%PTB uses [top,left, right, bottom] with origin at upper left
+		intCornerPix = floor(sStimParams.dblCornerSize*sStimParams.intScreenWidth_pix);
+		if sStimParams.intCornerTrigger == 1 %upper left
+			vecDiodeRect =  [0 0 intCornerPix intCornerPix];
+		elseif sStimParams.intCornerTrigger == 2 %upper right
+			vecDiodeRect =  [(vecRect(3)-intCornerPix) 0 vecRect(3) intCornerPix];
+		elseif sStimParams.intCornerTrigger == 3 %lower left
+			vecDiodeRect =  [0 (vecRect(4) - intCornerPix) intCornerPix  vecRect(4)];
+		elseif sStimParams.intCornerTrigger == 4 %lower right
+			vecDiodeRect =  [(vecRect(3)-intCornerPix) (vecRect(4) - intCornerPix) vecRect(3)  vecRect(4)];
+		end
+	end
+	
 	%% wait initial-blanking
 	fprintf('Starting initial blank (dur=%.3fs) [%s]\n',structEP.dblSecsBlankAtStart,getTime);
 	dblInitialBlankDur = 0;
@@ -419,7 +344,7 @@ try
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		%% prep trial
 		
-		%trial start
+		%trial start; background
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
 		
@@ -435,15 +360,6 @@ try
 		%retrieve stimulus info
 		intStimType = structEP.vecTrialStimTypes(intThisTrial);
 		sThisStimObject = sStimObject(intStimType);
-		if sThisStimObject.OrientationNoise > 0
-			%get random orientation
-			dblRandOri = normrnd(sThisStimObject.Orientation,sThisStimObject.OrientationNoise);
-			
-			%select nearest object
-			sStimObjectNoise = cellStimObjectNoise{intStimType};
-			[dblOri,intUseObject] = min(abs(cellfun(@minus,cellfill(dblRandOri,size(sStimObjectNoise)),{sStimObjectNoise.Orientation})));
-			sThisStimObject = sStimObjectNoise(intUseObject);
-		end
 		
 		%get timing
 		dblStartSecs = structEP.vecTrialStartSecs(intThisTrial);
@@ -452,28 +368,12 @@ try
 		dblStimDurSecs = dblStimOffSecs - dblStimOnSecs;
 		dblEndSecs = structEP.vecTrialEndSecs(intThisTrial);
 		
-		%load textures
-		matGrating = loadStimulusTexture(sThisStimObject,strTexDir,sStimParams);
-		intTotFrames = size(matGrating,3);
-		intOptimizeForDrawAngle = 0; %optimize for upright
-		intSpecialFlags = 0; %1 to put into square opengl texture
-		vecTex = nan(1,intTotFrames);
-		for intFrame=1:intTotFrames
-			vecTex(intFrame)=Screen('MakeTexture', ptrWindow, matGrating(:,:,intFrame), intOptimizeForDrawAngle, intSpecialFlags);
-		end
-		clear matGrating;
-		
-		%% pre-load textures
-		if boolPreLoadTextures
-			[boolResident,vecTexResident] = Screen('PreloadTextures', ptrWindow, vecTex);
-		end
-		
 		%% wait pre-blanking
 		dblPreBlankDur = 0;
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow);
 		dblDAQ_Dur = 0; %measured time to set NI DAQ switch
-		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblDAQ_Dur)
+		while dblPreBlankDur < (dblStimOnSecs - dblStartSecs - dblDAQ_Dur - dblStimFrameDur/2)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
@@ -483,53 +383,23 @@ try
 		%% 250ms pulse at stim start
 		if boolUseNI,startBackground(objDaqOut);end
 		
-		%% show stimulus
-		dblStimStartFlip = dblLastFlip;
-		dblCycleDur = 1/sThisStimObject.TemporalFrequency;
-		dblPhaseRand = dblCycleDur*rand(1);
-		sThisStimObject.Phase = dblPhaseRand;
-		dblNextFlip = 0;
-		intFlipCounter = 0;
-		vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
-		vecStimFrames = nan(size(vecStimFlips));
-		boolFirstFlip = false;
-		refTimeLocal = tic;
-		while toc(refTimeLocal) < (dblStimDurSecs - 2*dblStimFrameDur)
-			%draw stimulus
-			dblTime = dblLastFlip-dblStimStartFlip;
-			tStamp = mod(eps+dblPhaseRand+dblTime,dblCycleDur);
-			intFrame = ceil(tStamp * sThisStimObject.FrameRate);
-			Screen('DrawTexture',ptrWindow,vecTex(intFrame));
-			Screen('DrawingFinished', ptrWindow);
-			
-			%flip
-			dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
-			dblNextFlip = dblLastFlip + dblStimFrameDur/2;
-			intFlipCounter = intFlipCounter + 1;
-			vecStimFlips(intFlipCounter) = dblLastFlip;
-			vecStimFrames(intFlipCounter) = intFrame;
-			
-			%send trigger for stim start
-			if ~boolFirstFlip
-				%set switch
-				boolFirstFlip = true;
-				
-				%log NI timestamp
-				if boolUseSGL
-					dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-				else
-					dblStimOnNI = nan;
-				end
-				
-				%log flip
-				dblStimStartFlip = dblLastFlip;
-			end
-		end
-		vecStimFlips(isnan(vecStimFlips)) = [];
-		vecStimFrames(isnan(vecStimFrames)) = [];
-		dblStimOnFlip = vecStimFlips(1);
+		%% show flash
+		dblLuminance = sThisStimObject.Luminance;
+		Screen('FillRect',ptrWindow, round(sStimParams.intWhite*dblLuminance));           % Stimulus 
+        Screen('FillRect', ptrWindow, sStimParams.intWhite,vecDiodeRect) % Diode
+		dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
+		dblStimOnFlip = dblLastFlip;
 		
-		%back to background
+		%log NI timestamp
+		if boolUseSGL
+			dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+		else
+			dblStimOnNI = nan;
+		end
+		%wait
+		WaitSecs(dblStimDurSecs);
+		
+		%% back to background
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblStimOffFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 		dblStimDur = dblStimOffFlip-dblStimOnFlip;
@@ -540,10 +410,6 @@ try
 		else
 			dblStimOffNI = nan;
 		end
-		
-		%close textures and wait for post trial seconds
-		Screen('Close',vecTex);
-		clear vecTex;
 		
 		%% save stimulus object
 		try
@@ -562,7 +428,7 @@ try
 		dblTrialDur = 0;
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow);
-		while dblTrialDur < (dblEndSecs - dblStartSecs - 2*dblStimFrameDur)
+		while dblTrialDur < (dblEndSecs - dblStartSecs)
 			%do nothing
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
@@ -574,6 +440,7 @@ try
 		intStimNumber = intThisTrial;
 		structEP.TrialNumber(intStimNumber) = intThisTrial;
 		structEP.ActStimType(intStimNumber) = intStimType;
+		structEP.Luminance(intStimNumber) = dblLuminance;
 		structEP.ActStartSecs(intStimNumber) = dblTrialStartFlip;
 		structEP.ActOnSecs(intStimNumber) = dblStimOnFlip;
 		structEP.ActOffSecs(intStimNumber) = dblStimOffFlip;
@@ -581,20 +448,16 @@ try
 		structEP.ActOnNI(intStimNumber) = dblStimOnNI;
 		structEP.ActOffNI(intStimNumber) = dblStimOffNI;
 		
-		%add grating-specific properties as vectors
+		%add flash-specific properties as vectors
 		strProps = '';
 		for intField=1:numel(cellStimPropNames)
 			strField = cellStimPropNames{intField};
-			if strcmp(strField,'Phase')
-				structEP.(strField)(intStimNumber) = dblPhaseRand*sThisStimObject.TemporalFrequency;
-			else
-				structEP.(strField)(intStimNumber) = sThisStimObject.(strField);
-			end
+			structEP.(strField)(intStimNumber) = sThisStimObject.(strField);
 			strProps = strcat(strProps,strField,'=',num2str(structEP.(strField)(intStimNumber)),';');
 		end
 		
 		%show trial summary
-		fprintf('Completed %d/%d at %.3fs (pre=%.3fs,stim=%.3fs,post=%.3fs;tot=%.3fs); %.1f degs; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblPreBlankDur,dblStimDur,dblPostBlankDur,dblTrialDur,sThisStimObject.Orientation,strProps);
+		fprintf('Completed %d/%d at %.3fs (pre=%.3fs,stim=%.3fs,post=%.3fs;tot=%.3fs); %.1f luminance; %s\n',intThisTrial,structEP.intTrialNum,dblLastFlip - dblInitialFlip,dblPreBlankDur,dblStimDur,dblPostBlankDur,dblTrialDur,sThisStimObject.Luminance,strProps);
 	end
 	
 	%% save data
@@ -635,7 +498,7 @@ try
 	
 catch ME
 	%% check if escape
-	if strcmp(ME.identifier,'RunDriftingGratings:EscapePressed')
+	if strcmp(ME.identifier,[mfilename ':EscapePressed'])
 		fprintf('\nEscape pressed at [%s], closing down and cleaning up...\n',getTime);
 		%save data
 		structEP.sStimParams = sStimParams;

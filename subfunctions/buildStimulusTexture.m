@@ -129,8 +129,6 @@ function [vecSceneFrames,matTexture] = buildStimulusTexture(sStimObject,sStimPar
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		Screen('Flip', ptrWindow);
 		
-	elseif strcmp(sStimObject.StimType,'SineGrating')
-		error([mfilename ':TypeUnsupported'],sprintf('Stimulus type "%s" has not been programmed yet...',sStimObject.StimType));
 	elseif strcmp(sStimObject.StimType,'Line')
 		error([mfilename ':TypeUnsupported'],sprintf('Stimulus type "%s" has not been programmed yet...',sStimObject.StimType));
 	else

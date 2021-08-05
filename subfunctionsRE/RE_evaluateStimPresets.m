@@ -38,7 +38,13 @@ function [strEstTotDur,sStimParams,sStimObject] = RE_evaluateStimPresets(sStimSt
 	elseif strcmpi(strStimType,'RunOptoStim')
 		sStimParams = sStimStruct;
 		sStimObject = [];
+	elseif strcmpi(strStimType,'RunFlash')
+		%remove anything not a vector
+		indKeep = cellfun(@(x) strcmp(x(1:3),'vec'),cellFields);
+		sStimCombos = rmfield(sStimStruct,cat(1,cellFields(~indKeep),cellRemGenFields));
+		[sStimParams,sStimObject,sStimTypeList] = getFlashObjects(sStimCombos);
 	else
+		sStimParams = sStimStruct;
 		sStimObject = [];
 		warning([mfilename ':StimTypeUnknown'],sprintf('Unknown stimulus type "%s"',strStimType));
 	end
@@ -52,7 +58,7 @@ function [strEstTotDur,sStimParams,sStimObject] = RE_evaluateStimPresets(sStimSt
 		strEstTotDur = [char(strEstTotDur) ' (mm:ss); ' num2str(round(sStimPresetsLocal.intTrialNum)) 'x' num2str(round(numel(sStimStruct.vecPulseITI)))];
 		
 	elseif isempty(sStimObject)
-		strEstTotDur = 'Unknown stim type';
+		strEstTotDur = 'Cannot resolve duration';
 	else
 		
 		%calculate time
