@@ -26,6 +26,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 	%% group files
 	indDelete=false(1,numel(sEphysFilesNidq));
 	sFiles = [];
+	cellClaimedVidFiles = {};
 	for intFile=1:numel(sEphysFilesNidq)
 		%% nidq
 		sEphysNidq = sEphysFilesNidq(intFile);
@@ -140,6 +141,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		sPupilFiles(:)=[];
 		warning('off','MATLAB:elementsNowStruc');
 		%check if spikeglx run name matches
+		vecClaimedFiles = [];
 		for intPupilFile=1:numel(sSameDatePupilFiles)
 			sLoad=load(fullpath(sSameDatePupilFiles(intPupilFile).folder,sSameDatePupilFiles(intPupilFile).name));
 			if isfield(sLoad.sPupil,'sParamsSGL')
@@ -151,6 +153,8 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			else
 				%cannot check run name, so we'll just add it anyway
 				sPupilFiles(end+1) = sSameDatePupilFiles(intPupilFile);
+				vecPoss = find(indPossFiles);
+				vecClaimedFiles(end+1) = vecPoss(intPupilFile);
 			end
 		end
 		warning('on','MATLAB:elementsNowStruc');
@@ -165,6 +169,64 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		sFiles(intFile).sStimFiles = sStimFiles;
 		sFiles(intFile).sPupilFiles = sPupilFiles;
 		sFiles(intFile).sProbeCoords = sProbeCoords;
+		cellClaimedVidFiles{intFile} = vecClaimedFiles;
 	end
 	sFiles(indDelete) = [];
+	cellClaimedVidFiles(indDelete) = [];
+	
+	%% clean up ambiguous video files
+	vecMultiClaimers = find(cellfun(@numel,cellClaimedVidFiles)>1);
+	vecClaimed=cell2vec(cellClaimedVidFiles);
+	matNameDistToFile = nan(numel(sFiles),max(vecClaimed));
+	matHasR01orR02 = nan(numel(sFiles),max(vecClaimed));
+	for intFileIdx=1:numel(vecMultiClaimers)
+		intFile = vecMultiClaimers(intFileIdx);
+		vecClaimedByFile = cellClaimedVidFiles{intFile};
+		strFileName = sFiles(intFile).sEphysNidq.name;
+		for intVidIdx=1:numel(vecClaimedByFile)
+			intVid=vecClaimedByFile(intVidIdx);
+			strVidName = sPossiblePupilFiles(intVid).name;
+			matNameDistToFile(intFile,intVid) = strdist(strFileName,strVidName);
+			matHasR01orR02(intFile,intVid) = 2 - double((contains(strFileName,'R01') & contains(strVidName,'R01')) + (contains(strFileName,'R02') & contains(strVidName,'R02')));
+		end
+	end
+	%assign videos to files with preferences
+	matAssignToFileVid = nan(0,2);
+	for intAssignType=1:2
+		if intAssignType == 1
+			matPref = matNameDistToFile;
+		else
+			matPref = matHasR01orR02;
+		end
+		vecHasPref = find(max(matPref,[],2) - min(matPref,[],2)>0);
+		vecHasPref(ismember(vecHasPref,matAssignToFileVid(:,1))) = [];
+		for intFileIdx=1:numel(vecHasPref)
+			intFile = vecHasPref(intFileIdx);
+			[dummy,intVidIdx] = min(matPref(intFile,:));
+			sFiles(intFile).sPupilFiles = sPossiblePupilFiles(intVidIdx);
+			matAssignToFileVid(end+1,:) = [intFile intVidIdx];
+			cellClaimedVidFiles{intFile} = intVidIdx;
+		end
+	end
+	
+	%assign movies to remaining files
+	vecNoPrefFiles = find(cellfun(@numel,cellClaimedVidFiles)>1);
+	for intFileIdx=1:numel(vecNoPrefFiles)
+		intFile=vecNoPrefFiles(intFileIdx);
+		vecClaimedFiles = cellClaimedVidFiles{intFile};
+		vecAllClaims = cell2vec(cellClaimedVidFiles);
+		vecClaimCount = zeros(size(vecClaimedFiles));
+		%select video with least claims
+		for intVidIdx=1:numel(vecClaimedFiles)
+			intVid = vecClaimedFiles(intVidIdx);
+			vecClaimCount(intVidIdx) = sum(vecAllClaims==intVid);
+		end
+		[intClaimNr,vecAssignVid]=min(vecClaimCount);
+		if intClaimNr==1
+			%special case; videos are not claimed by others
+			vecAssignVid = vecClaimedFiles(vecClaimCount==1);
+		end
+		sFiles(intFile).sPupilFiles = sPossiblePupilFiles(vecAssignVid);
+		cellClaimedVidFiles{intFile} = vecAssignVid;
+	end
 end
