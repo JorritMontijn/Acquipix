@@ -668,7 +668,8 @@ catch ME
 		structEP.sStimParams = sStimParams;
 		structEP.sStimObject = sStimObject;
 		structEP.sStimTypeList = sStimTypeList;
-		save(fullfile(strLogDir,strFilename), 'structEP');
+		if ~exist('sParamsSGL','var'),sParamsSGL=[];end
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 		
 		%% catch me and throw me
 		Screen('Close');

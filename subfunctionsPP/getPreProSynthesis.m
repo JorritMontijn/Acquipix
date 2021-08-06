@@ -39,7 +39,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%% load eye-tracking
 	if isfield(sFile,'sPupilFiles') && ~isempty(sFile.sPupilFiles)
 		%msg
-		ptrText.String = 'Loading pupil data...';drawnow;
+		try,ptrText.String = 'Loading pupil data...';drawnow;catch,end
 		if numel(sFile.sPupilFiles) == 1
 			sLoad = load(fullpath(sFile.sPupilFiles.folder,sFile.sPupilFiles.name));
 			sPupil=sLoad.sPupil;
@@ -67,7 +67,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%% load NI sync stream times
-	ptrText.String = 'Loading NI & sync data...';drawnow;
+	try,ptrText.String = 'Loading NI & sync data...';drawnow;catch,end
 	%%
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
@@ -173,7 +173,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% load stimulus info
 	%load logging file
-	ptrText.String = 'Loading stimulation data...';drawnow;
+	try,ptrText.String = 'Loading stimulation data...';drawnow;catch,end
+	
 	%fprintf('Synchronizing multi-stream data...\n');
 	dblLastStop = 0;
 	sStimFiles = sFile.sStimFiles;
@@ -206,7 +207,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	cellStim = cell(1,intLogs);
 	for intLogFile = 1:intLogs
 		%% calculate stimulus times
-		ptrText.String = sprintf('Aligning data streams for block %d/%d...',intLogFile,intLogs);drawnow;
+		try,ptrText.String = sprintf('Aligning data streams for block %d/%d...',intLogFile,intLogs);drawnow;catch,end
+	
 		fprintf('>Log file "%s" [%s]\n',sStimFiles(vecReorderStimFiles(intLogFile)).name,getTime)
 		cellStim{intLogFile} = load(fullpath(sStimFiles(vecReorderStimFiles(intLogFile)).folder,sStimFiles(vecReorderStimFiles(intLogFile)).name));
 		if isfield(cellStim{intLogFile}.structEP,'strExpType')
@@ -272,12 +274,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			[vecP,vecI]=findmax(vecSoftmin,10);
 			dblAlignmentCertainty = vecP(1)/sum(vecP);
 			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
-			%if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && 0
-			%	error([mfilename 'E:CheckAlignment'],'Alignment certainty is under 90%%, please check manually');
-			%end
-			vecSubSampled = double(vecDiodeSignal(1:100:end));
-			[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblSampRateReportedNI/100),numel(vecSubSampled)),intLogFile);
-			
+			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~isempty(sPupil.sSyncData)
+				vecSubSampled = double(vecDiodeSignal(1:100:end));
+				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblSampRateReportedNI/100),numel(vecSubSampled)),intLogFile);
+			end
 			%ensure same starting time
 			vecStimActOnNI = vecStimActOnSecs + dblStartT;
 			vecStimActOffNI = vecStimActOffSecs + dblStartT;
@@ -311,12 +311,12 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
 			vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
 			vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
-			vecStimOffTime = vecStimOnTime + vecStimActDurSecs;
+			vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));
 		else
 			vecStimActOnSecs = cellStim{intLogFile}.structEP.vecStimOnNI;
 			vecStimActOffSecs = cellStim{intLogFile}.structEP.vecStimOffNI;
 			vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
-			vecStimOffTime = vecStimOnTime + vecStimActDurSecs;
+			vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));
 		end
 		
 		% save to cell array
@@ -332,7 +332,31 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			sPupil = [];
 			continue;
 		end
+		if isempty(sPupil.sSyncData)
+			%old recording; load pre-synced data
+			[dummy,strProbeSource] = fileparts(sFile.sProbeCoords.sourcefile);
+			cellSplit = strsplit(strProbeSource,'_');
+			strPath = 'H:\DataPreProcessed';
+			sLoadFile = dir(fullpath(strPath,['*' cellSplit{end} '*.mat']));
+			sLoad = load(fullpath(sLoadFile(1).folder,sLoadFile(1).name));
+			
+			%assign stim on/off times
+			if numel(cellStim{intLogFile}) ~= numel(sLoad.sAP.cellStim{intLogFile})
+				error([mfilename 'E:StimNumMismatch'],'Stim file mismatch for %s',strFileNidq);
+			end
+			vecNew = cellStim{intLogFile}.structEP.ActOnNI;
+			vecOld = sLoad.sAP.cellStim{intLogFile}.structEP.ActOnNI;
+			strSyncType = sprintf('Good: reused old timestamps; ActOnNI R(old,new)=%.3f',corr(vecNew(:),vecOld(:)));
+			fprintf([strSyncType '\n']);
+			cellStim{intLogFile}.structEP.strSyncType = strSyncType;
+			cellStim{intLogFile}.structEP.vecStimOnTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecStimOnTime;
+			cellStim{intLogFile}.structEP.vecStimOffTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecStimOffTime;
+			cellStim{intLogFile}.structEP.vecPupilStimOnTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOnTime;
+			cellStim{intLogFile}.structEP.vecPupilStimOffTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOffTime;
+			cellStim{intLogFile}.structEP.vecPupilStimOnFrame = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOnFrame;
+			cellStim{intLogFile}.structEP.vecPupilStimOffFrame = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOffFrame;
 		
+		else
 		%get NI timestamp sync data
 		matSyncData = sPupil.sSyncData.matSyncData;
 		matSyncData(:,any(isnan(matSyncData),1)) = [];
@@ -493,10 +517,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.vecPupilStimOnTime = vecPupilStimOnTime;
 		cellStim{intLogFile}.structEP.vecPupilStimOffTime = vecPupilStimOffTime;
 	end
-	
+end
 	%% load clustered data into matlab using https://github.com/cortex-lab/spikes
 	%% assign cluster data
-	ptrText.String = 'Assigning cluster data...';drawnow;
+	try,ptrText.String = 'Assigning cluster data...';drawnow;catch,end
 	% load some of the useful pieces of information from the kilosort and manual sorting results into a struct
 	strPathAP = sFile.sEphysAp.folder;
 	try
@@ -579,7 +603,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	
 	%go through cells and stim blocks
-	ptrText.String = 'Assigning metadata to clusters...';drawnow;
+	try,ptrText.String = 'Assigning metadata to clusters...';drawnow;catch,end
 	sCluster = struct;
 	parfor intCluster=1:intClustNum
 		%get cluster idx
@@ -667,7 +691,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% generate json file for library
 	%define data
-	ptrText.String = 'Creating synthesis & saving to file...';drawnow;
+	try,ptrText.String = 'Creating synthesis & saving to file...';drawnow;catch,end
 	if ~exist('strFileLFP','var'),strFileLFP='';end
 	
 	%required fields

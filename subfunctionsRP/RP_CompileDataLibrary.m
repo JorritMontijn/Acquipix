@@ -45,8 +45,11 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			strDate2 = strjoin({strDate1(1:4),strDate1(5:6),strDate1(7:8)},'-');
 			
 			if exist('ptrText','var') && ~isempty(ptrText)
+				try
 				ptrText.String = sprintf('Compiling data library...\nFound %d recordings',sum(~indDelete(1:intFile)));
 				drawnow;
+				catch
+				end
 			end
 		catch
 			indDelete(intFile) = true;
@@ -120,8 +123,10 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 				strRunName = sLoad.sParamsSGL.snsRunName;
 			elseif isfield(sLoad,'structEP') && isfield(sLoad.structEP,'strRecording')
 				strRunName = sLoad.structEP.strRecording;
+			elseif isfield(sLoad,'structEP') && isfield(sLoad.structEP,'ActOnNI') && ~isnan(sLoad.structEP.ActOnNI(2))
+				strRunName = strNidqName(4); %name bypass
 			else
-				continue;
+				error([mfilename 'E:BrokenStimFile'],sSameDateStimFiles(intStimFile).name);
 			end
 			if strcmp(strRunName,strNidqName(1:numel(strRunName))) || (numel(strNidqName) > (numel(strRunName)+2) && strcmp(strRunName,strNidqName(4:(numel(strRunName)+3))))
 				%match
