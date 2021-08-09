@@ -95,7 +95,8 @@ for intRec=1:size(matRunPrePro,1)
 	%AP direction is inverted; origin is at back
 	vecCoords([1 4]) = -vecCoords([1 4]);
 	%ML angle direction is inverted; negative is to the right
-	vecCoords([5]) = -vecCoords([5]);
+	%vecCoords([5]) = -vecCoords([5]);
+	vecCoords([5]) = vecCoords([5]); %hm, is it though?
 	
 	%AP DV ML
 	vecBregma = PH_GetBregma();

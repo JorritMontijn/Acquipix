@@ -1,7 +1,7 @@
 function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% show msg
-	ptrMsg = dialog('Position',[600 400 250 50],'Name','Library Compilation');
+	ptrMsg = dialog('Position',[600 400 250 50],'Name','Source synthesis');
 	ptrText = uicontrol('Parent',ptrMsg,...
 		'Style','text',...
 		'Position',[20 00 210 40],...
@@ -208,9 +208,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	for intLogFile = 1:intLogs
 		%% calculate stimulus times
 		try,ptrText.String = sprintf('Aligning data streams for block %d/%d...',intLogFile,intLogs);drawnow;catch,end
-	
+		
 		fprintf('>Log file "%s" [%s]\n',sStimFiles(vecReorderStimFiles(intLogFile)).name,getTime)
 		cellStim{intLogFile} = load(fullpath(sStimFiles(vecReorderStimFiles(intLogFile)).folder,sStimFiles(vecReorderStimFiles(intLogFile)).name));
+	
 		if isfield(cellStim{intLogFile}.structEP,'strExpType')
 			strStimType = cellStim{intLogFile}.structEP.strExpType;
 		else %old format
@@ -332,31 +333,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			sPupil = [];
 			continue;
 		end
-		if isempty(sPupil.sSyncData)
-			%old recording; load pre-synced data
-			[dummy,strProbeSource] = fileparts(sFile.sProbeCoords.sourcefile);
-			cellSplit = strsplit(strProbeSource,'_');
-			strPath = 'H:\DataPreProcessed';
-			sLoadFile = dir(fullpath(strPath,['*' cellSplit{end} '*.mat']));
-			sLoad = load(fullpath(sLoadFile(1).folder,sLoadFile(1).name));
-			
-			%assign stim on/off times
-			if numel(cellStim{intLogFile}) ~= numel(sLoad.sAP.cellStim{intLogFile})
-				error([mfilename 'E:StimNumMismatch'],'Stim file mismatch for %s',strFileNidq);
-			end
-			vecNew = cellStim{intLogFile}.structEP.ActOnNI;
-			vecOld = sLoad.sAP.cellStim{intLogFile}.structEP.ActOnNI;
-			strSyncType = sprintf('Good: reused old timestamps; ActOnNI R(old,new)=%.3f',corr(vecNew(:),vecOld(:)));
-			fprintf([strSyncType '\n']);
-			cellStim{intLogFile}.structEP.strSyncType = strSyncType;
-			cellStim{intLogFile}.structEP.vecStimOnTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecStimOnTime;
-			cellStim{intLogFile}.structEP.vecStimOffTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecStimOffTime;
-			cellStim{intLogFile}.structEP.vecPupilStimOnTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOnTime;
-			cellStim{intLogFile}.structEP.vecPupilStimOffTime = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOffTime;
-			cellStim{intLogFile}.structEP.vecPupilStimOnFrame = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOnFrame;
-			cellStim{intLogFile}.structEP.vecPupilStimOffFrame = sLoad.sAP.cellStim{intLogFile}.structEP.vecPupilStimOffFrame;
-		
-		else
 		%get NI timestamp sync data
 		matSyncData = sPupil.sSyncData.matSyncData;
 		matSyncData(:,any(isnan(matSyncData),1)) = [];
@@ -517,7 +493,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.vecPupilStimOnTime = vecPupilStimOnTime;
 		cellStim{intLogFile}.structEP.vecPupilStimOffTime = vecPupilStimOffTime;
 	end
-end
+	
 	%% load clustered data into matlab using https://github.com/cortex-lab/spikes
 	%% assign cluster data
 	try,ptrText.String = 'Assigning cluster data...';drawnow;catch,end
