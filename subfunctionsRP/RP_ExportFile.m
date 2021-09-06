@@ -90,6 +90,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 		end
 	end
 	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
+	sJson.file_preproAP = strAPFileTarget;
 	
 	%% prune cellStim and move originals to sSources
 	cellBlock = sSynthData.cellStim;
@@ -103,7 +104,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%save json file
 	strJsonData = jsonencode(sJson);
 	strJsonFileOut = strrep(strAPFileOut,'_AP.mat','_session.json');
-	strJsonTarget = fullpath(strOutputPath,strJsonFileOut);
+	strJsonTarget = fullpath(sSynthesis.folder,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
 	ptrFile = fopen(strJsonTarget,'w');
 	fprintf(ptrFile,strJsonData);
