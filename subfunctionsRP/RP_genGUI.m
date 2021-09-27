@@ -458,6 +458,8 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 				end
 			end
 			uiunlock(sFigRP);
+			%recompile
+			ptrButtonCompileLibrary_Callback([],[]);
 		end
 	end
 	function ptrButtonAdjustCoords_Callback(hObject, eventdata)

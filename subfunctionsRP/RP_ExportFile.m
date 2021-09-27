@@ -114,7 +114,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sAP = struct;
 	sAP.cellBlock = cellBlock;
 	if isfield(sSynthData,'sPupil')
-		sAP.sPupil = sSynthData.sPupil;
+		sAP.sPupil = PP_TransformPupilToAP(sSynthData.sPupil);
 	end
 	sAP.sCluster = sCluster;
 	sAP.sSources = sSources;

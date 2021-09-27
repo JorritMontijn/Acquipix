@@ -36,36 +36,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		syncSY = [];
 	end
 	
-	%% load eye-tracking
-	if isfield(sFile,'sPupilFiles') && ~isempty(sFile.sPupilFiles)
-		%msg
-		try,ptrText.String = 'Loading pupil data...';drawnow;catch,end
-		if numel(sFile.sPupilFiles) == 1
-			sLoad = load(fullpath(sFile.sPupilFiles.folder,sFile.sPupilFiles.name));
-			sPupil=sLoad.sPupil;
-		elseif numel(sEyeFiles) > 1
-			error([mfilename ':AmbiguousInput'],'Multiple video files found, please narrow search parameters');
-		end
-		
-		% prepare pupil synchronization
-		vecPupilFullSyncLum = sPupil.vecPupilFullSyncLum;
-		vecPupilFullSyncLumT = sPupil.vecPupilFullSyncLumT;
-		dblSampRatePupil = 1/median(diff(vecPupilFullSyncLumT));
-		
-		%filter to 0.1-30Hz
-		vecWindow2 = [0.5 30]./dblSampRatePupil;
-		[fb,fa] = butter(2,vecWindow2,'bandpass');
-		vecFiltFullSyncLum = filtfilt(fb,fa, double(vecPupilFullSyncLum));
-		boolPupilSync1 = vecFiltFullSyncLum>(-std(vecFiltFullSyncLum)/2);
-		boolPupilSync2 = vecFiltFullSyncLum>(std(vecFiltFullSyncLum)/3);
-		
-		%get on/off
-		vecChangePupilSync1 = diff(boolPupilSync1);
-		vecChangePupilSync2 = diff(boolPupilSync2);
-		vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
-		vecPupilSyncOnT = vecPupilFullSyncLumT(vecPupilSyncOn);
-	end
-	
 	%% load NI sync stream times
 	try,ptrText.String = 'Loading NI & sync data...';drawnow;catch,end
 	%%
@@ -202,6 +172,37 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	[dummy,vecReorderStimFiles] = sort(vecTimes,'ascend');
 	
+	
+	%% load eye-tracking
+	if isfield(sFile,'sPupilFiles') && ~isempty(sFile.sPupilFiles)
+		%msg
+		try,ptrText.String = 'Loading pupil data...';drawnow;catch,end
+		if numel(sFile.sPupilFiles) == 1
+			sLoad = load(fullpath(sFile.sPupilFiles.folder,sFile.sPupilFiles.name));
+			sPupil=sLoad.sPupil;
+		elseif numel(sEyeFiles) > 1
+			error([mfilename ':AmbiguousInput'],'Multiple video files found, please narrow search parameters');
+		end
+		
+		% prepare pupil synchronization
+		vecPupilFullSyncLum = sPupil.vecPupilFullSyncLum;
+		vecPupilFullSyncLumT = sPupil.vecPupilFullSyncLumT;
+		dblSampRatePupil = 1/median(diff(vecPupilFullSyncLumT));
+		
+		%filter to 0.1-30Hz
+		vecWindow2 = [0.5 30]./dblSampRatePupil;
+		[fb,fa] = butter(2,vecWindow2,'bandpass');
+		vecFiltFullSyncLum = filtfilt(fb,fa, double(vecPupilFullSyncLum));
+		boolPupilSync1 = vecFiltFullSyncLum>(-std(vecFiltFullSyncLum)/2);
+		boolPupilSync2 = vecFiltFullSyncLum>(std(vecFiltFullSyncLum)/3);
+		
+		%get on/off
+		vecChangePupilSync1 = diff(boolPupilSync1);
+		vecChangePupilSync2 = diff(boolPupilSync2);
+		vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
+		vecPupilSyncOnT = vecPupilFullSyncLumT(vecPupilSyncOn);
+	end
+	
 	%% run
 	intLastPupilStop = 1;
 	cellStim = cell(1,intLogs);
@@ -275,7 +276,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			[vecP,vecI]=findmax(vecSoftmin,10);
 			dblAlignmentCertainty = vecP(1)/sum(vecP);
 			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
-			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~isempty(sPupil.sSyncData)
+			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~isempty(vecDiodeSignal)
 				vecSubSampled = double(vecDiodeSignal(1:100:end));
 				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblSampRateReportedNI/100),numel(vecSubSampled)),intLogFile);
 			end
@@ -304,6 +305,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - intFirstSample/dblSampRateReportedNI;
 			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		else
+			dblMedianErr=0;
 			vecStimOnTime = vecStimActOnNI - intFirstSample/dblSampRateReportedNI;
 		end
 		
@@ -345,6 +347,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		%interpolate to NI-based time
 		vecPupilTimeNI = interp1(vecFrameVid,vecTimeNI,sPupil.vecPupilVidFrame,'linear','extrap');
 		sPupil.vecPupilTimeNI = vecPupilTimeNI;
+		sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - intFirstSample/dblSampRateReportedNI;
 		
 		%% use LED
 		%get pupil on/offsets

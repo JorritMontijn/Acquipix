@@ -43,7 +43,7 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 	
 	%always remove these fields
 	cellFields = fieldnames(sStimBlock);
-	cellAlwaysRemFields = {'dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
+	cellAlwaysRemFields = {'vecPupilStimOnTime','vecPupilStimOffTime','dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
 	cellRemFields = cellAlwaysRemFields(contains(cellAlwaysRemFields,cellFields));
 	sStimBlock = rmfield(sStimBlock,cellRemFields);
 	

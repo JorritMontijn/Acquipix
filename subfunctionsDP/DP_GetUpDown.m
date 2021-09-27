@@ -3,11 +3,11 @@ function [boolArray,dblCritVal] = DP_GetUpDown(vecData,dblLowerPercentile,dblUpp
 	%	[boolArray,dblCritVal] = DP_GetUpDown(vecData,dblLowerPercentile,dblUpperPercentile)
 	%
 	%Critical value is upper-inclusive and defined as the midpoint between
-	%(by default) the 10th and 90th percentile 
+	%(by default) the 1st and 99th percentile 
 	
 	%default percentiles
 	if ~exist('dblLowerPercentile','var') || isempty(dblLowerPercentile)
-		dblLowerPercentile = 0.1;
+		dblLowerPercentile = 0.01;
 	end
 	if ~exist('dblUpperPercentile','var') || isempty(dblUpperPercentile)
 		dblUpperPercentile = 1-dblLowerPercentile;
