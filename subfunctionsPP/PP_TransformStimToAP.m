@@ -41,10 +41,16 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 		end
 	end
 	
+	%add corrected pupil times
+	if isfield(sStimBlock,'vecStimOnsetCorrections') && isfield(sStimBlock,'vecStimOnTime')
+		sStimBlock.vecPupilStimOn = sStimBlock.vecStimOnTime + sStimBlock.vecStimOnsetCorrections;
+		sStimBlock.vecPupilStimOff = sStimBlock.vecStimOffTime + sStimBlock.vecStimOnsetCorrections;
+	end
+	
 	%always remove these fields
 	cellFields = fieldnames(sStimBlock);
-	cellAlwaysRemFields = {'vecPupilStimOnTime','vecPupilStimOffTime','dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
-	cellRemFields = cellAlwaysRemFields(contains(cellAlwaysRemFields,cellFields));
+	cellAlwaysRemFields = {'vecStimOnsetCorrections','vecPupilStimOnFrame','vecPupilStimOffFrame','vecPupilStimOnTime','vecPupilStimOffTime','dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
+	cellRemFields = cellAlwaysRemFields(cellfun(@(x) any(cellfun(@strcmpi,cellfill(x,size(cellFields)),cellFields)),cellAlwaysRemFields));
 	sStimBlock = rmfield(sStimBlock,cellRemFields);
 	
 	%delete all fields that exist in sStimObject except protected and
