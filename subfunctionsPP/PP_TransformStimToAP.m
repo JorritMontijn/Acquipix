@@ -42,14 +42,14 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 	end
 	
 	%add corrected pupil times
-	if isfield(sStimBlock,'vecStimOnsetCorrections') && isfield(sStimBlock,'vecStimOnTime')
-		sStimBlock.vecPupilStimOn = sStimBlock.vecStimOnTime + sStimBlock.vecStimOnsetCorrections;
-		sStimBlock.vecPupilStimOff = sStimBlock.vecStimOffTime + sStimBlock.vecStimOnsetCorrections;
+	if isfield(sStimBlock,'vecPupilOnsetCorrections') && isfield(sStimBlock,'vecStimOnTime')
+		sStimBlock.vecPupilStimOn = sStimBlock.vecStimOnTime + sStimBlock.vecPupilOnsetCorrections;
+		sStimBlock.vecPupilStimOff = sStimBlock.vecStimOffTime + sStimBlock.vecPupilOnsetCorrections;
 	end
 	
 	%always remove these fields
 	cellFields = fieldnames(sStimBlock);
-	cellAlwaysRemFields = {'vecStimOnsetCorrections','vecPupilStimOnFrame','vecPupilStimOffFrame','vecPupilStimOnTime','vecPupilStimOffTime','dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
+	cellAlwaysRemFields = {'vecPupilOnsetCorrections','vecPupilStimOnFrame','vecPupilStimOffFrame','vecPupilStimOnTime','vecPupilStimOffTime','dblSecsBlankAtStart','dblSecsBlankPre','dblSecsStimDur','dblSecsBlankPost','dblSecsBlankAtEnd'};
 	cellRemFields = cellAlwaysRemFields(cellfun(@(x) any(cellfun(@strcmpi,cellfill(x,size(cellFields)),cellFields)),cellAlwaysRemFields));
 	sStimBlock = rmfield(sStimBlock,cellRemFields);
 	

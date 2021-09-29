@@ -232,7 +232,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif ~isempty(vecStimOnScreenPD) %backup sync
-			warning([mfilename ':NoTimestampsNiqd'],'No NI timestamps were found in the stimulus log; attempting back-up synchronization procedure...');
+			warning([mfilename ':NoTimestampsNidq'],'No NI timestamps were found in the stimulus log; attempting back-up synchronization procedure...');
 			cellStim{intLogFile}.structEP.strSyncType = 'Bad: only onset pulses';
 			
 			%approximate timings
@@ -335,6 +335,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			sPupil = [];
 			continue;
 		end
+		
 		%get NI timestamp sync data
 		matSyncData = sPupil.sSyncData.matSyncData;
 		matSyncData(:,any(isnan(matSyncData),1)) = [];
@@ -365,24 +366,24 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		if vecReferenceT(round(numel(vecReferenceT)/3)) < vecNoisyHighResT(1) ...
 				|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end)
 			%insufficient overlap
-			vecOnsetCorrections = zeros(size(vecStimOnTime));
+			vecPupilOnsetCorrections = zeros(size(vecStimOnTime));
 			strTitle = 'Insufficient overlap';
 		else
 			%correct times with LED
 			dblOffsetT = -median(diff(vecStimOnTime))/4;
 			[vecRefT,matTracePerTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,sPupil.vecPupilSyncLum,vecStimOnTime+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))-dblOffsetT);
 			vecRefT = vecRefT+dblOffsetT;
-			vecOnsetCorrections = size(matTracePerTrial,1);
+			vecPupilOnsetCorrections = size(matTracePerTrial,1);
 			for intT=1:size(matTracePerTrial,1)
 				[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(matTracePerTrial(intT,:),vecRefT);
-				vecOnsetCorrections(intT) = dblOnset;
+				vecPupilOnsetCorrections(intT) = dblOnset;
 			end
 			strTitle = 'Refined /w pulses';
 			
 			%add to structure
-			cellStim{intLogFile}.structEP.vecStimOnsetCorrections = vecOnsetCorrections;
+			cellStim{intLogFile}.structEP.vecPupilOnsetCorrections = vecPupilOnsetCorrections;
 		end
-			
+		
 		%% plot output
 		hFig=figure;
 		subplot(2,3,1)
@@ -416,7 +417,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		plot(sPupil.vecPupilTimeFixed,vecFiltSyncLum./std(vecFiltSyncLum));
 		scatter(vecNoisyHighResT-dblT0_NI,1.05*ones(size(vecNoisyHighResT)),'kx');
 		scatter(vecStimOnTime,1.1*ones(size(vecReferenceT)),'rx');
-		scatter(vecStimOnTime+vecOnsetCorrections,1.15*ones(size(vecStimOnTime)),'bx');
+		scatter(vecStimOnTime+vecPupilOnsetCorrections,1.15*ones(size(vecStimOnTime)),'bx');
 		hold off
 		xlabel('Time after T0 (s)');
 		ylabel('Screen signal (smoothed)');
@@ -438,7 +439,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		export_fig(strFileSyncMetrics2);
 		%pause(0.1);
 		%close(hFig);
-		
 	end
 	
 	%% load clustered data into matlab using https://github.com/cortex-lab/spikes
