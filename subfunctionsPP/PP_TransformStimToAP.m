@@ -35,7 +35,7 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 		%remove
 		sStimBlock = rmfield(sStimBlock,cellRemFields);
 		%rename field if not identical to preferred name
-		if ~strcmp(cellVarPrefOrder{1},strKeepField)
+		if ~strcmp(cellVarPrefOrder{1},strKeepField) && ~isempty(strKeepField)
 			sStimBlock.(cellVarPrefOrder{1}) = sStimBlock.(strKeepField);
 			sStimBlock = rmfield(sStimBlock,strKeepField);
 		end

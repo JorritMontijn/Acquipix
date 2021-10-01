@@ -103,6 +103,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%% save json
 	%save json file
 	strJsonData = jsonencode(sJson);
+	strJsonData = strrep(strJsonData,'\','/'); %we're not using escape characters, so just transform everything to forward slashes
 	strJsonFileOut = strrep(strAPFileOut,'_AP.mat','_session.json');
 	strJsonTarget = fullpath(sSynthesis.folder,strJsonFileOut);
 	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
@@ -113,7 +114,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%build AP structure
 	sAP = struct;
 	sAP.cellBlock = cellBlock;
-	if isfield(sSynthData,'sPupil')
+	if isfield(sSynthData,'sPupil') && ~isempty(sSynthData.sPupil)
 		sAP.sPupil = PP_TransformPupilToAP(sSynthData.sPupil);
 	end
 	sAP.sCluster = sCluster;
