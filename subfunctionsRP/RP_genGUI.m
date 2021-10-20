@@ -54,11 +54,11 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	vecLocPanelMP = [10 vecPosGUI(4)-dblPanelHeight-10 vecPosGUI(3)-20 dblPanelHeight];
 	set(sFigRP.ptrPanelPaths,'Position',vecLocPanelMP);
 	
-	vecLocSetPath = [20 dblPanelHeight-30 120 25];
+	vecLocSetPath = [20 dblPanelHeight-dblPH 120 25];
 	for intPathButton=1:intPathNum
 		%get name
 		strPathName = cellPathVarNames{intPathButton};
-		vecLocSetPath = vecLocSetPath + [0 -30 0 0];
+		vecLocSetPath = vecLocSetPath + [0 -dblPH 0 0];
 		%button
 		strOutFieldButton = sprintf('ptrButtonSet%s',strPathName);
 		sFigRP.(strOutFieldButton) = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',11,...
@@ -76,7 +76,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	%%
 	%%{
 	%variables button
-	vecLocVariablesButton = [vecLocSetPath(1) vecLocSetPath(2)-30 120 25];
+	vecLocVariablesButton = [vecLocSetPath(1) vecLocSetPath(2)-dblPH 120 25];
 	sFigRP.ptrButtonEditVariables = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',11,...
 		'String','Edit variables',...
 		'Position',vecLocVariablesButton,...
@@ -124,6 +124,16 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 			'You can still run phy without this check, but then you will only be able to access the most recently clustered recording.']));
 	sFigRP.ptrCheckTempWh.Value = sRP.intPermaSaveOfTempWh;
 	
+	%make optional button that opens FYD GUI
+	if exist('getFYD.m','file')
+		%switch to save temp data to permanent folder
+		vecLocFydButton = [vecLocCheckTempWh(1) vecLocCheckTempWh(2)+dblPH 80 25];
+		sFigRP.ptrButtonFyd = uicontrol(sFigRP.ptrPanelPaths,'Style','pushbutton','FontSize',11,...
+			'String','Start FYD',...
+			'Position',vecLocFydButton,...
+			sFigRP.strTooltipField,'Launch the FYD GUI by Chris van der Togt to register new experiments in the database',...
+			'Callback',@(varargin) getFYD());
+	end
 	
 	%% actions
 	%set tracking parameters
