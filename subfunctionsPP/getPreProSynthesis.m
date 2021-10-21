@@ -51,17 +51,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	% get recording configuration variables
 	sMetaVar = sRP.sMetaVar;
 	sNiCh = PP_GetNiCh(sMetaVar,sMetaNI);
-	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh)
+	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh) && ~ isnan(sNiCh.intStimOnsetCh)
 		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
 	else
 		intStimOnsetCh = [];
 	end
-	if isfield(sNiCh,'intSyncPulseCh') && ~isempty(sNiCh.intSyncPulseCh)
+	if isfield(sNiCh,'intSyncPulseCh') && ~isempty(sNiCh.intSyncPulseCh) && ~ isnan(sNiCh.intSyncPulseCh)
 		intSyncPulseCh = sNiCh.intSyncPulseCh; %screen diode channel
 	else
 		intSyncPulseCh = [];
 	end
-	
+
 	% Get NI data
 	%fprintf('   Loading raw data ... [%s]\n',getTime);
 	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strrep(strFileNidq,'.meta','.bin'), strPathNidq); %1=PD,2=sync pulse
