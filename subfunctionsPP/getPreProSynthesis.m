@@ -345,6 +345,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		if isempty(sPupil.sSyncData)
 			%generate artificial clock times
 			[dblStartStimT,dblUserStartT,dblFinalStimT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,sPupil.vecPupilTime,intLogFile);
+			fprintf('Using %.3fs as start and %.3fs as end for block %d\n',dblStartStimT,dblFinalStimT,intLogFile);
 			matSyncData = nan(4,2);
 			matSyncData(1,:) = [dblStartStimT dblFinalStimT];
 			intT1 = find(sPupil.vecPupilTime>dblStartStimT,1);
