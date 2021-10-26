@@ -220,11 +220,13 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			cellStim{intLogFile}.structEP.strExpType = strStimType;
 		end
 		if isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
+			dblT0_NI = dblT0_NI;
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif isfield(cellStim{intLogFile}.structEP,'vecStimOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.vecStimOnNI))
+			dblT0_NI = dblT0_NI;
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			cellStim{intLogFile}.structEP.ActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI;
 			cellStim{intLogFile}.structEP.ActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
@@ -232,6 +234,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif ~isempty(vecStimOnScreenPD) %backup sync
+			dblT0_NI = 0;
 			warning([mfilename ':NoTimestampsNidq'],'No NI timestamps were found in the stimulus log; attempting back-up synchronization procedure...');
 			cellStim{intLogFile}.structEP.strSyncType = 'Bad: only onset pulses';
 			
@@ -296,17 +299,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		%get ON times
 		if exist('vecStimOnScreenPD','var') && ~isempty(vecStimOnScreenPD)
 			dblMaxErr = 0.1;
-			vecPresStimOnT = vecStimActOnNI - intFirstSample/dblSampRateReportedNI;
+			vecPresStimOnT = vecStimActOnNI - dblT0_NI;
 			vecSignalOnT = vecStimOnScreenPD/dblSampRateReportedNI;
 			[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
 			indReplace = abs(vecDiffOnT) > dblMaxErr;
 			dblMedianErr = median(vecDiffOnT(~indReplace));
 			if isnan(dblMedianErr),dblMedianErr=0;end
-			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - intFirstSample/dblSampRateReportedNI;
+			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - dblT0_NI;
 			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		else
 			dblMedianErr=0;
-			vecStimOnTime = vecStimActOnNI - intFirstSample/dblSampRateReportedNI;
+			vecStimOnTime = vecStimActOnNI - dblT0_NI;
 		end
 		
 		%get OFF times: ON + dur
@@ -330,34 +333,44 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.SampRateNI = dblSampRateReportedNI;
 		
 		%% align eye-tracking data
+		%downsample sync lum
+		vecPupilSyncLum = interp1(vecPupilFullSyncLumT,vecPupilFullSyncLum,sPupil.vecPupilTime);
+		vecFiltSyncLum = interp1(vecPupilFullSyncLumT,vecFiltFullSyncLum,sPupil.vecPupilTime);
+		
 		%if no pupil data present, continue
 		if ~exist('sPupil','var') || isempty(sPupil)
 			sPupil = [];
 			continue;
 		end
+		if isempty(sPupil.sSyncData)
+			%generate artificial clock times
+			[dblStartStimT,dblUserStartT,dblFinalStimT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,sPupil.vecPupilTime,intLogFile);
+			matSyncData = nan(4,2);
+			matSyncData(1,:) = [dblStartStimT dblFinalStimT];
+			intT1 = find(sPupil.vecPupilTime>dblStartStimT,1);
+			intT2 = find(sPupil.vecPupilTime>dblFinalStimT,1);
+			matSyncData(2,:) = [sPupil.vecPupilVidFrame(intT1) sPupil.vecPupilVidFrame(intT2)];
+			matSyncData(3,:) = [vecStimActOnNI(1) vecStimActOnNI(end)];
+		else
+			%get NI timestamp sync data
+			matSyncData = sPupil.sSyncData.matSyncData;
+			matSyncData(:,any(isnan(matSyncData),1)) = [];
+		end
 		
-		%get NI timestamp sync data
-		matSyncData = sPupil.sSyncData.matSyncData;
-		matSyncData(:,any(isnan(matSyncData),1)) = [];
+		%retrieve data
 		vecTimeVid = matSyncData(1,:); %video time in secs since recording start (t0~=0)
 		vecFrameVid = matSyncData(2,:); %video frame # since video start (t0=0)
 		vecTimeNI = matSyncData(3,:); %ni time in secs; corresponds to stim times
-		vecFrameNI = matSyncData(4,:); %ni sample #
-		dblVidT0 = vecTimeVid(1);
 		
 		%interpolate to NI-based time
 		vecPupilTimeNI = interp1(vecFrameVid,vecTimeNI,sPupil.vecPupilVidFrame,'linear','extrap');
 		sPupil.vecPupilTimeNI = vecPupilTimeNI;
-		sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - intFirstSample/dblSampRateReportedNI;
+		sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - dblT0_NI;
 		
 		%% use LED
+		hFig=figure;
 		%transform onset signals to ni time
 		vecPupilSignalOnNI = interp1(vecFrameVid,vecTimeNI,vecPupilSyncOn,'linear','extrap');
-		vecPupilSignalOnTime = vecPupilSignalOnNI - intFirstSample/dblSampRateReportedNI;
-		
-		%downsample sync lum
-		vecPupilSyncLum = interp1(vecPupilFullSyncLumT,vecPupilFullSyncLum,sPupil.vecPupilTime);
-		vecFiltSyncLum = interp1(vecPupilFullSyncLumT,vecFiltFullSyncLum,sPupil.vecPupilTime);
 		
 		%rename & align
 		vecReferenceT = vecStimActOnNI;
@@ -371,21 +384,29 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		else
 			%correct times with LED
 			dblOffsetT = -median(diff(vecStimOnTime))/4;
-			[vecRefT,matTracePerTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,sPupil.vecPupilSyncLum,vecStimOnTime+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))-dblOffsetT);
-			vecRefT = vecRefT+dblOffsetT;
-			vecPupilOnsetCorrections = size(matTracePerTrial,1);
-			for intT=1:size(matTracePerTrial,1)
-				[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(matTracePerTrial(intT,:),vecRefT);
-				vecPupilOnsetCorrections(intT) = dblOnset;
+			intTrials = numel(vecStimOnTime);
+			vecPupilOnsetCorrections = nan(1,intTrials);
+			dblOnset = 0;
+			subplot(2,3,3);hold on
+			for intT=1:intTrials
+				[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))-dblOffsetT);
+				vecRefT = vecRefT+dblOffsetT;
+				dblPrevOnset = dblOnset;
+				[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(vecTraceInTrial,vecRefT);
+				vecPupilOnsetCorrections(intT) = dblOnset;%+dblPrevOnset;
+				plot(vecRefT,vecTraceInTrial,'color',[1-intT/intTrials 0 intT/intTrials])
 			end
 			strTitle = 'Refined /w pulses';
+			hold off
+			fixfig;
+			xlabel('Time after onset (s)');
+			ylabel('Sync signal (a.u.)')
 			
 			%add to structure
 			cellStim{intLogFile}.structEP.vecPupilOnsetCorrections = vecPupilOnsetCorrections;
 		end
 		
 		%% plot output
-		hFig=figure;
 		subplot(2,3,1)
 		hold on
 		plot(vecPupilTimeNI,vecPupilSyncLum - mean(vecPupilSyncLum));
@@ -412,16 +433,15 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecLimX = [min([get(gca,'xlim') 0]) max(get(gca,'xlim'))];
 		xlim(vecLimX);
 		
-		subplot(2,3,3)
+		subplot(2,3,[4 5 6])
 		hold on
 		plot(sPupil.vecPupilTimeFixed,vecFiltSyncLum./std(vecFiltSyncLum));
-		scatter(vecNoisyHighResT-dblT0_NI,1.05*ones(size(vecNoisyHighResT)),'kx');
 		scatter(vecStimOnTime,1.1*ones(size(vecReferenceT)),'rx');
-		scatter(vecStimOnTime+vecPupilOnsetCorrections,1.15*ones(size(vecStimOnTime)),'bx');
+		scatter(vecStimOnTime+vecPupilOnsetCorrections,1.2*ones(size(vecStimOnTime)),'bx');
 		hold off
 		xlabel('Time after T0 (s)');
 		ylabel('Screen signal (smoothed)');
-		title('Black=Pulses, red=NI, blue=synthesis');
+		title('Red=NI, blue=synthesis');
 		drawnow;fixfig(gca);
 		xlim(vecLimX);
 		maxfig;drawnow;

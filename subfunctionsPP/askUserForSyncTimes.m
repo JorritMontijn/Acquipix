@@ -1,10 +1,10 @@
-function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
+function [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
 	%askUserForSyncTimes Request user input to synchronize on/offsets
-	%   [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
+	%   [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
 	
 	%filter to 0.1-30Hz
 	dblSampRatePupil = 1/median(diff(vecPupilTime));
-	vecWindow2 = [0.5./(dblSampRatePupil./2) 0.99]
+	vecWindow2 = [0.5./(dblSampRatePupil./2) 0.99];
 	[fb,fa] = butter(2,vecWindow2,'bandpass');
 	vecFiltSyncLum = filtfilt(fb,fa, double(vecPupilSyncLum));
 	boolPupilSync = vecFiltSyncLum>(std(vecFiltSyncLum)/3);
@@ -12,7 +12,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	figure
 	subplot(2,1,1)
 	hold on
-	plot(vecPupilTime,vecPupilSyncLum - mean(vecPupilSyncLum));
+	plot(vecPupilTime,zscore(vecPupilSyncLum));
 	plot(vecPupilTime,boolPupilSync);
 	hold off
 	xlabel('Time (s)');
@@ -33,7 +33,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	dblUserStartT = [];
 	while isempty(dblUserStartT)
 		dblUserStartT = input(sprintf('\nPlease enter a time point during the final blanking prior to start of stim1 for stimulation block %d (s):\n',intBlock));
-		intStartT = round(dblUserStartT*dblSampRatePupil);
+		intStartT = find(vecPupilTime > dblUserStartT,1);
 		if ~isempty(intStartT) && (boolPupilSync(intStartT) == 1)
 			dblUserStartT = [];
 			
@@ -55,15 +55,15 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 	%find first onset
 	boolPupilSync(1:intStartT) = 0;
 	intStartHiDef = find(boolPupilSync==1,1);
-	dblStartHiDefT = intStartHiDef/dblSampRatePupil;
+	dblStartHiDefT = vecPupilTime(intStartHiDef);
 	if nargout > 2
 		%ask when the stimuli stop
-		dblUserStopT = [];
-		while isempty(dblUserStopT)
-			dblUserStopT = input(sprintf('\nPlease enter a time point during the final stimulus presentation for stimulation block %d (s):\n',intBlock));
-			intStopT = round(dblUserStopT*dblSampRatePupil);
-			if ~isempty(intStopT) && (boolPupilSync(intStopT) == 0)
-				dblUserStopT = [];
+		dblUserFinalT = [];
+		while isempty(dblUserFinalT)
+			dblUserFinalT = input(sprintf('\nPlease enter a time point during the final blanking prior to start of the final stimulus presentation for stimulation block %d (s):\n',intBlock));
+			intStopT = round(dblUserFinalT*dblSampRatePupil);
+			if ~isempty(intStopT) && (boolPupilSync(intStopT) == 1)
+				dblUserFinalT = [];
 				
 				%print message
 				ptrDialog = dialog('Name','Wrong selection','Position',[400 500 300 100]);
@@ -71,7 +71,7 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 					'Style','text',...
 					'FontSize',10,...
 					'Position',[10 0 280 90],...
-					'String',sprintf('The selected timepoint is not during a stimulus!\n        (You selected t=%f)',dblUserStopT));
+					'String',sprintf('The selected timepoint is not during a blank!\n        (You selected t=%f)',dblUserFinalT));
 				ptrButton = uicontrol('Parent',ptrDialog,...
 					'Position',[75 10 150 25],...
 					'FontSize',10,...
@@ -79,12 +79,12 @@ function [dblStartHiDefT,dblUserStartT,dblStopHiDefT,dblUserStopT] = askUserForS
 					'Callback','delete(gcf)');
 			end
 		end
-		intStopT = round(dblUserStopT*dblSampRatePupil);
+		intFinalUserT = find(vecPupilTime > dblUserFinalT,1);
 		%find last offset
-		boolPupilSyncOff = boolPupilSync;
-		boolPupilSyncOff(1:intStopT) = 1;
-		intStopHiDef = find(boolPupilSyncOff==0,1);
-		dblStopHiDefT = intStopHiDef/dblSampRatePupil;
+		boolPupilSyncLast = boolPupilSync;
+		boolPupilSyncLast(1:intFinalUserT) = 0;
+		intFinalHiDef = find(boolPupilSyncLast==1,1);
+		dblFinalStartHiDefT = vecPupilTime(intFinalHiDef);
 	end
 	close;
 end
