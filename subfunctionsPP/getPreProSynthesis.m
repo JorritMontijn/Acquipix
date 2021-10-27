@@ -333,15 +333,16 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.SampRateNI = dblSampRateReportedNI;
 		
 		%% align eye-tracking data
-		%downsample sync lum
-		vecPupilSyncLum = interp1(vecPupilFullSyncLumT,vecPupilFullSyncLum,sPupil.vecPupilTime);
-		vecFiltSyncLum = interp1(vecPupilFullSyncLumT,vecFiltFullSyncLum,sPupil.vecPupilTime);
-		
 		%if no pupil data present, continue
 		if ~exist('sPupil','var') || isempty(sPupil)
 			sPupil = [];
 			continue;
 		end
+		
+		%downsample sync lum
+		vecPupilSyncLum = interp1(vecPupilFullSyncLumT,vecPupilFullSyncLum,sPupil.vecPupilTime);
+		vecFiltSyncLum = interp1(vecPupilFullSyncLumT,vecFiltFullSyncLum,sPupil.vecPupilTime);
+		
 		if isempty(sPupil.sSyncData)
 			%generate artificial clock times
 			[dblStartStimT,dblUserStartT,dblFinalStimT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,sPupil.vecPupilTime,intLogFile);
@@ -369,7 +370,6 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - dblT0_NI;
 		
 		%% use LED
-		hFig=figure;
 		%transform onset signals to ni time
 		vecPupilSignalOnNI = interp1(vecFrameVid,vecTimeNI,vecPupilSyncOn,'linear','extrap');
 		
@@ -384,30 +384,23 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			strTitle = 'Insufficient overlap';
 		else
 			%correct times with LED
-			dblOffsetT = -0.33;
+			dblOffsetT = -0.05;
 			intTrials = numel(vecStimOnTime);
 			vecPupilOnsetCorrections = nan(1,intTrials);
-			dblOnset = 0;
-			subplot(2,3,3);hold on
 			for intT=1:intTrials
 				[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))+dblOffsetT);
 				vecRefT = vecRefT+dblOffsetT;
-				dblPrevOnset = dblOnset;
 				[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(vecTraceInTrial,vecRefT);
 				vecPupilOnsetCorrections(intT) = dblOnset;%+dblPrevOnset;
-				plot(vecRefT-dblOnset,vecTraceInTrial,'color',[1-intT/intTrials 0 intT/intTrials])
 			end
 			strTitle = 'Refined /w pulses';
-			hold off
-			fixfig;
-			xlabel('Time after onset (s)');
-			ylabel('Sync signal (a.u.)')
 			
 			%add to structure
 			cellStim{intLogFile}.structEP.vecPupilOnsetCorrections = vecPupilOnsetCorrections;
 		end
 		
 		%% plot output
+		hFig=figure;
 		subplot(2,3,1)
 		hold on
 		plot(vecPupilTimeNI,vecPupilSyncLum - mean(vecPupilSyncLum));
@@ -434,6 +427,15 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecLimX = [min([get(gca,'xlim') 0]) max(get(gca,'xlim'))];
 		xlim(vecLimX);
 		
+		h=subplot(2,3,3);hold on
+		h.ColorOrder = redbluepurple(numel(vecStimOnTime));
+		[vecRefT,matTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecStimOnTime+vecPupilOnsetCorrections-0.5,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime)));
+		plot(vecRefT-0.5,matTraceInTrial);
+		hold off
+		fixfig;
+		xlabel('Time after onset (s)');
+		ylabel('Sync signal (a.u.)')
+			
 		subplot(2,3,[4 5 6])
 		hold on
 		plot(sPupil.vecPupilTimeFixed,vecFiltSyncLum./std(vecFiltSyncLum));
