@@ -374,8 +374,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecPupilSignalOnNI = interp1(vecFrameVid,vecTimeNI,vecPupilSyncOn,'linear','extrap');
 		
 		%rename & align
-		vecReferenceT = vecStimActOnNI;
-		vecNoisyHighResT = vecPupilSignalOnNI;
+		vecReferenceT = vecStimOnTime;
+		vecNoisyHighResT = vecPupilSignalOnNI - dblMedianErr - dblT0_NI;
 		%check if pupil time overlaps NI time
 		if vecReferenceT(round(numel(vecReferenceT)/3)) < vecNoisyHighResT(1) ...
 				|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end)
