@@ -11,62 +11,62 @@ function rez = PP_ClusterKilosort3(ops,strDataOutputDir,sWaitbar)
 	
 	%% this block runs all the steps of the algorithm
 	% find the binary file
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Preprocessing...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rez                = preprocessDataSub(ops);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Datashift2...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rez                = datashift2(rez, 1);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Extract spikes...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	[rez, st3, tF]     = extract_spikes(rez);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Template learning...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rez                = template_learning(rez, tF, st3);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Track and sort...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	[rez, st3, tF]     = trackAndSort(rez);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Final clustering...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rez                = final_clustering(rez, tF, st3);
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Find merges...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rez                = find_merges(rez, 1);
 	
 	%check if we want to save temp_wh.dat
 	if ops.intPermaSaveOfTempWh == 1
-		if ~isempty(ptrWaitbarHandle)
+		try
 			strStep = 'Copying temp_wh.dat...';
 			intStep = intStep + 0.5;
 			waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-		end
+		catch;end
 		
 		%copy temp_wh
 		[strPath,strFile,strExt]=fileparts(rez.ops.fproc);
@@ -80,11 +80,11 @@ function rez = PP_ClusterKilosort3(ops,strDataOutputDir,sWaitbar)
 		end
 	end
 	
-	if ~isempty(ptrWaitbarHandle)
+	try
 		strStep = 'Exporting to phy...';
 		intStep = intStep + 1;
 		waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	end
+	catch;end
 	rezToPhy2(rez, strDataOutputDir);
 	
 end
