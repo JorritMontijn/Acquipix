@@ -17,6 +17,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sSynthesis = sFile.sSynthesis;
 	sLoad = load(fullpath(sSynthesis.folder,sSynthesis.name));
 	sSynthData = sLoad.sSynthData;
+	sMetaVar = sRP.sMetaVar;
 	
 	%get probe location
 	sProbeCoords = sFile.sProbeCoords;
@@ -91,6 +92,15 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	end
 	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
 	sJson.file_preproAP = strAPFileTarget;
+	
+	%overwrite data with current metavars
+	cellFields = fieldnames(sJson);
+	for intField=1:numel(cellFields)
+		strField = cellFields{intField};
+		if isfield(sMetaVar,strField)
+			sJson.(strField) = sMetaVar.(strField);
+		end
+	end
 	
 	%% prune cellStim and move originals to sSources
 	cellBlock = sSynthData.cellStim;
