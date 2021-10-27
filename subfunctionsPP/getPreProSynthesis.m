@@ -384,18 +384,18 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			strTitle = 'Insufficient overlap';
 		else
 			%correct times with LED
-			dblOffsetT = -median(diff(vecStimOnTime))/4;
+			dblOffsetT = -0.33;
 			intTrials = numel(vecStimOnTime);
 			vecPupilOnsetCorrections = nan(1,intTrials);
 			dblOnset = 0;
 			subplot(2,3,3);hold on
 			for intT=1:intTrials
-				[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))-dblOffsetT);
+				[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))+dblOffsetT);
 				vecRefT = vecRefT+dblOffsetT;
 				dblPrevOnset = dblOnset;
 				[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(vecTraceInTrial,vecRefT);
 				vecPupilOnsetCorrections(intT) = dblOnset;%+dblPrevOnset;
-				plot(vecRefT,vecTraceInTrial,'color',[1-intT/intTrials 0 intT/intTrials])
+				plot(vecRefT-dblOnset,vecTraceInTrial,'color',[1-intT/intTrials 0 intT/intTrials])
 			end
 			strTitle = 'Refined /w pulses';
 			hold off
