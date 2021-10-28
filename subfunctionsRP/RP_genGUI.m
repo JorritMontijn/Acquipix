@@ -106,6 +106,8 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	[dblV,strKilosortPath] = RP_AssertKilosort();
 	if dblV > 0
 		strSorter = ['Kilosort' num2str(dblV)];
+	else
+		strSorter = 'None detected';
 	end
 	sFigRP.ptrStaticTextSorter = uicontrol(sFigRP.ptrPanelPaths,'Style','text','FontSize',10,...
 		'String','Spike sorter:',...
