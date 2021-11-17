@@ -73,7 +73,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end
 	
 	%build output name & check if it exists
-	if numel(sJson.subject) > 5 && strcmp(sJson.subject(1:5),'RecMA'),sJson.subject=strrep(sJson.subject,'RecMA','MA');end
+	if numel(sJson.subject) > 3 && strcmp(sJson.subject(1:3),'Rec'),sJson.subject=sJson.subject(4:end);end
 	strSubject = sJson.subject;
 	strRecDate = sJson.date;
 	strRecording = sJson.recording;

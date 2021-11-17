@@ -26,16 +26,16 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 	
 	%get areas
 	pixel_space = 5;
-	probe_areas = interp3(single(sGUI.av(1:pixel_space:end,1:pixel_space:end,1:pixel_space:end)), ...
+	probe_area_ids = interp3(single(sGUI.av(1:pixel_space:end,1:pixel_space:end,1:pixel_space:end)), ...
 		round(probe_zcoords/pixel_space),round(probe_xcoords/pixel_space),round(probe_ycoords/pixel_space),'nearest')';
-	probe_areas(isnan(probe_areas))=1;
-	probe_area_boundaries = intersect(unique([find(~isnan(probe_areas),1,'first'); ...
-		find(diff(probe_areas) ~= 0);find(~isnan(probe_areas),1,'last')]),find(~isnan(probe_areas)));
+	probe_area_ids(isnan(probe_area_ids))=1;
+	probe_area_boundaries = intersect(unique([find(~isnan(probe_area_ids),1,'first'); ...
+		find(diff(probe_area_ids) ~= 0);find(~isnan(probe_area_ids),1,'last')]),find(~isnan(probe_area_ids)));
 	probe_area_centers = probe_area_boundaries(1:end-1) + diff(probe_area_boundaries)/2;
-	probe_area_labels = sGUI.st.acronym(probe_areas(round(probe_area_centers)));
+	probe_area_labels = sGUI.st.acronym(probe_area_ids(round(probe_area_centers)));
 	
 	%get parent structure
-	[a,probe_areas_parent]=ismember(sGUI.st.parent_structure_id(probe_areas),sGUI.st.id);
+	[a,probe_areas_parent]=ismember(sGUI.st.parent_structure_id(probe_area_ids),sGUI.st.id);
 	probe_areas_parent(isnan(probe_areas_parent) | probe_areas_parent==0)=1;
 	probe_area_boundaries_parent = intersect(unique([find(~isnan(probe_areas_parent),1,'first'); ...
 		find(diff(probe_areas_parent) ~= 0);find(~isnan(probe_areas_parent),1,'last')]),find(~isnan(probe_areas_parent)));
@@ -61,15 +61,15 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 	
 	% Update the probe areas
 	yyaxis(sGUI.handles.axes_probe_areas,'right');
-	set(sGUI.handles.probe_areas_plot,'YData',[1:length(probe_areas)]*10,'CData',probe_areas);
+	set(sGUI.handles.probe_areas_plot,'YData',[1:length(probe_area_ids)]*10,'CData',probe_area_ids);
 	set(sGUI.handles.axes_probe_areas,'YTick',probe_area_centers*10,'YTickLabels',probe_area_labels);
 	yyaxis(sGUI.handles.axes_probe_areas2,'right');
-	set(sGUI.handles.probe_areas_plot2,'YData',[1:length(probe_areas)]*10,'CData',probe_areas);
+	set(sGUI.handles.probe_areas_plot2,'YData',[1:length(probe_area_ids)]*10,'CData',probe_area_ids);
 	set(sGUI.handles.axes_probe_areas2,'YTick',probe_area_centers*10,'YTickLabels',probe_area_labels);
 	
 	%save current data
 	sGUI.output.probe_vector = probe_vector;
-	sGUI.output.probe_areas = probe_areas;
+	sGUI.output.probe_areas = probe_area_ids;
 	sGUI.output.probe_areas_parent = probe_areas_parent;
 	sGUI.output.probe_intersect = trajectory_brain_intersect;
 	

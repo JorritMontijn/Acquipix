@@ -1,7 +1,8 @@
-function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath,strName)
+function [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath,strName)
 	
 	%% pre-allocate output
 	cellPoints = [];
+	sProbeCoords = [];
 	if ~exist('strName','var') || isempty(strName)
 		strPrompt = 'Select probe coordinate file';
 	else
@@ -22,7 +23,10 @@ function [cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath,strName
 	
 	%% load
 	sLoad = load(fullpath(strPath,strFile));
-	if isfield(sLoad,'probe_ccf') && isstruct(sLoad.probe_ccf) && isfield(sLoad.probe_ccf,'points')
+	if isfield(sLoad,'sProbeCoords') && isstruct(sLoad.sProbeCoords)
+		cellPoints = sLoad.sProbeCoords.cellPoints;
+		sProbeCoords = sLoad.sProbeCoords;
+	elseif isfield(sLoad,'probe_ccf') && isstruct(sLoad.probe_ccf) && isfield(sLoad.probe_ccf,'points')
 		%AP_histology
 		cellPoints = {sLoad.probe_ccf.points};
 	elseif isfield(sLoad,'pointList') && isstruct(sLoad.pointList) && isfield(sLoad.pointList,'pointList')

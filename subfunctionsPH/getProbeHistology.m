@@ -15,12 +15,23 @@ end
 
 %load coords file
 strDefaultPath = sRP.strProbeLocPath;
-[cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath);
+[cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath);
 if isempty(cellPoints),return;end
 [strDir,strName,strExt]= fileparts(strFile);
 
+%generate dummy sFile with minimal information
+sFile = struct;
+
 %select probe nr
-intProbeIdx = PH_SelectProbeNr(cellPoints,strFile,tv,av,st);
+if isempty(sProbeCoords)
+	intProbeIdx = PH_SelectProbeNr(cellPoints,strFile,tv,av,st);
+	sFile.sProbeCoords.folder = strPath;
+	sFile.sProbeCoords.name = [strName '_Adjusted.mat'];
+	sFile.sProbeCoords.cellPoints = cellPoints;
+	sFile.sProbeCoords.intProbeIdx = intProbeIdx;
+else
+	sFile.sProbeCoords = sProbeCoords;
+end
 
 %ask for path
 %select file
@@ -36,13 +47,6 @@ cd(strOldPath);
 if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
 	return;
 end
-
-%generate dummy sFile with minimal information
-sFile = struct;
-sFile.sProbeCoords.folder = strPath;
-sFile.sProbeCoords.name = [strName '_Adjusted.mat'];
-sFile.sProbeCoords.cellPoints = cellPoints;
-sFile.sProbeCoords.intProbeIdx = intProbeIdx;
 sFile.sClustered.folder = strEphysPath;
 
 %% plot grid

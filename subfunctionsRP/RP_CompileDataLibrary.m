@@ -59,10 +59,20 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		%% ap
 		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
 		sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strApFile));
+		if isempty(sEphysAp)
+			sMetaAP = [];
+		else
+			sMetaAP = DP_ReadMeta(sEphysAp(1).name, sEphysAp(1).folder);
+		end
 		
 		%% lf
 		strLfFile = strrep(strNidqFile,'nidq','imec*.lf');
 		sEphysLf = dir(fullfile(sRP.strEphysPath, '**',strLfFile));
+		if isempty(sEphysLf)
+			sMetaLF = [];
+		else
+			sMetaLF = DP_ReadMeta(sEphysLf(1).name, sEphysLf(1).folder);
+		end
 		
 		%% processed kilosort data
 		sClustered = dir(strcat(strNidqPath,sRP.strEphysFindClustered));
@@ -174,6 +184,8 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		sFiles(intFile).sStimFiles = sStimFiles;
 		sFiles(intFile).sPupilFiles = sPupilFiles;
 		sFiles(intFile).sProbeCoords = sProbeCoords;
+		sFiles(intFile).sMetaAP = sMetaAP;
+		sFiles(intFile).sMetaLF = sMetaLF;
 		cellClaimedVidFiles{intFile} = vecClaimedFiles;
 	end
 	sFiles(indDelete) = [];

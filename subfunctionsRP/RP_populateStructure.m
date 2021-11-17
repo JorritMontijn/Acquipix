@@ -1,5 +1,5 @@
 function sRP = RP_populateStructure(sRP)
-	%ET_populateStructure Prepares EyeTracker parameters by loading ini file,
+	%RP_populateStructure Prepares recording processor parameters by loading ini file,
 	%						or creates one with default values
 	
 	%check for ini file
