@@ -44,6 +44,6 @@ function [dblInstalledVersion,strKilosortPath] = RP_AssertKilosort()
 		cellPath = strsplit(strGPU,filesep);
 		strKilosortPath = fullpath(cellPath{1:(end-2)});
 	else
-		strKilosortPath = [];
+		strKilosortPath = '';
 	end
 end
