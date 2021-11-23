@@ -12,7 +12,7 @@ function [dblStimOnNI,dblStimOffNI]=PresentFlyOver(hSGL,ptrWindow,intStimNr,intS
 	%% do stuff
 	x=rand(2000) \ rand(2000);
 	%Screen('FillRect',ptrWindow, sStimParams.intBackground);
-
+	
 	%% get NI offset timestamp
 	if ~isempty(hSGL)
 		dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;

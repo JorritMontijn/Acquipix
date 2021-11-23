@@ -58,11 +58,20 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		
 		%% ap
 		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
-		sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strApFile));
+		strTcatApFile = strrep(strApFile,'t0','tcat');
+		sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strTcatApFile));
 		if isempty(sEphysAp)
-			sMetaAP = [];
+			sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strApFile));
+			if isempty(sEphysAp)
+				sMetaAP = [];
+			else
+				sMetaAP = DP_ReadMeta(sEphysAp(1).name, sEphysAp(1).folder);
+				sMetaAP.IsTcat = false;
+			end
 		else
+			% take tcat
 			sMetaAP = DP_ReadMeta(sEphysAp(1).name, sEphysAp(1).folder);
+			sMetaAP.IsTcat = true;
 		end
 		
 		%% lf

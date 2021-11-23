@@ -207,9 +207,15 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		
 		%sFiles(intFile).sEphysAp = sEphysAp;
 		if isfield(sFiles(intFile),'sEphysAp') && ~isempty(sFiles(intFile).sEphysAp)
-			strText = 'Y';
-			vecColor = [0 0.8 0];
-			strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name];
+			if isfield(sFiles(intFile),'sMetaAP') && isfield(sFiles(intFile).sMetaAP,'IsTcat') && sFiles(intFile).sMetaAP.IsTcat
+				strText = 'Y';
+				vecColor = [0 0 0.8];
+				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name];
+			else
+				strText = 'Y';
+				vecColor = [0 0.8 0];
+				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name];
+			end
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -219,6 +225,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		sPointers(intFile).AP = uicontrol(ptrPanelChild,'style','text',...
 			'Position',vecLoc,'String',strText,'HorizontalAlignment','Left','ForegroundColor',vecColor,'FontSize',10,strTooltipField,strTip);
 		dblLastX = vecLoc(1) + vecLoc(3);
+		
 		%sFiles(intFile).sEphysLf = sEphysLf;
 		if isfield(sFiles(intFile),'sEphysLf') && ~isempty(sFiles(intFile).sEphysLf)
 			strText = 'Y';
