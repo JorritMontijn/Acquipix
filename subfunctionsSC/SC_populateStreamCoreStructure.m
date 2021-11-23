@@ -12,7 +12,7 @@ function sStream = SC_populateStreamCoreStructure(sStream)
 	sStream.metaData.strChanMapFile = 'neuropixPhase3B2_kilosortChanMap.mat';
 	
 	%metadata
-	sStream.intStimSyncChanNI = 0;
+	sStream.intStimSyncChanNI = 0; %ambiguous name, should change to StimOnset, also in StreamCore
 	sStream.NumChannels = 0;
 	sStream.dblSampFreqIM = 0;
 	sStream.dblSampFreqNI = 0;

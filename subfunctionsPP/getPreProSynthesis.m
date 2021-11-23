@@ -57,7 +57,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		intStimOnsetCh = [];
 	end
 	if isfield(sNiCh,'intSyncPulseCh') && ~isempty(sNiCh.intSyncPulseCh) && ~ isnan(sNiCh.intSyncPulseCh)
-		intSyncPulseCh = sNiCh.intSyncPulseCh; %screen diode channel
+		intSyncPulseCh = sNiCh.intSyncPulseCh; %synchronization pulses
 	else
 		intSyncPulseCh = [];
 	end

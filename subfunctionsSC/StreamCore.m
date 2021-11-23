@@ -101,7 +101,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		%crop Fetch
 		intRetrieveSamplesNI = intMaxFetchNI;
 		%send warning
-		feval(f_updateTextInformation,sprintf('<< WARNING >> Requested NIEC Fetch was %.1fs, max query is %.1fs',...
+		feval(f_updateTextInformation,sprintf('<< WARNING >> Requested NI Fetch was %.1fs, max query is %.1fs',...
 			intRetrieveSamplesNI/dblSampFreqNI,intMaxFetchNI/dblSampFreqNI));
 		
 		%crop Fetch
@@ -228,6 +228,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 			return;
 		end
 	end
+	
 	%update IM time
 	dblEphysTimeIM = intCurCountIM/dblSampFreqIM;
 	set(sFig.ptrTextTimeIM,'string',sprintf('%.3f',dblEphysTimeIM));

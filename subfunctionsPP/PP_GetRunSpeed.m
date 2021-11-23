@@ -1,13 +1,12 @@
 function sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
 	%PP_GetRunSpeed Transforms encoder pulses to run speed. Syntax:
-	%   sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
+	%   sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI/dblSampRateNI)
 	%
 	%	input:
-	%	- matImage; [X by Y] image matrix (can be gpuArray)
-	%	- matFilt: [M by N] filter matrix (can be gpuArray)
-	%	- strPadVal: optional (default: 'symmetric'), padding type using padarray.m
+	%	- vecData; running data
+	%	- sMetaNI/dblSampRateNI: metadata structure containing sampling rate, or the sampling rate itself
 	%
-	%	output: structure with the following fields:
+	%	output: sRunSpeed, structure with the following fields:
 	%	- vecOutT; vector with timestamps (t0=0) (in seconds)
 	%	- vecTraversed_m: traversed distance per time step (in meters)
 	%	- vecSpeed_mps: filtered running speed over last 1s (in m/s)
@@ -22,14 +21,18 @@ function sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
 	dblWheelCircumference = 0.534055; %meter; circumference of running wheel
 	dblPulsesPerCircumference = 1024; %pulse # over 2pi for one full rotation
 	dblSampRatePulses = 1000; %sampling frequency of encoder updates
+	if isstruct(sMetaNI)
+		dblSampRateNI =sMetaNI.niSampRate;
+	else
+		dblSampRateNI =sMetaNI;
+	end
 	
 	%% extract discrete voltage levels
-	dblSampRateNi = str2double(sMetaNI.niSampRate);
-	vecT = (1:numel(vecData))/dblSampRateNi;
+	vecT = (1:numel(vecData))/dblSampRateNI;
 	vecRunStep=round((-vecData+dblStaticV)/dblStepV);
 	
 	%% get 1ms-step output
-	dblReduceBy = dblSampRateNi/dblSampRatePulses;
+	dblReduceBy = dblSampRateNI/dblSampRatePulses;
 	vecOutT = (1/dblSampRatePulses):(1/dblSampRatePulses):vecT(end);
 	vecFilt = ones([1 round(dblReduceBy)])/dblReduceBy;
 	try

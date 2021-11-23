@@ -417,8 +417,8 @@ try
 	for intThisTrial = 1:structEP.intTrialNum
 		%% check escape
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
-		%% prep trial
 		
+		%% prep trial
 		%trial start
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
