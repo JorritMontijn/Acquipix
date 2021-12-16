@@ -1,7 +1,7 @@
 function [intPresetsCreated,cellExperiments] = assertPresets()
 	% get target path
 	intPresetsCreated = 0;
-	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim','RunFlash'};
+	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim','RunFlash','RunOptoWhiskerStim'};
 	
 	%% generate data & pre-allocate
 	for intExp=1:numel(cellExperiments)
@@ -84,10 +84,26 @@ function [intPresetsCreated,cellExperiments] = assertPresets()
 				sStimPresets.strExpType = strExp;
 				sStimPresets.dblPrePostWait = 2;%secs
 				sStimPresets.intRepsPerPulse = 5;%count
-				sStimPresets.intTrialNum = 40;%count
+				sStimPresets.intTrialNum = 50;%count
 				sStimPresets.dblPulseWait = 2;%secs, at least ~0.2s
 				sStimPresets.vecPulseITI = 1./[1 2 5 10 20 50];%secs
 				dblPulseDur = 20/1000;%secs
+				sStimPresets.vecPulseDur = dblPulseDur*ones(size(sStimPresets.vecPulseITI));%secs
+				sStimPresets.dblPulseWaitSignal = sStimPresets.dblPulseWait/2;
+				sStimPresets.dblPulseWaitPause = sStimPresets.dblPulseWait - sStimPresets.dblPulseWaitSignal;
+				intPresetIdx = saveStimPreset(sStimPresets,strExp);
+				intPresetsCreated = intPresetsCreated + 1;
+             
+               elseif strcmp(strExp,'RunOptoWhiskerStim')
+				sStimPresets = struct;
+				sStimPresets.strExpType = strExp;
+				sStimPresets.dblPrePostWait = 2;%secs
+				sStimPresets.intRepsPerPulse = 1;%count
+				sStimPresets.intTrialNum = 50;%count
+				sStimPresets.dblPulseWait = 2;%secs, at least ~0.2s
+				sStimPresets.vecPulseITI = 3;%secs
+				dblPulseDur = 20/1000;%secs
+                sStimPresets.vecStimDelay = 0:0.005:0.05;
 				sStimPresets.vecPulseDur = dblPulseDur*ones(size(sStimPresets.vecPulseITI));%secs
 				sStimPresets.dblPulseWaitSignal = sStimPresets.dblPulseWait/2;
 				sStimPresets.dblPulseWaitPause = sStimPresets.dblPulseWait - sStimPresets.dblPulseWaitSignal;
