@@ -138,15 +138,15 @@ vecStimOffNI = nan(1,intTrialNum);
 for intTrial=1:intTrialNum
 	%shuffle order of Delays
 	%vecRand = randperm(numel(vecPulseITI));
-	vecRandDelay = randperm(numel(vecStimDelay));
+	vecRandDelay = randperm(numel(dblDelay));
 	%vecShuffITI = vecPulseITI(vecRand); %this is from opto stim protocol, kept for now
 	%vecShuffDur = vecPulseDur(vecRand);
-	vecShuffDelay = vecStimDelay(vecRandDelay);
+	vecShuffDelay = dblDelay(vecRandDelay);
 	Delay_number = numel(vecShuffDelay);
 	vecData1 = logical([]);
 	vecData2 = logical([]);
 	
-	for intPulseType=1:numel(vecShuffDelay)
+	for intDelayType=1:numel(vecShuffDelay)
 		
 		%opto data
 		vecOnePulse1 = cat(1,true(round(vecPulseDur*dblSamplingRate),1),false(round(vecPulseITI*dblSamplingRate),1));
