@@ -1,3 +1,4 @@
+
 %function structMP = RunReceptiveFieldMapping
 %8 seconds per trial
 %8 trial types (max 64 seconds per rep)
@@ -71,8 +72,8 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~strcm
 	sStimParamsSettings.intScreenHeight_pix = vecRect(4) - vecRect(2);
 	
 	%receptive field size&location parameters
-	sStimParamsSettings.dblCheckerSizeX_deg = 7; % width of checker
-	sStimParamsSettings.dblCheckerSizeY_deg = 7; % height of checker
+	sStimParamsSettings.dblCheckerSizeX_deg = 10; % width of checker
+	sStimParamsSettings.dblCheckerSizeY_deg = 10; % height of checker
 	sStimParamsSettings.intOnOffCheckers = 3; %3/6; how many are on/off at any frame? If flicker, this number is doubled
 	
 	%stimulus control variables
