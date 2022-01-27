@@ -7,7 +7,8 @@ function RM_redraw(varargin)
 	global sFig;
 	
 	%% check if data has been loaded
-	if isempty(sRM) || isempty(sFig)
+	try
+		if isempty(sRM) || isempty(sFig)
 		return;
 	end
 	%check if busy
@@ -272,5 +273,8 @@ function RM_redraw(varargin)
 	
 	%unset busy
 	sFig.boolIsDrawing = false;
-	
+	catch ME
+		dispErr(ME);
+		sFig.boolIsDrawing = true;
+	end
 end
