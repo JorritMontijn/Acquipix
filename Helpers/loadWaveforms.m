@@ -41,7 +41,9 @@ function [sAggStim,sAggNeuron] = loadWaveforms(sAggStim,sAggNeuron)
 			end
 		catch
 			%cannot find file, ask user for folder
-			
+			cellDir = strsplit(strPathAP,filesep);
+			strPathKS = uigetdir(strPathKS,sprintf('Select data dir "%s"',cellDir{end}));
+			sSpikes = loadKSdir(strPathKS);
 		end
 		vecAllSpikeClust = sSpikes.clu;
 		vecClustIdx = unique(vecAllSpikeClust);
