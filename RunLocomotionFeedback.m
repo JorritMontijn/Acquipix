@@ -144,9 +144,6 @@ else
 end
 
 %% initialize parallel pool && gpu
-if sStimParamsSettings.intUseParPool > 0 && isempty(gcp('nocreate'))
-	parpool(sStimParamsSettings.intUseParPool * [1 1]);
-end
 if sStimParamsSettings.intUseGPU > 0
 	objGPU = gpuDevice(sStimParamsSettings.intUseGPU);
 end
@@ -188,49 +185,14 @@ end
 
 %% open screen & start experiment
 try
-	%% INITALIZE SCREEN
-	fprintf('Starting PsychToolBox extension...\n');
-	%open window
-	AssertOpenGL;
-	KbName('UnifyKeyNames');
-	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
-	if boolDebug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
-	try
-		Screen('Preference', 'SkipSyncTests', 0);
-		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParamsSettings.intBackground,vecInitRect);
-	catch ME
-		warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
-		Screen('Preference', 'SkipSyncTests', 1);
-		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParamsSettings.intBackground,vecInitRect);
-	end
-	%window variables
-	sStimParamsSettings.ptrWindow = ptrWindow;
-	sStimParamsSettings.vecRect = vecRect;
-	sStimParamsSettings.intScreenWidth_pix = vecRect(3)-vecRect(1);
-	sStimParamsSettings.intScreenHeight_pix = vecRect(4)-vecRect(2);
-	
-	%% MAXIMIZE PRIORITY
-	intOldPriority = 0;
-	if boolDebug == 0
-		intPriorityLevel=MaxPriority(ptrWindow);
-		intOldPriority = Priority(intPriorityLevel);
-	end
-	
-	%% get refresh rate
-	dblStimFrameRate=Screen('FrameRate', ptrWindow);
-	intStimFrameRate = round(dblStimFrameRate);
-	dblStimFrameDur = mean(1/dblStimFrameRate);
-	dblInterFlipInterval = Screen('GetFlipInterval', ptrWindow);
-	if dblStimFrameDur/dblInterFlipInterval > 1.05 || dblStimFrameDur/dblInterFlipInterval < 0.95
-		warning([mfilename ':InconsistentFlipDur'],sprintf('Something iffy with flip speed and monitor refresh rate detected; frame duration is %fs, while flip interval is %fs!',dblStimFrameDur,dblInterFlipInterval));
-	end
-	
 	%% pre-allocate & set parameters
 	%parameters
 	dblStimDur = 1; %you will have to change this to however long one stimulus takes
 	dblRunThreshold = 1;
-	%fixed stufff
-	cellAsyncObjects = [];
+	%fixed stuff
+	sStimParamsSettings.strHostAddress=strHostAddress;
+	mmapSignal = InitMemMap('dataswitch',[0 0]);
+	mmapParams = InitMemMap('sStimParams',sStimParamsSettings);
 	intStimNumber = 0;
 	dblDaqRefillDur = 0.5; %must be less than the stimulus duration, and cannot be less than ~300ms
 	boolMustRefillDaq = false;
@@ -242,6 +204,17 @@ try
 		queueOutputData(objDaqOut,[outputData1 outputData2]);
 		prepare(objDaqOut);
 	end
+	
+	%% wait for other matlab to join memory map
+	fprintf('Preparation complete. Waiting for PTB matlab to join the memory map...\n');
+	while all(mmapSignal.Data == 0)
+		pause(0.1);
+	end
+	
+	%delete stim params data
+	clear mmapParams;
+	mmapParams = InitMemMap('sStimParams',0);
+	clear mmapParams;
 	
 	%% run until escape button is pressed
 	hTic = tic;
@@ -288,7 +261,8 @@ try
 			end
 			
 			%% start stimulus
-			cellAsyncObjects{intStimNumber} = parfeval(@PresentFlyOver,2,hSGL,ptrWindow,intStimNumber,intStimType,sStimParamsSettings);
+			mmapSignal.Data(1) = intStimNumber;
+			mmapSignal.Data(2) = intStimType;
 			
 			%% get approximate timestamp for start
 			if ~isempty(hSGL)
@@ -296,39 +270,31 @@ try
 			else
 				dblApproxStimOnNI = toc(hTic);
 			end
-			
-			%% save temporary object for online analyses
-			try
-				%add timestamps
-				sThisStimObject = struct;
-				sThisStimObject.StimType = sStimParamsSettings.strStimType;
-				sThisStimObject.dblStimOnNI = dblApproxStimOnNI;
-				sThisStimObject.dblStimOffNI = dblApproxStimOnNI+dblStimDur;
-				
-				%save object
-				sObject = sThisStimObject;
-				save(fullfile(strTempDir,['Object',num2str(intStimNumber),'.mat']),'sObject');
-			catch ME
-				warning(ME.identifier,'%s',ME.message);
-			end
 		end
 	end
+	%signal end
+	mmapSignal.Data(1) = -1;
+	mmapSignal.Data(2) = -1;
 	
-	%% read async object timestamps
-	structEP.TrialNumber = [];
-	structEP.ActStimType = [];
-	structEP.ActOnNI = [];
-	structEP.ActOffNI = [];
-	for intStimIdx=1:intStimNumber
-		%retrieve data
-		[dblStimOnNI,dblStimOffNI] = fetchOutputs(cellAsyncObjects{intStimIdx});
-		
-		% save stim-based data
-		structEP.TrialNumber(intStimIdx) = intStimIdx;
-		structEP.ActStimType(intStimIdx) = intStimType;
-		structEP.ActOnNI(intStimIdx) = dblStimOnNI;
-		structEP.ActOffNI(intStimIdx) = dblStimOffNI;
+	%% wait for other matlab to join memory map
+	fprintf('Experiment complete. Waiting for PTB matlab to send data...\n');
+	while ~all(mmapSignal.Data == -2)
+		pause(0.1);
 	end
+	
+	%% retrieve trial data
+	mmapSignal = JoinMemMap('sTrialData');
+	sTrialData = mmapSignal.Data;
+	
+	% save stim-based data
+	structEP.TrialNumber = sTrialData.TrialNumber;
+	structEP.ActStimType = sTrialData.ActStimType;
+	structEP.ActOnNI = sTrialData.ActOnNI;
+	structEP.ActOffNI = sTrialData.ActOffNI;
+	
+	%signal retrieval
+	mmapSignal.Data(1) = -3;
+	mmapSignal.Data(2) = -3;
 	
 	%% save data
 	%save data
@@ -346,13 +312,6 @@ try
 		end
 	end
 	
-	%% close screen
-	Screen('Close',ptrWindow);
-	Screen('CloseAll');
-	ShowCursor;
-	Priority(0);
-	Screen('Preference', 'Verbosity',intOldVerbosity);
-	
 catch ME
 	%% catch me and throw me
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
@@ -361,13 +320,6 @@ catch ME
 	structEP.sStimParams = sStimParamsSettings;
 	if ~exist('sParamsSGL','var'),sParamsSGL=[];end
 	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
-	
-	%% catch me and throw me
-	Screen('Close');
-	Screen('CloseAll');
-	ShowCursor;
-	Priority(0);
-	Screen('Preference', 'Verbosity',intOldVerbosity);
 	
 	%% close Daq IO
 	if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))
