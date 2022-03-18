@@ -4,15 +4,20 @@ function [sTrialData,sStimParams]=RunAsyncStim()
 	boolDebug = true;
 	
 	%% start memory maps
-	mmapSignal = JoinMemMap('dataswitch');
-	
-	%% load stim params
-	mmapParams = JoinMemMap('sStimParams','struct');
-	sStimParams = mmapParams.Data;
-	if ~isstruct(sStimParams) && isscalar(sStimParams) && sStimParams == 0
-		error([mfilename ':DataMapNotInitialized'],'Data transfer failed. Did you start the other matlab first?');
+	try
+		%% data switch
+		mmapSignal = JoinMemMap('dataswitch');
+		
+		%% load stim params
+		mmapParams = JoinMemMap('sStimParams','struct');
+		sStimParams = mmapParams.Data;
+		if ~isstruct(sStimParams) && isscalar(sStimParams) && sStimParams == 0
+			error([mfilename ':DataMapNotInitialized'],'Data transfer failed. Did you start the other matlab first?');
+		end
+		strHostAddress = sStimParams.strHostAddress;
+	catch
+		error([mfilename ':DataMapNotInitialized'],'Memory mapping and/or data transfer failed. Did you start the other matlab first?');
 	end
-	strHostAddress = sStimParams.strHostAddress;
 	
 	%% connect to spikeglx
 	if boolDebug == 1
