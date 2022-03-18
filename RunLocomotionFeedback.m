@@ -88,9 +88,7 @@ else
 	end
 end
 if boolDebug == 1
-	intUseScreen = 0;
-else
-	intUseScreen = sStimParamsSettings.intUseScreen;
+	sStimParamsSettings.intUseScreen = 0;
 end
 
 
@@ -147,9 +145,6 @@ end
 if sStimParamsSettings.intUseGPU > 0
 	objGPU = gpuDevice(sStimParamsSettings.intUseGPU);
 end
-if isempty(gcp('nocreate')) || (gcp('nocreate').NumWorkers < 2)
-	error([mfilename ':ParallelFail'],'This function requires at least two active workers in the parallel pool');
-end
 
 %% initialize NI I/O box
 if boolUseNI
@@ -193,6 +188,7 @@ try
 	sStimParamsSettings.strHostAddress=strHostAddress;
 	mmapSignal = InitMemMap('dataswitch',[0 0]);
 	mmapParams = InitMemMap('sStimParams',sStimParamsSettings);
+	clear mmapParams;
 	intStimNumber = 0;
 	dblDaqRefillDur = 0.5; %must be less than the stimulus duration, and cannot be less than ~300ms
 	boolMustRefillDaq = false;
@@ -207,14 +203,9 @@ try
 	
 	%% wait for other matlab to join memory map
 	fprintf('Preparation complete. Waiting for PTB matlab to join the memory map...\n');
-	while all(mmapSignal.Data == 0)
+	while mmapSignal.Data(2) == 0
 		pause(0.1);
 	end
-	
-	%delete stim params data
-	clear mmapParams;
-	mmapParams = InitMemMap('sStimParams',0);
-	clear mmapParams;
 	
 	%% run until escape button is pressed
 	hTic = tic;
@@ -281,10 +272,11 @@ try
 	while ~all(mmapSignal.Data == -2)
 		pause(0.1);
 	end
+	fprintf('Data received! Sending exit signal to PTB matlab and & saving data.\n');
 	
 	%% retrieve trial data
-	mmapSignal = JoinMemMap('sTrialData');
-	sTrialData = mmapSignal.Data;
+	mmapData = JoinMemMap('sTrialData','struct');
+	sTrialData = mmapData.Data;
 	
 	% save stim-based data
 	structEP.TrialNumber = sTrialData.TrialNumber;

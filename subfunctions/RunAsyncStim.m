@@ -1,21 +1,25 @@
 function [sTrialData,sStimParams]=RunAsyncStim()
 	
 	%% switches
-	boolDebug = false;
+	boolDebug = true;
 	
 	%% start memory maps
 	mmapSignal = JoinMemMap('dataswitch');
 	
 	%% load stim params
-	mmapParams = JoinMemMap('sStimParams');
+	mmapParams = JoinMemMap('sStimParams','struct');
 	sStimParams = mmapParams.Data;
-	if isscalar(sStimParams) && sStimParams == 0
+	if ~isstruct(sStimParams) && isscalar(sStimParams) && sStimParams == 0
 		error([mfilename ':DataMapNotInitialized'],'Data transfer failed. Did you start the other matlab first?');
 	end
 	strHostAddress = sStimParams.strHostAddress;
 	
 	%% connect to spikeglx
-	hSGL = SpikeGL(strHostAddress);
+	if boolDebug == 1
+		hSGL = [];
+	else
+		hSGL = SpikeGL(strHostAddress);
+	end
 	
 	%% start PTB
 	try
@@ -27,11 +31,11 @@ function [sTrialData,sStimParams]=RunAsyncStim()
 		if boolDebug == 1, vecInitRect = [0 0 640 640];else vecInitRect = [];end
 		try
 			Screen('Preference', 'SkipSyncTests', 0);
-			[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
+			[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
 		catch ME
 			warning([mfilename ':ErrorPTB'],'Psychtoolbox error, attempting with sync test skip [msg: %s]',ME.message);
 			Screen('Preference', 'SkipSyncTests', 1);
-			[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
+			[ptrWindow,vecRect] = Screen('OpenWindow', sStimParams.intUseScreen,sStimParams.intBackground,vecInitRect);
 		end
 		%window variables
 		sStimParams.ptrWindow = ptrWindow;
@@ -64,6 +68,9 @@ function [sTrialData,sStimParams]=RunAsyncStim()
 		
 		%% run until we get the signal to stop
 		intStimNumber = mmapSignal.Data(1);
+		%send signal we're ready to start
+		fprintf('Preparation complete. Sending go-ahead signal!\n');
+		mmapSignal.Data(2) = -1;
 		intTrialCounter = 0;
 		while intStimNumber ~= -1
 			%check if we need to show a new stimulus
@@ -90,7 +97,8 @@ function [sTrialData,sStimParams]=RunAsyncStim()
 		end
 		
 		%% export all data
-		mmapData = InitMemMap('sTrialData',sTrialData);
+		mmapData = InitMemMap('sTrialData',sTrialData); %#ok<NASGU>
+		clear mmapData;
 		
 		%signal we're done
 		mmapSignal.Data(1) = -2;

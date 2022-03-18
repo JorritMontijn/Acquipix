@@ -15,6 +15,7 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 	
 	%% get defaults
 	if ~exist('strFile','var'),strFile='';end
+	strFile = char(strFile);
 	sRP = RP_populateStructure();
 	strDefPath = sRP.strTempPath;
 	strDefName = 'datacontainer';
@@ -48,7 +49,23 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 			initData = double(1);
 		end
 		if isstruct(initData)
-			[varFormat,initData] = FormatStructure(initData);
+			%save struct data
+			structData = initData;
+			%create pointer to .mat file
+			varFormat = 'uint8'; %ASCII
+			%use 48-57, 65-90, 97-122
+			vecAcceptedValues = cat(2,48:57,65:90,97:122);
+			strRand = char(vecAcceptedValues(randi(numel(vecAcceptedValues),[1 10])));
+			strDataFile = strcat('datacontainer_',strRand,'.mat');
+			while exist(fullpath(strPath,strDataFile),'file')
+				strRand = char(vecAcceptedValues(randi(numel(vecAcceptedValues),[1 10])));
+				strDataFile = strcat('datacontainer_',strRand,'.mat');
+			end
+			initData = uint8(strDataFile);
+			
+			%write struct
+			save(fullpath(strPath,strDataFile),'-struct','structData');
+			
 		else
 			varFormat = class(initData);
 		end
@@ -60,7 +77,4 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 	%start memory map
 	mmap = memmapfile(strFilename,'Format',varFormat, ...
       'Writable',true);
-end
-function [cellFormat,binData] = FormatStructure(struct)
-	
 end

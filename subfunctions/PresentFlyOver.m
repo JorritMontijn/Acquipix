@@ -10,8 +10,11 @@ function [dblStimOnNI,dblStimOffNI]=PresentFlyOver(hSGL,ptrWindow,intStimNr,intS
 	end
 	
 	%% do stuff
-	x=rand(2000) \ rand(2000);
-	%Screen('FillRect',ptrWindow, sStimParams.intBackground);
+	Screen('FillOval',ptrWindow, 1,[10 10 100 100]);
+	Screen('Flip',ptrWindow);
+	pause(0.5)
+	Screen('FillRect',ptrWindow, sStimParams.intBackground);
+	Screen('Flip',ptrWindow);
 	
 	%% get NI offset timestamp
 	if ~isempty(hSGL)
