@@ -1,6 +1,6 @@
 function mmap = JoinMemMap(strFile,strFormat)
-	%InitMemMap Creates memory mapping object and fills banks with initial data
-	%	mmap = InitMemMap(strFile,strFormat)
+	%JoinMemMap Joins existing memory mapping object
+	%	mmap = JoinMemMap(strFile,strFormat)
 	%
 	%Inputs (optional):
 	% - strFile: target container to join
