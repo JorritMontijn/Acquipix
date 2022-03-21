@@ -6,11 +6,18 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 	% - strFile: target file to read/create/overwrite
 	% - initData: if no data are supplied and strFile exists, it will read the contents of strFile;
 	%		if data are supplied, it will overwrite strFile; if no data are supplied and strFile
-	%		does not exist, it will create a minimal file with the contents double(0)
+	%		does not exist, it will create a minimal file with the contents double(0).
+	%		Note: if you supply a struct, this will create a memory map with a file location to a
+	%		.mat file that contains the struct. The struct itself is therefore not editable as mmap.
+	%
 	%Outputs:
 	% - mmap: memory map object
 	% - strFilename: file location of container
 	% - initData: initial data
+	%
+	%Version history:
+	%1.0 - 2022 March 21
+	%	Created by Jorrit Montijn
 	
 	
 	%% get defaults
