@@ -28,7 +28,7 @@ function mmap = JoinMemMap(strFile,strFormat,boolPersistent)
 	strDefExt = '.mmap';
 	[strPath,strName,strExt] = fileparts(strFile);
 	
-	%define path
+	%% define path
 	if numel(strPath) > 1 && strcmp(strPath(2),':')
 		%absolute path
 		if ~exist(strPath,'dir')
@@ -38,12 +38,12 @@ function mmap = JoinMemMap(strFile,strFormat,boolPersistent)
 		strPath = fullpath(strDefPath,strPath);
 	end
 	
-	%define file
+	%% define file
 	if isempty(strName),strName = strDefName;end
 	if isempty(strExt),strExt = strDefExt;end
 	strFilename = strcat(strPath,strName,strExt);
 	
-	%load file
+	%% load file
 	if ~exist(strFilename,'file')
 		error([mfilename ':FileMissing'],sprintf('Specified container file does not exist: %s',strFile));
 	else
@@ -55,7 +55,7 @@ function mmap = JoinMemMap(strFile,strFormat,boolPersistent)
 		end
 	end
 	
-	%check if struct; if so, load data
+	%% check if struct; if so, load data
 	if strcmp(strFormat,'struct')
 		strDataFile = char(mmap.Data(:)');
 		sLoad = load(strcat(strPath,strDataFile));

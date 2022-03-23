@@ -29,7 +29,7 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 	strDefExt = '.mmap';
 	[strPath,strName,strExt] = fileparts(strFile);
 	
-	%define path
+	%% define path
 	if numel(strPath) > 1 && strcmp(strPath(2),':')
 		%absolute path
 		if ~exist(strPath,'dir')
@@ -39,12 +39,12 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 		strPath = fullpath(strDefPath,strPath);
 	end
 	
-	%define file
+	%% define file
 	if isempty(strName),strName = strDefName;end
 	if isempty(strExt),strExt = strDefExt;end
 	strFilename = strcat(strPath,strName,strExt);
 	
-	%load or generate file
+	%% load or generate file
 	if (~exist('initData','var') || isempty(initData)) && exist(strFilename,'file')
 		%load data
 		ptrFile = fopen(strFilename,'r');
@@ -81,7 +81,7 @@ function [mmap,strFilename,initData] = InitMemMap(strFile,initData)
 		fclose(ptrFile);
 	end
 	
-	%start memory map
+	%% start memory map
 	mmap = memmapfile(strFilename,'Format',varFormat, ...
       'Writable',true);
 end
