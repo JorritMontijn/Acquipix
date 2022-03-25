@@ -137,6 +137,7 @@ if boolUseSGL
 	sStream.dblSampFreqNI=dblSampFreqNI;
 	sStream.hSGL = hSGL;
 else
+	strHostAddress = '';
 	hSGL = [];
 	sParamsSGL = struct;
 end
