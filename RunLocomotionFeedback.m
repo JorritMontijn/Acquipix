@@ -6,9 +6,9 @@ clearvars -except sStimPresets sStimParamsSettings sExpMeta;
 
 %% set default variables and debug switches
 intStimSet = 1;
-boolUseSGL = false;
-boolUseNI = false;
-boolDebug = true;
+boolUseSGL = true;
+boolUseNI = true;
+boolDebug = false;
 
 %% set channel ids
 %niCh0=onset
@@ -20,23 +20,23 @@ intStreamNI = -1;
 
 %% retrieve RunExperiment variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
-if exist('sExpMeta','var')
+% if exist('sExpMeta','var')
 	%defaults
 	dblPupilLightMultiplier = 1; %strength of infrared LEDs
 	dblSyncLightMultiplier = 0.3;
-	strHostAddress = '192.87.10.238'; %default host address
+	strHostAddress = '192.87.11.133'; %default host address
 	objDaqOut = [];
 	
-	%expand structure
-	if isfield(sExpMeta,'dblPupilLightMultiplier'),dblPupilLightMultiplier=sExpMeta.dblPupilLightMultiplier;end
-	if isfield(sExpMeta,'dblSyncLightMultiplier'),dblSyncLightMultiplier=sExpMeta.dblSyncLightMultiplier;end
-	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
-	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
-	if isfield(sExpMeta,'boolUseSGL'),boolUseSGL=sExpMeta.boolUseSGL;end
-	if isfield(sExpMeta,'boolUseNI'),boolUseNI=sExpMeta.boolUseNI;end
-else
-	sExpMeta = [];
-end
+% 	%expand structure
+% 	if isfield(sExpMeta,'dblPupilLightMultiplier'),dblPupilLightMultiplier=sExpMeta.dblPupilLightMultiplier;end
+% 	if isfield(sExpMeta,'dblSyncLightMultiplier'),dblSyncLightMultiplier=sExpMeta.dblSyncLightMultiplier;end
+% 	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
+% 	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
+% 	if isfield(sExpMeta,'boolUseSGL'),boolUseSGL=sExpMeta.boolUseSGL;end
+% 	if isfield(sExpMeta,'boolUseNI'),boolUseNI=sExpMeta.boolUseNI;end
+% else
+% 	sExpMeta = [];
+% end
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')
@@ -53,7 +53,7 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~(strc
 	sStimParamsSettings = struct;
 	sStimParamsSettings.strStimType = 'Flyover';
 	sStimParamsSettings.strOutputPath = 'C:\_Data\Exp'; %appends date
-	sStimParamsSettings.strTempObjectPath = 'C:\_Data\TempObjects\';%'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
+	sStimParamsSettings.strTempObjectPath = 'X:\Haak';%'X:\JorritMontijn\';%X:\JorritMontijn\ or F:\Data\Temp\
 	
 	%visual space parameters
 	sStimParamsSettings.dblSubjectPosX_cm = 0; % cm; relative to center of screen
@@ -185,6 +185,7 @@ try
 	%parameters
 	dblStimDur = 1; %you will have to change this to however long one stimulus takes
 	dblRunThreshold = 1;
+	dblMinSampleTime = 2e-3;
 	%fixed stuff
 	sStimParamsSettings.strHostAddress=strHostAddress;
 	mmapSignal = InitMemMap('dataswitch',[0 0]);
@@ -225,8 +226,8 @@ try
 		end
 		
 		%do some sort of calculation here to determine whether the mouse crossed the threshold
-		dblRunSpeed = max(vecRunningSpeed_mps);
-		boolRunningThresholdCrossed = (dblRunSpeed > dblRunThreshold);
+		dblRunSpeed = max(vecRunningSpeed_mps)
+		boolRunningThresholdCrossed = (dblRunSpeed > dblRunThreshold) & (range(vecTimestamps_s) > dblMinSampleTime);
 		intStimType = 2; %in case you want to present multiple stimuli, you can change this somewhere and it will be passed to PresentFlyOver.m
 		
 		%check if we should refill the DAQ

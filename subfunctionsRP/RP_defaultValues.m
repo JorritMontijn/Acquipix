@@ -1,7 +1,7 @@
 function sRP = RP_defaultValues()
-	%% default data paths
+	%% default dcata paths
 	sRP.strOutputPath = 'D:\Data\Processed\Neuropixels';
-	sRP.strTempPath = 'E:\_TempData'; %fast & reliable ssd;
+	sRP.strTempPath = 'D:\_TempData';%'E:\_TempData'; %fast & reliable ssd;
 	sRP.strEphysPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strStimLogPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strEyeTrackingPath = 'D:\Data\Raw\Neuropixels';

@@ -1,7 +1,7 @@
 function [sTrialData,sStimParams]=RunAsyncStim()
 	
 	%% switches
-	boolDebug = true;
+	boolDebug = false;
 	
 	%% start memory maps
 	try
@@ -64,6 +64,10 @@ function [sTrialData,sStimParams]=RunAsyncStim()
 			warning([mfilename ':InconsistentFlipDur'],sprintf('Something iffy with flip speed and monitor refresh rate detected; frame duration is %fs, while flip interval is %fs!',dblStimFrameDur,dblInterFlipInterval));
 		end
 		
+		%background grey
+		Screen('FillRect',ptrWindow, sStimParams.intBackground);
+		Screen('Flip',ptrWindow);
+	
 		%% pre-allocate
 		sTrialData=struct;
 		sTrialData.TrialNumber = [];

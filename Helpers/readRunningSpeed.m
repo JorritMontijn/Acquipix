@@ -46,7 +46,7 @@ function [vecSamples,vecRunningData,vecSyncData,sStream]=readRunningSpeed(sStrea
 		intRetrieveSamplesNI = min(intCurCountNI-1,intRetrieveSamplesNI); %ensure we're not requesting data prior to start
 		intStartFetch = intCurCountNI - intRetrieveSamplesNI; %set last fetch to starting position
 	else
-		intStartFetch = intLastFetchNI;% - round(dblSampFreqNI);
+		intStartFetch = intLastFetchNI - round(0.2*dblSampFreqNI);
 		intStartFetch = max(intStartFetch,1); %ensure we're not requesting data prior to start
 		intRetrieveSamplesNI = intCurCountNI - intStartFetch; %retrieve as many samples as acquired between previous fetch and now
 	end
@@ -88,11 +88,11 @@ function [vecSamples,vecRunningData,vecSyncData,sStream]=readRunningSpeed(sStrea
 	if isempty(intStimOnsetChanNI)
 		vecNewSyncData = [];
 	else
-		vecNewSyncData = sStream.NI2V*single(matDataNI(1,:)); %transform to voltage
+		vecNewSyncData = sStream.NI2V*single(matDataNI(:,1)); %transform to voltage
 	end
 	
 	%collect outputs
 	vecSamples = vecSamplesNI;
-	vecRunningData = matDataNI(1,:);
+	vecRunningData = matDataNI(:,1);
 	vecSyncData = vecNewSyncData;
 end
