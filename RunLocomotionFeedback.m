@@ -18,6 +18,13 @@ intStimOnsetChanNI=0;
 intRunningChanNI=1;
 intStreamNI = -1;
 
+%% load presets
+if ~exist('sStimPresets','var') || ~strcmp(sStimPresets.strExpType,mfilename)
+	sStimPresets = loadStimPreset(intStimSet,mfilename);
+end
+dblStimDur = sStimPresets.StimDur;
+dblRunThreshold = sStimPresets.RunningThreshold;
+	
 %% retrieve RunExperiment variables
 %defaults
 dblPupilLightMultiplier = 1; %strength of infrared LEDs
@@ -88,14 +95,15 @@ else
 		end
 	end
 end
+%RunExperiment will not load values from below here
+sStimParams = sStimParamsSettings;
 if boolDebug == 1
-	sStimParamsSettings.intUseScreen = 0;
+	sStimParams.intUseScreen = 0;
 end
 
-
 %% set output locations for logs
-strOutputPath = sStimParamsSettings.strOutputPath;
-strTempObjectPath = sStimParamsSettings.strTempObjectPath;
+strOutputPath = sStimParams.strOutputPath;
+strTempObjectPath = sStimParams.strTempObjectPath;
 strThisFilePath = mfilename('fullpath');
 [strFilename,strLogDir,strTempDir,strTexDir] = RE_assertPaths(strOutputPath,strRecording,strTempObjectPath,strThisFilePath);
 fprintf('Saving output in directory %s\n',strLogDir);
@@ -144,8 +152,8 @@ else
 end
 
 %% initialize parallel pool && gpu
-if sStimParamsSettings.intUseGPU > 0
-	objGPU = gpuDevice(sStimParamsSettings.intUseGPU);
+if sStimParams.intUseGPU > 0
+	objGPU = gpuDevice(sStimParams.intUseGPU);
 end
 
 %% initialize NI I/O box
@@ -168,7 +176,7 @@ if boolUseNI
 		end
 	end
 	if ~boolDaqOutRunning
-		objDaqOut = openDaqOutput(sStimParamsSettings.intUseDaqDevice);
+		objDaqOut = openDaqOutput(sStimParams.intUseDaqDevice);
 		%turns leds on
 		stop(objDaqOut);
 		outputData1 = dblSyncLightMultiplier*cat(1,linspace(3, 3, 200)',linspace(0, 0, 50)');
@@ -184,13 +192,11 @@ end
 try
 	%% pre-allocate & set parameters
 	%parameters
-	dblStimDur = 1; %you will have to change this to however long one stimulus takes
-	dblRunThreshold = 1;
 	dblMinSampleTime = 2e-3;
 	%fixed stuff
-	sStimParamsSettings.strHostAddress=strHostAddress;
+	sStimParams.strHostAddress=strHostAddress;
 	mmapSignal = InitMemMap('dataswitch',[0 0]);
-	mmapParams = InitMemMap('sStimParams',sStimParamsSettings);
+	mmapParams = InitMemMap('sStimParams',sStimParams);
 	clear mmapParams;
 	intStimNumber = 0;
 	dblDaqRefillDur = 0.5; %must be less than the stimulus duration, and cannot be less than ~300ms
@@ -293,7 +299,7 @@ try
 	
 	%% save data
 	%save data
-	structEP.sStimParams = sStimParamsSettings;
+	structEP.sStimParams = sStimParams;
 	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 	
 	%clean up
@@ -312,7 +318,7 @@ catch ME
 	fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
 	
 	%save data
-	structEP.sStimParams = sStimParamsSettings;
+	structEP.sStimParams = sStimParams;
 	if ~exist('sParamsSGL','var'),sParamsSGL=[];end
 	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
 	

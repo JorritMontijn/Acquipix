@@ -1,7 +1,7 @@
 function [intPresetsCreated,cellExperiments] = assertPresets()
 	% get target path
 	intPresetsCreated = 0;
-	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim','RunFlash','RunOptoWhiskerStim'};
+	cellExperiments = {'RunReceptiveFieldMapping','RunDriftingGratings','RunNaturalMovie','RunOptoStim','RunFlash','RunLocomotionFeedback','RunOptoWhiskerStim'};
 	
 	%% generate data & pre-allocate
 	for intExp=1:numel(cellExperiments)
@@ -62,6 +62,24 @@ function [intPresetsCreated,cellExperiments] = assertPresets()
 					intPresetIdx = saveStimPreset(sStimPresets,strExp);
 					intPresetsCreated = intPresetsCreated + 1;
 				end
+			elseif strcmp(strExp,'RunLocomotionFeedback')
+				sStimPresets = struct;
+				for intSet=1:3
+					if intSet == 1
+						sStimPresets = struct;
+						sStimPresets.strExpType = strExp;
+						sStimPresets.RunningThreshold = 2;
+						sStimPresets.StimDur = 1;
+					elseif intSet == 2
+						sStimPresets = struct;
+						sStimPresets.strExpType = strExp;
+						sStimPresets.RunningThreshold = 2;
+						sStimPresets.StimDur = 1;
+					end
+					intPresetIdx = saveStimPreset(sStimPresets,strExp);
+					intPresetsCreated = intPresetsCreated + 1;
+				end
+				
 			elseif strcmp(strExp,'RunNaturalMovie')
 				sStimPresets = struct;
 				sStimPresets.strExpType = strExp;

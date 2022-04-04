@@ -43,6 +43,10 @@ function [strEstTotDur,sStimParams,sStimObject] = RE_evaluateStimPresets(sStimSt
 		indKeep = cellfun(@(x) strcmp(x(1:3),'vec'),cellFields);
 		sStimCombos = rmfield(sStimStruct,cat(1,cellFields(~indKeep),cellRemGenFields));
 		[sStimParams,sStimObject,sStimTypeList] = getFlashObjects(sStimCombos);
+	elseif strcmpi(strStimType,'RunLocomotionFeedback')
+		%remove anything not a vector
+		sStimParams = sStimStruct;
+		sStimObject = [];
 	else
 		sStimParams = sStimStruct;
 		sStimObject = [];
