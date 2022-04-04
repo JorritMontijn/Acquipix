@@ -85,10 +85,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecChangeSyncPulsesImec = diff(boolVecSyncPulsesImec);
 		vecSyncPulseOnImec = (find(vecChangeSyncPulsesImec == 1)+1);
 		vecDiffPulsesImec = sort(diff(vecSyncPulseOnImec));
-		intNumPulsePeriodsImec = numel(vecDiffPulsesImec);
-		intOneTenthImec = ceil(intNumPulsePeriodsImec/10);
-		intNineTenthImec = floor((intNumPulsePeriodsImec/10)*9);
-		dblSampRateImec = mean(vecDiffPulsesImec(intOneTenthImec:intNineTenthImec));
+		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | zscore(vecDiffPulsesImec) < 1;
+		indUsePulsePeriods([1 end]) = false;
+		dblSampRateImec = mean(vecDiffPulsesImec(indUsePulsePeriods));
 		%compare real and pre-calibrated rate
 		dblCalibratedRateImec = str2double(sMetaAp.imSampRate);
 		dblImecRateError=(1-(dblSampRateImec/dblCalibratedRateImec));
@@ -115,12 +114,11 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecSyncPulseOn = (find(vecChangeSyncPulses == 1)+1);
 		clear vecChangeSyncPulses boolVecSyncPulses;
 		
-		%take mean of middle 80% in case some pulses are missed or counted double
+		%take only reliable pulse durations to remove double-counted or missed pulses
 		vecDiffPulses = sort(diff(vecSyncPulseOn));
-		intNumPulsePeriods = numel(vecDiffPulses);
-		intOneTenth = ceil(intNumPulsePeriods/10);
-		intNineTenth = floor((intNumPulsePeriods/10)*9);
-		dblImecRateInNItime = mean(vecDiffPulses(intOneTenth:intNineTenth))/dblSampRateReportedNI;
+		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | zscore(vecDiffPulses) < 1;
+		indUsePulsePeriods([1 end]) = false;
+		dblImecRateInNItime = mean(vecDiffPulses(indUsePulsePeriods))/dblSampRateReportedNI;
 		dblMultiplyIMECby = dblImecRateInNItime/str2double(sMetaNI.syncSourcePeriod);
 		dblSampRateFaultPercentage = (1-(dblMultiplyIMECby))*100;
 		if dblSampRateFaultPercentage < -1e-4 || dblSampRateFaultPercentage > 1e-4
