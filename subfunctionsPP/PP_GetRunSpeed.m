@@ -17,7 +17,7 @@ function sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
 	
 	%% define constants
 	dblStepV = 2220; %int16 values between voltage steps
-	dblStaticV = -5583; %int16 value of voltage at rest when wheel is still
+	dblStaticV = 5583; %int16 value of voltage at rest when wheel is still
 	dblWheelCircumference = 0.534055; %meter; circumference of running wheel
 	dblPulsesPerCircumference = 1024; %pulse # over 2pi for one full rotation
 	dblSampRatePulses = 1000; %sampling frequency of encoder updates
@@ -28,8 +28,9 @@ function sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
 	end
 	
 	%% extract discrete voltage levels
+	vecData = abs(double(vecData));
 	vecT = (1:numel(vecData))/dblSampRateNI;
-	vecRunStep=round((-vecData+dblStaticV)/dblStepV);
+	vecRunStep=round((vecData-dblStaticV)/dblStepV);
 	
 	%% get 1ms-step output
 	dblReduceBy = dblSampRateNI/dblSampRatePulses;
@@ -57,7 +58,7 @@ function sRunSpeed = PP_GetRunSpeed(vecData,sMetaNI)
 
 	%% transform to distance+speed
 	dblMeterPerPulse = dblWheelCircumference/dblPulsesPerCircumference;
-	vecTraversed_m = vecOutV*dblMeterPerPulse; %distance in meter: pulse * (meter/pulse) = meter/ms
+	vecTraversed_m = vecOutV(:)'*dblMeterPerPulse; %distance in meter: pulse * (meter/pulse) = meter/ms
 	intStartIdx = min(max(1,(numel(vecTraversed_m) - numel(vecOutT) + 1)),numel(vecTraversed_m));
 	vecTraversed_m = vecTraversed_m(intStartIdx:end);
 	vecFiltSecondSum = ones([1 round(dblSampRatePulses)]);

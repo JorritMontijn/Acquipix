@@ -15,28 +15,29 @@ boolDebug = false;
 %niCh1=running
 %niCh2=sync
 intStimOnsetChanNI=0;
-intRunningChanNI=2;
+intRunningChanNI=1;
 intStreamNI = -1;
 
 %% retrieve RunExperiment variables
+%defaults
+dblPupilLightMultiplier = 1; %strength of infrared LEDs
+dblSyncLightMultiplier = 0.3;
+strHostAddress = '192.87.11.133'; %default host address
+objDaqOut = [];
+
 fprintf('Starting %s [%s]\n',mfilename,getTime);
-% if exist('sExpMeta','var')
-	%defaults
-	dblPupilLightMultiplier = 1; %strength of infrared LEDs
-	dblSyncLightMultiplier = 0.3;
-	strHostAddress = '192.87.11.133'; %default host address
-	objDaqOut = [];
+if exist('sExpMeta','var')
 	
-% 	%expand structure
-% 	if isfield(sExpMeta,'dblPupilLightMultiplier'),dblPupilLightMultiplier=sExpMeta.dblPupilLightMultiplier;end
-% 	if isfield(sExpMeta,'dblSyncLightMultiplier'),dblSyncLightMultiplier=sExpMeta.dblSyncLightMultiplier;end
-% 	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
-% 	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
-% 	if isfield(sExpMeta,'boolUseSGL'),boolUseSGL=sExpMeta.boolUseSGL;end
-% 	if isfield(sExpMeta,'boolUseNI'),boolUseNI=sExpMeta.boolUseNI;end
-% else
-% 	sExpMeta = [];
-% end
+	%expand structure
+	if isfield(sExpMeta,'dblPupilLightMultiplier'),dblPupilLightMultiplier=sExpMeta.dblPupilLightMultiplier;end
+	if isfield(sExpMeta,'dblSyncLightMultiplier'),dblSyncLightMultiplier=sExpMeta.dblSyncLightMultiplier;end
+	if isfield(sExpMeta,'strHostAddress'),strHostAddress=sExpMeta.strHostAddress;end
+	if isfield(sExpMeta,'objDaqOut'),objDaqOut=sExpMeta.objDaqOut;end
+	if isfield(sExpMeta,'boolUseSGL'),boolUseSGL=sExpMeta.boolUseSGL;end
+	if isfield(sExpMeta,'boolUseNI'),boolUseNI=sExpMeta.boolUseNI;end
+else
+	sExpMeta = [];
+end
 
 %% query user input for recording name
 if exist('sStimParamsSettings','var') && isfield(sStimParamsSettings,'strRecording')

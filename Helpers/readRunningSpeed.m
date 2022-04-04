@@ -15,6 +15,9 @@ function [vecSamples,vecRunningData,vecSyncData,sStream]=readRunningSpeed(sStrea
 	%
 	%Version 1.0 [2021-11-23]
 	%	Created by Jorrit Montijn
+	%Version 1.1 [2022-04-04]
+	%	Fixed Fetch() returning SpikeGLX channels in an order that does not
+	%	match the query [by JM]
 	
 	%% get variables
 	%check if stim onset channel is supplied
@@ -77,6 +80,9 @@ function [vecSamples,vecRunningData,vecSyncData,sStream]=readRunningSpeed(sStrea
 		end
 	end
 	
+	% SPIKEGLX DOES NOT RETURN CHANNELS IN THE REQUESTED ORDER!!
+	[dummy,vecReorder] = sort([intRunningChanNI intStimOnsetChanNI]);
+	
 	%update NI time
 	dblEphysTimeNI = intCurCountNI/dblSampFreqNI;
 	%save to globals
@@ -88,11 +94,11 @@ function [vecSamples,vecRunningData,vecSyncData,sStream]=readRunningSpeed(sStrea
 	if isempty(intStimOnsetChanNI)
 		vecNewSyncData = [];
 	else
-		vecNewSyncData = sStream.NI2V*single(matDataNI(:,1)); %transform to voltage
+		vecNewSyncData = sStream.NI2V*single(matDataNI(:,vecReorder(2))); %transform to voltage
 	end
 	
 	%collect outputs
 	vecSamples = vecSamplesNI;
-	vecRunningData = matDataNI(:,1);
+	vecRunningData = matDataNI(:,vecReorder(1));
 	vecSyncData = vecNewSyncData;
 end

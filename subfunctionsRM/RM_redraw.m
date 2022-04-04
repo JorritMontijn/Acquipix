@@ -6,6 +6,7 @@ function RM_redraw(varargin)
 	global sRM;
 	global sFig;
 	
+	try
 	%% check if data has been loaded
 	try
 		if isempty(sRM) || isempty(sFig)
