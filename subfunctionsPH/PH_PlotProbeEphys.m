@@ -3,6 +3,10 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	%global sFile
 	hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
 	sEphysData = PH_LoadEphys(sFile);
+	if isempty(sEphysData)
+		close(hMsg);
+		return;
+	end
 	
 	%define depths and spike numbers
 	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);

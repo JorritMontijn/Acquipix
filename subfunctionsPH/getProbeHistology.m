@@ -3,7 +3,7 @@
 %define ABA location
 strAllenCCFPath = '';
 if isempty(strAllenCCFPath)
-	sRP = RP_defaultValues();
+	sRP = RP_populateStructure();
 	strAllenCCFPath = sRP.strAllenCCFPath;
 end
 
@@ -16,14 +16,20 @@ end
 %load coords file
 strDefaultPath = sRP.strProbeLocPath;
 [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath);
-if isempty(cellPoints),return;end
-[strDir,strName,strExt]= fileparts(strFile);
+if ~isempty(cellPoints)
+	[strDir,strName,strExt]= fileparts(strFile);
+end
 
 %generate dummy sFile with minimal information
 sFile = struct;
 
 %select probe nr
-if isempty(sProbeCoords)
+if isempty(sProbeCoords) && isempty(cellPoints)
+	sFile.sProbeCoords.folder = '';
+	sFile.sProbeCoords.name = ['default'];
+	sFile.sProbeCoords.cellPoints = {};
+	sFile.sProbeCoords.intProbeIdx = 0;
+elseif isempty(sProbeCoords)
 	intProbeIdx = PH_SelectProbeNr(cellPoints,strFile,tv,av,st);
 	sFile.sProbeCoords.folder = strPath;
 	sFile.sProbeCoords.name = [strName '_Adjusted.mat'];
@@ -44,9 +50,9 @@ catch
 end
 strEphysPath=uigetdir(strNewPath,'Select kilosort data folder');
 cd(strOldPath);
-if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
-	return;
-end
+%if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
+%	return;
+%end
 sFile.sClustered.folder = strEphysPath;
 
 %% plot grid
