@@ -28,8 +28,18 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sSyncAp = load(fullpath(sFile.sClustered.folder,'syncSY.mat'));
 		syncSY = sSyncAp.syncSY;
 		sMetaAp = sSyncAp.sMeta;
-		%check SHA1 keys
-		if ~strcmp(sMetaAp.fileCreateTime,sFile.sMeta.fileCreateTime)
+		%check SHA1 keys; _original is appended when catgt resyncs the data
+		if isfield(sMetaAp,'fileCreateTime_original')
+			strCreateTimeAp = sMetaAp.fileCreateTime_original;
+		else
+			strCreateTimeAp = sMetaAp.fileCreateTime;
+		end
+		if isfield(sFile.sMeta,'fileCreateTime_original')
+			strCreateTime = sFile.sMeta.fileCreateTime_original;
+		else
+			strCreateTime = sFile.sMeta.fileCreateTime;
+		end
+		if ~strcmp(strCreateTimeAp,strCreateTime)
 			error([mfilename ':FileOriginMismatch'],'Origins of meta file and sync data do not match!');
 		end
 	else
@@ -85,7 +95,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecChangeSyncPulsesImec = diff(boolVecSyncPulsesImec);
 		vecSyncPulseOnImec = (find(vecChangeSyncPulsesImec == 1)+1);
 		vecDiffPulsesImec = sort(diff(vecSyncPulseOnImec));
-		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | zscore(vecDiffPulsesImec) < 1;
+		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | zscore(vecDiffPulsesImec) < 2;
 		indUsePulsePeriods([1 end]) = false;
 		dblSampRateImec = mean(vecDiffPulsesImec(indUsePulsePeriods));
 		%compare real and pre-calibrated rate
@@ -116,7 +126,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		
 		%take only reliable pulse durations to remove double-counted or missed pulses
 		vecDiffPulses = sort(diff(vecSyncPulseOn));
-		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | zscore(vecDiffPulses) < 1;
+		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | zscore(vecDiffPulses) < 2;
 		indUsePulsePeriods([1 end]) = false;
 		dblImecRateInNItime = mean(vecDiffPulses(indUsePulsePeriods))/dblSampRateReportedNI;
 		dblMultiplyIMECby = dblImecRateInNItime/str2double(sMetaNI.syncSourcePeriod);
