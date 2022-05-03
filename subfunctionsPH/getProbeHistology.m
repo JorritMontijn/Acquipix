@@ -1,53 +1,16 @@
 %get brain slice
-intUseMouseOrRat = 2;
-sRP = RP_populateStructure();
-if intUseMouseOrRat == 1
-	%define ABA location
-	strAllenCCFPath = '';
-	if isempty(strAllenCCFPath)
-		strAllenCCFPath = sRP.strAllenCCFPath;
-	end
-	
-	%load ABA
-	if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st))
-		[tv,av,st] = RP_LoadABA(strAllenCCFPath);
-		if isempty(tv),return;end
-	end
-	
-	%define misc variables
-	vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
-	vecVoxelSize = [10 10 10];% bregma in accf; [AP,DV,ML]
-	
-	%brain grid
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
-	matBrainGrid = sLoad.brainGridData;
-	
-	%color map
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
-	cmap=sLoad.cmap;
-	
-else
-	%load RATlas
-	strSpragueDawleyAtlasPath = 'F:\Data\Ratlas';
-	[tv,av,st] = RP_LoadSDA(strSpragueDawleyAtlasPath);
+
+%define ABA location
+strAllenCCFPath = '';
+if isempty(strAllenCCFPath)
+	sRP = RP_populateStructure();
+	strAllenCCFPath = sRP.strAllenCCFPath;
+end
+
+%load ABA
+if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st))
+	[tv,av,st] = RP_LoadABA(strAllenCCFPath);
 	if isempty(tv),return;end
-	
-	%define misc variables
-	%[ML,AP,DV] with dimensions 512 x 1024 x 512). The midline seems to be around ML=244
-	
-	%define misc variables
-	%bregma in [AP,DV,ML]; c = 653, h = 440, s = 246
-	vecBregma = [246,653,440];% bregma in SDA; [ML,AP,DV]
-	vecVoxelSize = [39 39 39];
-	
-	%rat brain grid
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
-	matBrainGrid = sLoad.brainGridData;
-	
-	%color map
-	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
-	cmap=sLoad.cmap;
-	
 end
 
 %load coords file
@@ -93,7 +56,7 @@ cd(strOldPath);
 sFile.sClustered.folder = strEphysPath;
 
 %% plot grid
-[hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile,vecBregma,vecVoxelSize,matBrainGrid,cmap);
+[hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile);
 
 %% wait until done
 waitfor(hMain,'UserData','close');

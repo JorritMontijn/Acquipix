@@ -1,4 +1,4 @@
-function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile,vecBregma,vecVoxelSize,matBrainGrid,cmap)
+function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile)
 	%[hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile)
 	%
 	% Many parts of this GUI are copied from, modified after, and/or
@@ -9,32 +9,6 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%Probe Histology Coordinate Adjuster GUI
 	%Version 1.0 [2021-07-26]
 	%	Created by Jorrit Montijn
-	
-	%% get defaults if none supplied
-	%bregma location in atlas
-	if ~exist('vecBregma','var') || isempty(vecBregma)
-		vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
-	end
-	
-	%voxel size
-	if ~exist('vecVoxelSize','var') || isempty(vecVoxelSize)
-		vecVoxelSize = [10 10 10];% bregma in accf; [AP,DV,ML]
-	end
-	
-	%brain grid
-	if ~exist('matBrainGrid','var') || isempty(matBrainGrid)
-		sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
-		matBrainGrid = sLoad.brainGridData;
-	end
-	%color map
-	if ~exist('cmap','var') || isempty(cmap)
-		sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
-		cmap=sLoad.cmap;
-	end
-	
-	%remove zeros
-	bp = double(matBrainGrid);
-	bp(sum(bp,2)==0,:) = NaN; % when saved to uint16, NaN's become zeros. There aren't any real vertices at (0,0,0) and it shouldn't look much different if there were
 	
 	%% get probe locdata
 	%probe_vector_ccf =[...
@@ -52,6 +26,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	elseif isfield(sProbeCoords,'cellPoints')
 		matProbeV = [0   0   0;...AP depth ML (wrt atlas at (0,0,0))
 			0   384   0];
+		vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
 		matProbeVector = bsxfun(@plus,matProbeV,vecBregma);
 	else
 		%file not recognized
@@ -73,7 +48,19 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
 	%matProbeLoc = bsxfun(@plus,probe_vector_ccf,vecBregma);
 	
+	%% load source data
+	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'brainGridData.mat'));
+	matBrainGrid = sLoad.brainGridData;
+	sLoad = load(fullfile(fileparts(mfilename('fullpath')), 'allen_ccf_colormap_2017.mat'));
+	cmap=sLoad.cmap;
+	
+	bp = double(matBrainGrid);
+	bp(sum(bp,2)==0,:) = NaN; % when saved to uint16, NaN's become zeros. There aren't any real vertices at (0,0,0) and it shouldn't look much different if there were
+	
 	%% Set up the gui
+	%bregma location
+	vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
+	%vecBregma = [540,570,0];% bregma in accf; [AP,DV,ML]
 	%main figure
 	hMain = figure('Toolbar','none','Menubar','none','color','w', ...
 		'Name','Coordinate adjuster','Units','normalized','Position',[0.05,0.05,0.9,0.9],...
