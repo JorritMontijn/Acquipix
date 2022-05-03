@@ -74,13 +74,6 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 	sGUI.output.probe_intersect = trajectory_brain_intersect;
 	
 	%% plot boundaries
-	%extract boundaries
-	matAreaColors = sGUI.cmap(probe_area_ids,:);
-	dblAtlasSize = 10;
-	vecBoundY = dblAtlasSize*find(~all(diff(matAreaColors,1,1) == 0,2));
-	vecColor = [0.5 0.5 0.5 0.5];
-	
-	%plot
 	cellHandleName = {'probe_clust_bounds','probe_zeta_bounds','probe_xcorr_bounds'};
 	cellAxesHandles = {sGUI.handles.probe_clust,sGUI.handles.probe_zeta,sGUI.handles.probe_xcorr};
 	for intPlot=1:numel(cellHandleName)
@@ -88,10 +81,24 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 		hAx = cellAxesHandles{intPlot};
 		boundary_lines = gobjects;
 		vecLimX = get(hAx,'xlim');
-		boundary_lines = line(hAx,repmat(vecLimX,numel(vecBoundY),1)',repmat(vecBoundY,1,2)','Color',vecColor,'LineWidth',1);
-		if intPlot==3
-			boundary_lines2 = line(hAx,repmat(vecBoundY,1,2)',repmat(vecLimX,numel(vecBoundY),1)','Color',vecColor,'LineWidth',1);
-			boundary_lines = cat(1,boundary_lines,boundary_lines2);
+		%vecBoundY = probe_area_boundaries_parent*10;
+		vecBoundY = probe_area_boundaries*10;
+		for intBound = 1:length(vecBoundY)
+			%boundary_lines(intBound,1) = line(hAx,vecLimX, ...
+			%	repmat(vecBoundY(intBound),1,2),'color','b','linewidth',1);
+			boundary_lines(intBound,1) = cline(hAx,vecLimX, ...
+				repmat(vecBoundY(intBound),1,2),[],0.5*[1 1 1],1);
+			boundary_lines(intBound,1).EdgeAlpha = 0.5;
+			boundary_lines(intBound,1).LineWidth = 1;
+			if intPlot==3
+				%boundary_lines(intBound+length(vecBoundY),1) = line(hAx,repmat(vecBoundY(intBound),1,2), ...
+				%	vecLimX,'color','b','linewidth',1);
+				boundary_lines(intBound+length(vecBoundY),1) = cline(hAx,repmat(vecBoundY(intBound),1,2), ...
+					vecLimX,[],0.5*[1 1 1],1);
+				boundary_lines(intBound+length(vecBoundY),1).EdgeAlpha = 0.5;
+				boundary_lines(intBound+length(vecBoundY),1).LineWidth = 1;
+				
+			end
 		end
 		sGUI.handles.(cellHandleName{intPlot}) = boundary_lines;
 	end

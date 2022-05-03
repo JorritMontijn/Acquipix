@@ -1,12 +1,5 @@
 function PH_KeyPress(hMain,eventdata)
 	
-	%dummy for testing
-	if ~exist('eventdata','var')
-		eventdata = struct;
-		eventdata.Key = 'uparrow';
-		eventdata.Modifier = [];
-	end
-	
 	% Get guidata
 	gui_data = guidata(hMain);
 	if toc(gui_data.lastPress) < 0.1;return;end

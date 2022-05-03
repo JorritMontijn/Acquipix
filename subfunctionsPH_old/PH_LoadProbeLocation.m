@@ -44,8 +44,7 @@ function PH_LoadProbeLocation(hMain,matProbeVector,intProbeIdx,sProbeAdjusted)
 	
 	%plot points
 	delete(sGUI.handles.probe_points);
-	sGUI.handles.probe_points = [];
-	scatter3(sGUI.handles.axes_atlas,probe_vector_ccf(:,1),probe_vector_ccf(:,3),probe_vector_ccf(:,2),20,[0 0 0.8],'.','Linewidth',1);
+	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,probe_vector_ccf(:,1),probe_vector_ccf(:,3),probe_vector_ccf(:,2),20,[0 0 0.8],'.','Linewidth',1);
 	
 	%get vector from points
 	[probe_vector,trajectory_brain_intersect,probe_ref_vector] = PH_Points2vec(matProbeVector,sGUI.av);

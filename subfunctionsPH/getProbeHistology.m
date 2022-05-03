@@ -1,45 +1,60 @@
-%get brain slice
+%align probe to atlas
 
-%define ABA location
-strAllenCCFPath = '';
-if isempty(strAllenCCFPath)
-	sRP = RP_populateStructure();
-	strAllenCCFPath = sRP.strAllenCCFPath;
+%% ask what to load
+
+%% load atlas
+intUseMouseOrRat = 1;
+sRP = RP_populateStructure();
+if intUseMouseOrRat == 1
+	%define ABA location
+	strAllenCCFPath = '';
+	if isempty(strAllenCCFPath)
+		strAllenCCFPath = sRP.strAllenCCFPath;
+	end
+	
+	%load ABA
+	if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st)) || ~all(size(av) == [1320 800 1140])
+		[tv,av,st] = RP_LoadABA(strAllenCCFPath);
+		if isempty(tv),return;end
+	end
+	
+	%prep ABA
+	sAtlas = RP_PrepABA(tv,av,st);
+else
+	%load RATlas
+	strSpragueDawleyAtlasPath = 'F:\Data\Ratlas';
+	if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st)) || ~all(size(av) == [512 1024 512])
+		[tv,av,st] = RP_LoadSDA(strSpragueDawleyAtlasPath);
+		if isempty(tv),return;end
+	end
+	
+	%prep SDA
+	sAtlas = RP_PrepSDA(tv,av,st);
 end
 
-%load ABA
-if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st))
-	[tv,av,st] = RP_LoadABA(strAllenCCFPath);
-	if isempty(tv),return;end
-end
-
-%load coords file
+%% load coords file
 strDefaultPath = sRP.strProbeLocPath;
 [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath);
 if ~isempty(cellPoints)
 	[strDir,strName,strExt]= fileparts(strFile);
 end
 
-%generate dummy sFile with minimal information
-sFile = struct;
-
 %select probe nr
 if isempty(sProbeCoords) && isempty(cellPoints)
-	sFile.sProbeCoords.folder = '';
-	sFile.sProbeCoords.name = ['default'];
-	sFile.sProbeCoords.cellPoints = {};
-	sFile.sProbeCoords.intProbeIdx = 0;
+	sProbeCoords.folder = '';
+	sProbeCoords.name = ['default'];
+	sProbeCoords.cellPoints = {};
+	sProbeCoords.intProbeIdx = 0;
 elseif isempty(sProbeCoords)
 	intProbeIdx = PH_SelectProbeNr(cellPoints,strFile,tv,av,st);
-	sFile.sProbeCoords.folder = strPath;
-	sFile.sProbeCoords.name = [strName '_Adjusted.mat'];
-	sFile.sProbeCoords.cellPoints = cellPoints;
-	sFile.sProbeCoords.intProbeIdx = intProbeIdx;
-else
-	sFile.sProbeCoords = sProbeCoords;
+	sProbeCoords.folder = strPath;
+	sProbeCoords.name = [strName '_Adjusted.mat'];
+	sProbeCoords.cellPoints = cellPoints;
+	sProbeCoords.intProbeIdx = intProbeIdx;
 end
+sProbeCoords.dblProbeLength = 3840; % (hardcode, sometimes kilosort2 drops channels)
 
-%ask for path
+%% load ephys
 %select file
 try
 	strOldPath = cd(sRP.strEphysPath);
@@ -53,10 +68,25 @@ cd(strOldPath);
 %if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
 %	return;
 %end
+
+%generate dummy sFile with minimal information
+sFile = struct;
 sFile.sClustered.folder = strEphysPath;
 
-%% plot grid
-[hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(av,tv,st,sFile);
+%global sFile
+hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
+sEphysData = PH_LoadEphys(sFile);
+if isempty(sEphysData)
+	close(hMsg);
+	return;
+end
+sClusters = PH_PrepEphys(sFile,sEphysData,sProbeCoords.dblProbeLength);
+
+% close message
+close(hMsg);
+
+%% run GUI
+[hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(sAtlas,sProbeCoords,sClusters);
 
 %% wait until done
 waitfor(hMain,'UserData','close');

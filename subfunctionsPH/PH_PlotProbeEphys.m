@@ -1,71 +1,31 @@
-function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
+function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sClusters)
 	%% get data
-	%global sFile
-	hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
-	sEphysData = PH_LoadEphys(sFile);
-	if isempty(sEphysData)
-		close(hMsg);
-		return;
-	end
-	
-	%define depths and spike numbers
-	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);
-	vecUseClusters = vecTemplateIdx+1;
-	vecNormSpikeCounts = mat2gray(log10(accumarray(spike_templates_reidx,1)+1));
-	max_depths = 3840; % (hardcode, sometimes kilosort2 drops channels)
-	vecTemplateDepths = max_depths-sEphysData.templateDepths(vecUseClusters);
-	
-	%retrieve zeta
-	try
-		sLoad = load(fullpath(sFile.sSynthesis.folder,sFile.sSynthesis.name));
-		sSynthData = sLoad.sSynthData;
-		vecDepth = cell2vec({sSynthData.sCluster.Depth});
-		vecZetaP = cellfun(@min,{sSynthData.sCluster.ZetaP});
-		vecZeta = norminv(1-(vecZetaP/2));
-		strZetaTit = 'ZETA (z-score)';
-		cellSpikes = {sSynthData.sCluster.SpikeTimes};
-	catch
-		vecDepth = vecTemplateDepths;
-		vecZeta = sEphysData.ContamP(vecUseClusters);
-		strZetaTit = 'Contamination';
-		
-		%build spikes per cluster
-		vecAllSpikeTimes = sEphysData.st;
-		vecAllSpikeClust = sEphysData.clu;
-		intClustNum = numel(vecUseClusters);
-		cellSpikes = cell(1,intClustNum);
-		for intCluster=1:intClustNum
-			intClustIdx = vecUseClusters(intCluster);
-			cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx);
-		end
-		
-	end
-	
-	%check if depth is the same
-	dblDepthR = corr(vecDepth(:),vecTemplateDepths(:));
-	if dblDepthR > -0.95 && dblDepthR < 0.95
-		error([mfilename ':DepthInconsistency'],'Depth information from templates and synthesis data do not match! Pearson r=%.3f',dblDepthR);
-	elseif dblDepthR < -0.95
-		warndlg('Depth information from templates and synthesis data are mirrored, please check the source data','Depths mirrored');
-	end
+	vecUseClusters = sClusters.vecUseClusters;
+	vecNormSpikeCounts = sClusters.vecNormSpikeCounts;
+	vecDepth = sClusters.vecDepth;
+	vecZeta = sClusters.vecZeta;
+	strZetaTit = sClusters.strZetaTit;
+	cellSpikes = sClusters.cellSpikes;
+	dblProbeLength = sClusters.dblProbeLength;
+	vecAllSpikeT = cell2vec(sClusters.cellSpikes);
 	
 	%% plot zeta
 	scatter(hAxZeta,vecZeta,vecDepth,15,'b','filled');
 	title(hAxZeta,strZetaTit);
 	set(hAxZeta,'FontSize',12);
 	ylabel(hAxZeta,'Depth (\mum)');
-	set(hAxZeta,'XAxisLocation','top','YLim',[0,max_depths],'YColor','k','YDir','reverse');
+	set(hAxZeta,'XAxisLocation','top','YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
 	
 	%% calc mua & spike rates
 	% Get multiunit correlation
 	n_corr_groups = 40;
-	depth_group_edges = linspace(0,max_depths,n_corr_groups+1);
-	depth_group = discretize(vecTemplateDepths,depth_group_edges);
+	depth_group_edges = linspace(0,dblProbeLength,n_corr_groups+1);
+	depth_group = discretize(vecDepth,depth_group_edges);
 	depth_group_centers = depth_group_edges(1:end-1)+(diff(depth_group_edges)/2);
 	unique_depths = 1:length(depth_group_edges)-1;
 	
 	spike_binning = 0.01; % seconds
-	corr_edges = nanmin(sEphysData.st):spike_binning:nanmax(sEphysData.st);
+	corr_edges = nanmin(vecAllSpikeT):spike_binning:nanmax(vecAllSpikeT);
 	corr_centers = corr_edges(1:end-1) + diff(corr_edges);
 	
 	binned_spikes_depth = zeros(length(unique_depths),length(corr_edges)-1);
@@ -81,9 +41,9 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	mua_corr(isnan(mua_corr))=0;
 	
 	%% Plot spike depth vs rate
-	scatter(hAxClust,vecNormSpikeCounts,vecTemplateDepths,15,'k','filled');
+	scatter(hAxClust,vecNormSpikeCounts,vecDepth,15,'k','filled');
 	set(hAxClust,'YDir','reverse');
-	ylim(hAxClust,[0,max_depths]);
+	ylim(hAxClust,[0,dblProbeLength]);
 	xlabel(hAxClust,'N spikes')
 	title(hAxClust,'Template depth & rate')
 	set(hAxClust,'FontSize',12)
@@ -97,8 +57,4 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sFile)
 	title(hAxMua,'MUA correlation');
 	set(hAxMua,'FontSize',12)
 	
-	%% close message
-	close(hMsg);
-	%h=figure;hS=subplot(1,1,1);
-	%scatter(hS,vecDepth(:)',vecTemplateDepths(:)');
-	%error ja
+end

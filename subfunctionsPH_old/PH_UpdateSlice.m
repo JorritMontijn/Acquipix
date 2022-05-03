@@ -29,7 +29,7 @@ if strcmp(gui_data.handles.slice_plot(1).Visible,'on')
     % Define a plane of points to index
     % (the plane grid is defined based on the which cardinal plan is most
     % orthogonal to the plotted plane. this is janky but it works)
-    slice_px_space = 3;%3
+    slice_px_space = 3;
     %[~,cam_plane] = max(abs((campos - camtarget)./norm(campos - camtarget)));
     
     [~,cam_plane] = max(abs(normal_vector./norm(normal_vector)));
