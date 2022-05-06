@@ -1,5 +1,9 @@
 function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sClusters)
 	%% get data
+	if isempty(sClusters) || ~isfield(sClusters,'vecDepth') || isempty(sClusters.vecDepth)
+		title(hAxZeta,'No Ephys data loaded');
+		return
+	end
 	vecUseClusters = sClusters.vecUseClusters;
 	vecNormSpikeCounts = sClusters.vecNormSpikeCounts;
 	vecDepth = sClusters.vecDepth;

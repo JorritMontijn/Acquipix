@@ -1,5 +1,6 @@
-function [matProbePoints,matProbeVector,sProbeAdjusted] = PH_ExtractProbeCoords(sProbeCoords)
+function [sProbeCoords] = PH_ExtractProbeCoords(sProbeCoords)
 	%PH_ExtractProbeCoords Transforms coordinate system of input file to ProbeHistology coordinates
+	%	sProbeCoords = PH_ExtractProbeCoords(sProbeCoords)
 	%
 	%Coordinates are [ML=x AP=y DV=z], using the atlas's Bregma in native atlas grid entry indices. For
 	%example, the rat SD atlas has bregma [ML=246,AP=653,DV=440]; Note:
@@ -9,35 +10,36 @@ function [matProbePoints,matProbeVector,sProbeAdjusted] = PH_ExtractProbeCoords(
 	% - low AP is posterior (i.e., -y in AP coordinates is posterior to bregma)
 	% - low DV is ventral (i.e., -z w.r.t. lambda is ventral and inside of the brain, while
 	% - Note that this is not the native Allen Brain CCF coordinates, as those do not make any sense.
-	% - the probe has two angles: ML
-	%
-	%outputs:
-	% - matProbePoints: original histology points of electrode track [or original vector endpoints]
-	% - matProbeVector: current probe location
-	% - sProbeAdjusted: adjusted probe location (can be empty)
+	% - the probe has two angles: ML and AP where (0;0) degrees is a vertical insertion
 	
 	%check formats
-	if isfield(sProbeCoords,'probe_ccf')
-		%AP_histology output
-		matProbeVector = sProbeCoords.probe_ccf(sProbeCoords.intProbeIdx);
-	elseif isfield(sProbeCoords,'cellPoints') && ~isempty(sProbeCoords.cellPoints)
-		%cell array of points per probe
-		matProbeVector = sProbeCoords.cellPoints{sProbeCoords.intProbeIdx};
-	elseif isfield(sProbeCoords,'cellPoints')
-		matProbeV = [0   0   0;...AP depth ML (wrt atlas at (0,0,0))
-			0   384   0];
-		matProbeVector = bsxfun(@plus,matProbeV,vecBregma);
-	else
-		%file not recognized
-		error([mfilename ':UnknownFormat'],'Probe location file format is not recognized');
-	end
-	matProbePoints = matProbeVector;
-	%overwrite probe location if adjusted position is present
-	if isfield(sProbeCoords,'sProbeAdjusted') && isfield(sProbeCoords.sProbeAdjusted,'probe_vector')
-		%this gui's output
-		matProbeVector = sProbeCoords.sProbeAdjusted.probe_vector([1 3 2],:)';
-		sProbeAdjusted = sProbeCoords.sProbeAdjusted;
-	else
-		sProbeAdjusted = [];
+	if ~isfield(sProbeCoords,'format') || ~strcmpi(sProbeCoords.format,'ML,AP,DV')
+		if strcmpi(sProbeCoords.Type,'AP_histology')
+			%AP_histology output
+			vecSizeABA = [1140 1320 800]; %ML,AP,DV (post-transformed)
+			for intProbe=1:numel(sProbeCoords.cellPoints)
+				%should be [ML,AP,DV]
+				%is [x,DV,y] => [y x 2]  = [3 1 2]?
+				sProbeCoords.cellPoints{intProbe} = sProbeCoords.cellPoints{intProbe}(:,[3 1 2]);
+				sProbeCoords.cellPoints{intProbe} = [...
+					sProbeCoords.cellPoints{intProbe}(:,1) ...
+					vecSizeABA(2) - sProbeCoords.cellPoints{intProbe}(:,2)...
+					vecSizeABA(3) - sProbeCoords.cellPoints{intProbe}(:,3)...
+					];
+			end
+			sProbeCoords.format = 'ML,AP,DV';
+		elseif strcmpi(sProbeCoords.Type,'SHARP-track')
+			%sharp track
+			error('this might not be correct yet')
+			for intProbe=1:numel(sProbeCoords.cellPoints)
+				sProbeCoords.cellPoints{intProbe} = sProbeCoords.cellPoints{intProbe}(:,[3 1 2]);%is this correct?
+			end
+			sProbeCoords.format = 'ML,AP,DV';
+		elseif strcmpi(sProbeCoords.Type,'native')
+			sProbeCoords.format = 'ML,AP,DV';
+		else
+			%file not recognized
+			error([mfilename ':UnknownFormat'],'Probe location file format is not recognized');
+		end
 	end
 end

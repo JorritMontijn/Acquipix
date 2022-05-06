@@ -1,5 +1,7 @@
 function sClusters = PH_PrepEphys(sFile,sEphysData,dblProbeLength)
 	%define depths and spike numbers
+	sClusters = [];
+	if isempty(sEphysData),return;end
 	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);
 	vecUseClusters = vecTemplateIdx+1;
 	vecNormSpikeCounts = mat2gray(log10(accumarray(spike_templates_reidx,1)+1));

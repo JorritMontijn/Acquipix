@@ -1,7 +1,7 @@
-function [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath,strName)
+function sProbeCoords = PH_OpenCoordsFile(strDefaultPath,strName)
+	%open a histology coordinates file and adds the file type to the sProbeCoords field .Type
 	
 	%% pre-allocate output
-	cellPoints = [];
 	sProbeCoords = [];
 	if ~exist('strName','var') || isempty(strName)
 		strPrompt = 'Select probe coordinate file';
@@ -24,18 +24,16 @@ function [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaul
 	%% load
 	sLoad = load(fullpath(strPath,strFile));
 	if isfield(sLoad,'sProbeCoords') && isstruct(sLoad.sProbeCoords)
-		cellPoints = sLoad.sProbeCoords.cellPoints;
 		sProbeCoords = sLoad.sProbeCoords;
+		sProbeCoords.Type = 'native';
 	elseif isfield(sLoad,'probe_ccf') && isstruct(sLoad.probe_ccf) && isfield(sLoad.probe_ccf,'points')
 		%AP_histology
-		cellPoints = {sLoad.probe_ccf.points};
+		sProbeCoords.cellPoints = {sLoad.probe_ccf.points};
+		sProbeCoords.Type = 'AP_histology';
 	elseif isfield(sLoad,'pointList') && isstruct(sLoad.pointList) && isfield(sLoad.pointList,'pointList')
 		%sharp track
-		cellPoints = sLoad.pointList.pointList(:,1); %cell arrays
-		
-		%invert x/y
-		cellPoints = cellfun(@(x) (x(:,[3 2 1])),cellPoints,'UniformOutput',false);
-		
+		sProbeCoords.cellPoints = sLoad.pointList.pointList(:,1);
+		sProbeCoords.Type = 'SHARP-track';
 	else
 		try
 			error([mfilename ':FileTypeNotRecognized'],'File is of unknown format');
@@ -46,10 +44,7 @@ function [cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaul
 		end
 	end
 	
-	%% assume the probe is coming from above
-	%sort y
-	for intProbe=1:numel(cellPoints)
-		matPoints = cellPoints{intProbe};
-		[a,vecReorder]=sort(matPoints(:,2),'ascend');
-		cellPoints{intProbe} = matPoints(vecReorder,:);
-	end
+	%add source
+	sProbeCoords.folder = strPath;
+	sProbeCoords.name = strFile;
+end

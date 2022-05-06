@@ -1,34 +1,44 @@
-function [probe_vector,trajectory_brain_intersect,probe_ref_vector] = PH_Points2vec(matProbeLoc,av)
+function [vecSphereVector,vecLocBrainIntersect,matRefVector] = PH_Points2vec(sProbeCoords,sAtlas)
+	
+	%pre-allocate dummies
+	vecSphereVector = [];
+	vecLocBrainIntersect = [];
+	matRefVector = [];
+	
+	%get probe length
+	if isfield(sProbeCoords,'ProbeLength') && ~isempty(sProbeCoords.ProbeLength)
+		dblProbeLength = sProbeCoords.ProbeLength;
+	else
+		dblProbeLength = 1000;
+	end
 	%assume the probe is pointed downward
-	if size(matProbeLoc,2)>3,matProbeLoc=matProbeLoc';end
-	[dummy,vecReorder]=sort(matProbeLoc(:,2),'ascend');
-	matProbeLoc = matProbeLoc(vecReorder,:);
+	matHistoPoints = sProbeCoords.cellPoints{sProbeCoords.intProbeIdx};
+	if size(matHistoPoints,2)>3,matHistoPoints=matHistoPoints';end
+	[dummy,vecReorder]=sort(matHistoPoints(:,3),'descend');
+	matHistoPoints = matHistoPoints(vecReorder,:);
 	
 	%get probe vector from points
-	r0 = mean(matProbeLoc,1);
-	xyz = bsxfun(@minus,matProbeLoc,r0);
-	[~,~,V] = svd(xyz,0);
-	histology_probe_direction = V(:,1);
-	
-	probe_eval_points = [-1000,1000];
-	probe_line_endpoints = bsxfun(@plus,bsxfun(@times,probe_eval_points',histology_probe_direction'),r0);
-	if probe_line_endpoints(1,2) > probe_line_endpoints(2,2)
-		probe_line_endpoints = probe_line_endpoints([2 1],:);
-	end
-	
-	% Place the probe on the histology best-fit axis
-	probe_ref_top = probe_line_endpoints(1,[1,3,2]);
-	probe_ref_bottom = probe_line_endpoints(2,[1,3,2]);
-	probe_ref_vector = [probe_ref_top;probe_ref_bottom]';
+	matRefVector = PH_GetRefVector(matHistoPoints);
 	
 	%get intersection
-	trajectory_brain_intersect = PH_GetBrainIntersection(probe_ref_vector,av)';
+	vecLocBrainIntersect = PH_GetBrainIntersection(matRefVector,sAtlas.av);
+	if isempty(vecLocBrainIntersect)
+		vecProbeLoc = matRefVector(1,:);
+	else
+		vecProbeLoc = vecLocBrainIntersect(1:3);
+	end
 	
-	%get angle
-	[theta,phi] = cart2sph(diff(probe_ref_vector(1,:)),diff(probe_ref_vector(2,:)),diff(probe_ref_vector(3,:)));
+	%get angles
+	vecD = diff(matRefVector);
+	[azimuth,elevation,r] = cart2sph(vecD(1),vecD(2),vecD(3));%ML, AP,depth (DV)
 	
-	r = 384;
-	[dx,dy,dz] = sph2cart(theta,phi,r);
-	probe_vector = [trajectory_brain_intersect;trajectory_brain_intersect + [dx,dy,dz]]';
+	%extract angles in degrees
+	dblInverterML = double(matRefVector(2) < 0)*2-1;
+	dblAngleAP = rad2deg(azimuth);
+	dblAngleML = rad2deg(elevation);
+	vecAngles = mod([dblAngleAP dblAngleML-90],360);
+	
+	%set correct probe length
+	vecSphereVector = [vecProbeLoc(:)' vecAngles dblProbeLength];
 end
 	

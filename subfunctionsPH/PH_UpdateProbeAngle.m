@@ -1,5 +1,5 @@
 function gui_data = PH_UpdateProbeAngle(hMain,angle_change)
-	
+	error update this bit
 	% Get guidata
 	gui_data = guidata(hMain);
 	%angle_change = [-10 0]

@@ -34,25 +34,26 @@ end
 
 %% load coords file
 strDefaultPath = sRP.strProbeLocPath;
-[cellPoints,strFile,strPath,sProbeCoords] = PH_OpenCoordsFile(strDefaultPath);
-if ~isempty(cellPoints)
-	[strDir,strName,strExt]= fileparts(strFile);
-end
+sProbeCoords = PH_OpenCoordsFile(strDefaultPath);
+dblProbeLength = 3840;%in microns (hardcode, sometimes kilosort2 drops channels)
 
 %select probe nr
-if isempty(sProbeCoords) && isempty(cellPoints)
+if isempty(sProbeCoords)
 	sProbeCoords.folder = '';
 	sProbeCoords.name = ['default'];
-	sProbeCoords.cellPoints = {};
-	sProbeCoords.intProbeIdx = 0;
-elseif isempty(sProbeCoords)
-	intProbeIdx = PH_SelectProbeNr(cellPoints,strFile,tv,av,st);
-	sProbeCoords.folder = strPath;
-	sProbeCoords.name = [strName '_Adjusted.mat'];
-	sProbeCoords.cellPoints = cellPoints;
+	sProbeCoords.cellPoints{1} = [sAtlas.Bregma; sAtlas.Bregma - [0 0 dblProbeLength]./sAtlas.VoxelSize];
+	sProbeCoords.intProbeIdx = 1;
+	sProbeCoords.Type = ['native'];
+else
+	%transform probe coordinates
+	sProbeCoords = PH_ExtractProbeCoords(sProbeCoords);
+	
+	%select probe
+	intProbeIdx = PH_SelectProbeNr(sProbeCoords,sAtlas);
 	sProbeCoords.intProbeIdx = intProbeIdx;
 end
-sProbeCoords.dblProbeLength = 3840; % (hardcode, sometimes kilosort2 drops channels)
+sProbeCoords.ProbeLength = dblProbeLength ./ sAtlas.VoxelSize(end); %in native atlas size
+sProbeCoords.ProbeLengthMicrons = dblProbeLength; %in microns
 
 %% load ephys
 %select file
@@ -77,10 +78,9 @@ sFile.sClustered.folder = strEphysPath;
 hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
 sEphysData = PH_LoadEphys(sFile);
 if isempty(sEphysData)
-	close(hMsg);
-	return;
+	%return;
 end
-sClusters = PH_PrepEphys(sFile,sEphysData,sProbeCoords.dblProbeLength);
+sClusters = PH_PrepEphys(sFile,sEphysData,sProbeCoords.ProbeLengthMicrons);
 
 % close message
 close(hMsg);

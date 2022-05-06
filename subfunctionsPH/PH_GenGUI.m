@@ -11,11 +11,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%	Created by Jorrit Montijn
 	
 	%% get atlas variables
-	vecBregma = sAtlas.Bregma;% bregma in accf; [AP,DV,ML]
-	vecVoxelSize= sAtlas.VoxelSize;% bregma in accf; [AP,DV,ML]
-	matBrainGrid = sAtlas.BrainGrid;
+	vecBregma = sAtlas.Bregma;% bregma in paxinos coordinates (x=ML,y=AP,z=DV)
+	vecVoxelSize= sAtlas.VoxelSize;% voxel size
+	matBrainMesh = sAtlas.BrainMesh;
 	matColorMap=sAtlas.ColorMap;
-	av = sAtlas.av;
+	av = sAtlas.av; %paxinos coordinates: av(x,y,z) where (x=ML,y=AP,z=DV)
 	st = sAtlas.st;
 	tv = sAtlas.tv;
 	
@@ -23,9 +23,10 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%probe_vector_ccf =[...
 	%   862   -20   732;...AP depth ML (wrt atlas at (0,0,0))
 	%   815   359   690];
-	[matProbePoints,matProbeVector,sProbeAdjusted] = PH_ExtractProbeCoords(sProbeCoords);
-	dblProbeLength = sProbeCoords.dblProbeLength;
-	sClusters.dblProbeLength = dblProbeLength;
+	sProbeCoords = PH_ExtractProbeCoords(sProbeCoords);
+	dblProbeLengthMicrons = sProbeCoords.ProbeLengthMicrons;
+	dblProbeLength = sProbeCoords.ProbeLength;
+	sClusters.dblProbeLength = sProbeCoords.ProbeLengthMicrons;
 	
 	%% Set up the gui
 	%main figure
@@ -37,14 +38,14 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	hAxAtlas = subplot(2,3,1);
 	%vecGridColor = [0 0 0 0.3];
 	vecGridColor = [0.7 0.7 0.7];
-	h = plot3(hAxAtlas, matBrainGrid(:,1), matBrainGrid(:,2), matBrainGrid(:,3), 'Color', vecGridColor);
-	set(hAxAtlas, 'ZDir', 'reverse')
+	h = plot3(hAxAtlas, matBrainMesh(:,1), matBrainMesh(:,2), matBrainMesh(:,3), 'Color', vecGridColor);
+	%set(hAxAtlas, 'ZDir', 'reverse')
 	hold(hAxAtlas,'on');
 	axis(hAxAtlas,'vis3d','equal','manual','off');
 	
-	%view([-30,25]);
+	view([220,30]);
 	caxis([0 300]);
-	[ap_max,dv_max,ml_max] = size(tv);
+	[ml_max,ap_max,dv_max] = size(tv);
 	xlim([-1,ap_max+1])
 	ylim([-1,ml_max+1])
 	zlim([-1,dv_max+1])
@@ -59,11 +60,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	set(hAxAreas,'FontSize',11);
 	yyaxis(hAxAreas,'left');
 	hAxAreasPlot = image(0);
-	set(hAxAreas,'XTick','','YLim',[0,dblProbeLength],'YTick','','YColor','k','YDir','reverse');
+	set(hAxAreas,'XTick','','YLim',[0,dblProbeLengthMicrons],'YTick','','YColor','k','YDir','reverse');
 	colormap(hAxAreas,matColorMap);
 	caxis([1,size(matColorMap,1)])
 	yyaxis(hAxAreas,'right');
-	set(hAxAreas,'XAxisLocation','top','XTick','','YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
+	set(hAxAreas,'XAxisLocation','top','XTick','','YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	
 	% Set up the probe area axes
 	hAxAreas2 = subplot(2,4,8);
@@ -71,28 +72,28 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	set(hAxAreas2,'FontSize',11);
 	yyaxis(hAxAreas2,'left');
 	hAxAreasPlot2 = image(0);
-	set(hAxAreas2,'XTick','','YLim',[0,dblProbeLength],'YTick','','YColor','k','YDir','reverse');
+	set(hAxAreas2,'XTick','','YLim',[0,dblProbeLengthMicrons],'YTick','','YColor','k','YDir','reverse');
 	colormap(hAxAreas2,matColorMap);
 	caxis([1,size(matColorMap,1)])
 	yyaxis(hAxAreas2,'right');
-	set(hAxAreas2,'XAxisLocation','top','XTick','','YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
+	set(hAxAreas2,'XAxisLocation','top','XTick','','YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	
 	%% ZETA
 	hAxZeta = subplot(2,3,2);
-	set(hAxZeta,'XAxisLocation','top','YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
+	set(hAxZeta,'XAxisLocation','top','YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	ylabel(hAxZeta,'Depth (\mum)');
 	
 	%% xcorr & clusters
 	hAxClusters = subplot(2,4,6);
 	ylabel(hAxClusters,'Depth (\mum)');
-	set(hAxClusters,'XLim',[0,dblProbeLength],'YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
+	set(hAxClusters,'XLim',[0,dblProbeLengthMicrons],'YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	
 	hAxMua = subplot(2,4,7);
 	hAxMuaPlot=imagesc(hAxMua,magic(3));
 	%ylabel(hAxMua,'Depth (\mum)');
 	xlabel(hAxMua,'Depth (\mum)');
 	axis(hAxMua,'equal');
-	set(hAxMua,'YTickLabel','','XLim',[0,dblProbeLength],'YLim',[0,dblProbeLength],'YColor','k','YDir','reverse');
+	set(hAxMua,'YTickLabel','','XLim',[0,dblProbeLengthMicrons],'YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	
 	%% Position the axes
 	%set(axes_atlas,'Position',[-0.15,-0.1,1,1.2]);
@@ -123,32 +124,32 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%build gui data
 	sGUI=struct;
 	sGUI.sProbeCoords = sProbeCoords;
-	sGUI.probe_vector_ccf = matProbePoints;
+	sGUI.probe_vector_cart = [];
 	sGUI.tv = tv;
 	sGUI.av = av;
 	sGUI.st = st;
 	sGUI.cmap = colormap(hAxAreas); % Atlas colormap
-	sGUI.bregma = vecBregma; % Bregma for external referencing
-	sGUI.probe_length = dblProbeLength; % Length of probe
+	sGUI.bregma = vecBregma; % Bregma in atlas voxels for external referencing
+	sGUI.probe_length = dblProbeLength; % Length of probe in atlas voxels
 	sGUI.structure_plot_idx = []; % Plotted structures
-	sGUI.probe_angle = [0;90]; % Probe angles in ML/DV
 	sGUI.step_size = 1;
 	
 	%Store handles
-	sGUI.handles.cortex_outline = matBrainGrid;
+	sGUI.handles.cortex_outline = matBrainMesh;
 	sGUI.handles.structure_patch = []; % Plotted structures
 	sGUI.handles.axes_atlas = hAxAtlas; % Axes with 3D atlas
 	sGUI.handles.axes_probe_areas = hAxAreas; % Axes with probe areas
 	sGUI.handles.axes_probe_areas2 = hAxAreas2; % Axes with probe areas
 	sGUI.handles.slice_plot = surface('EdgeColor','none'); % Slice on 3D atlas
 	sGUI.handles.slice_volume = 'av'; % The volume shown in the slice
-	sGUI.probe_ref_line = []; % Probe reference line on 3D atlas
-	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',1); % placeholder
-	sGUI.handles.probe_line = line([-100 -200],[-100 -200],[-100 -200],'Color','b'); % placeholder
-	sGUI.handles.probe_intersect = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'rx','linewidth',2);
+	
+	sGUI.handles.bregma = scatter3(sGUI.handles.axes_atlas,vecBregma(1),vecBregma(2),vecBregma(3),100,'g.','linewidth',1); %bregma
+	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',1); % will contain histology points
+	sGUI.handles.probe_vector_cart = line([-100 -200],[-100 -200],[-100 -200],'Color','b'); % will contain atlas voxel-based location
+	sGUI.handles.probe_tip = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'b.','linewidth',1); % will contain probe tip location
+	sGUI.handles.probe_intersect = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'rx','linewidth',1); %will contain brain intersection
 	sGUI.handles.probe_areas_plot = hAxAreasPlot; % Color-coded probe regions
 	sGUI.handles.probe_areas_plot2 = hAxAreasPlot2; % Color-coded probe regions
-	sGUI.handles.probe_intersect = scatter3(-100,-100,-100,100,'rx','linewidth',2);
 	sGUI.handles.probe_xcorr = hAxMua;
 	sGUI.handles.probe_xcorr_bounds = gobjects;
 	sGUI.handles.probe_clust = hAxClusters;
@@ -178,7 +179,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClusters,sClusters);
 	
 	%set initial position
-	PH_LoadProbeLocation(hMain,matProbeVector,sProbeCoords.intProbeIdx,sProbeAdjusted);
+	PH_LoadProbeLocation(hMain,sProbeCoords,sAtlas);
 	
 	%update angle
 	PH_UpdateProbeAngle(hMain,[0 0]);

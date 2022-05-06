@@ -1,10 +1,10 @@
-function probe_vector_ccf = PH_GetProbeVector(probe_atlas_gui)
+function probe_vector_ccf = PH_GetProbeVector(hMain)
 	
 	% Get guidata
-	gui_data = guidata(probe_atlas_gui);
+	sGUI = guidata(hMain);
 	
 	%get probe location
-	probe_vector_ccf(:,1) = gui_data.handles.probe_line.XData;
-	probe_vector_ccf(:,2) = gui_data.handles.probe_line.ZData;
-	probe_vector_ccf(:,3) = gui_data.handles.probe_line.YData;
+	probe_vector_ccf(:,1) = sGUI.handles.probe_vector_cart.XData;
+	probe_vector_ccf(:,2) = sGUI.handles.probe_vector_cart.ZData;
+	probe_vector_ccf(:,3) = sGUI.handles.probe_vector_cart.YData;
 end

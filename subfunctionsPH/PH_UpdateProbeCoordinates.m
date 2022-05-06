@@ -1,15 +1,15 @@
 function PH_UpdateProbeCoordinates(hMain,varargin)
-	
+	error update this function
 	% Get guidata
 	sGUI = guidata(hMain);
 	
 	%get coords
-	probe_vector = cell2mat(get(sGUI.handles.probe_line,{'XData','YData','ZData'})');
-	probe_n_coords = sqrt(sum(diff(probe_vector,[],2).^2));
+	probe_vector = cell2mat(get(sGUI.handles.probe_vector_cart,{'XData','YData','ZData'})')';
+	probe_n_coords = sqrt(sum(diff(probe_vector,[],1).^2));
 	[probe_xcoords,probe_ycoords,probe_zcoords] = deal( ...
-		linspace(probe_vector(1,1),probe_vector(1,2),probe_n_coords), ...
-		linspace(probe_vector(2,1),probe_vector(2,2),probe_n_coords), ...
-		linspace(probe_vector(3,1),probe_vector(3,2),probe_n_coords));
+		linspace(probe_vector(1,1),probe_vector(2,1),probe_n_coords), ...
+		linspace(probe_vector(1,2),probe_vector(2,2),probe_n_coords), ...
+		linspace(probe_vector(1,3),probe_vector(2,3),probe_n_coords));
 	
 	% Get the positions of the probe and trajectory reference
 	trajectory_brain_intersect = PH_GetBrainIntersection(probe_vector,sGUI.av);
@@ -27,7 +27,7 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 	%get areas
 	pixel_space = 5;
 	probe_area_ids = interp3(single(sGUI.av(1:pixel_space:end,1:pixel_space:end,1:pixel_space:end)), ...
-		round(probe_zcoords/pixel_space),round(probe_xcoords/pixel_space),round(probe_ycoords/pixel_space),'nearest')';
+		round(probe_xcoords/pixel_space),round(probe_ycoords/pixel_space),round(probe_zcoords/pixel_space),'nearest')';
 	probe_area_ids(isnan(probe_area_ids))=1;
 	probe_area_boundaries = intersect(unique([find(~isnan(probe_area_ids),1,'first'); ...
 		find(diff(probe_area_ids) ~= 0);find(~isnan(probe_area_ids),1,'last')]),find(~isnan(probe_area_ids)));
@@ -43,7 +43,7 @@ function PH_UpdateProbeCoordinates(hMain,varargin)
 	probe_area_labels_parent = sGUI.st.acronym(probe_areas_parent(round(probe_area_centers_parent)));
 	
 	% Get position of brain intersect relative to bregma
-	probe_bregma_coordinate = round((sGUI.bregma([1,3])' - trajectory_brain_intersect(1:2))*10);
+	probe_bregma_coordinate = round((sGUI.bregma([1,2]) - trajectory_brain_intersect(1:2)')*10);
 	
 	% Get the depth of the bottom of the probe (sign: hack by z offset)
 	probe_depth = round(sqrt(sum((trajectory_brain_intersect - probe_vector(:,2)).^2))*10)* ...

@@ -1,9 +1,7 @@
 function PH_SetProbeLocation(probe_atlas_gui,probe_vector_ccf)
 	% Load histology points
 	
-	% Philip's GUI: not saved in native CCF order?
-	% plot3(histology_points(:,3),histology_points(:,1),histology_points(:,2),'.b','MarkerSize',20);
-	% line(P(:,3),P(:,1),P(:,2),'color','k','linewidth',2)
+	error('is this still used?')
 	
 	% Get guidata
 	gui_data = guidata(probe_atlas_gui);
