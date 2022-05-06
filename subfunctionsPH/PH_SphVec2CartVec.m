@@ -9,6 +9,6 @@ function matCartVector = PH_SphVec2CartVec(vecSphereVector)
 	[dx,dy,dz] = sph2cart(deg2rad(vecSphereVector(4)),deg2rad(vecSphereVector(5)+90),vecSphereVector(6));
 	
 	%add dx,dy,dz
-	matCartVector = [vecSphereVector(1:3);(vecSphereVector(1:3) - [dx,dy,dz])];
+	matCartVector = [vecSphereVector(1:3);(vecSphereVector(1:3) + [dx,dy,dz])];
 end
 

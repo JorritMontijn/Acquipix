@@ -2,11 +2,11 @@ function vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	%PH_CartVec2SphVec Transforms 2-point cartesian vector to 1-point spherical vector
 	%   vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	%
-	%matCartVector = [x1 y1 z1; x2 y2 z2]
+	%matCartVector = [x1 y1 z1; x2 y2 z2], where [x1 y1 z1] is probe tip
 	%vecSphereVector = [x1 y1 z1 deg-AP deg-ML length]
 	
 	%get dx,dy,dz
-	vecRefVector = matCartVector(1,:) - matCartVector(2,:);
+	vecRefVector = matCartVector(2,:) - matCartVector(1,:);
 	%calculate angle
 	[azimuth,elevation,r] = cart2sph(vecRefVector(1),vecRefVector(2),vecRefVector(3));%ML, AP,depth (DV)
 	

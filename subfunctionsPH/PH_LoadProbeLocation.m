@@ -1,6 +1,5 @@
 function PH_LoadProbeLocation(hMain,sProbeCoords,sAtlas)
 	% Load histology points
-	error('the tip is now at the brain intersection; need to swap')
 	
 	% Get guidata
 	sGUI = guidata(hMain);
