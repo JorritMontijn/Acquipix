@@ -18,9 +18,10 @@ function PH_KeyPress(hMain,eventdata)
 		dblStep = gui_data.step_size;
 		if isempty(eventdata.Modifier)
 			% Up: move probe anterior
-			ap_offset = 10*dblSign*dblStep;
-			vecNewLoc = PH_GetProbeVector(hMain) + [ap_offset 0 0; ap_offset 0 0];
-			PH_SetProbeLocation(hMain,vecNewLoc);
+			ap_offset = mean(gui_data.sAtlas.VoxelSize)*dblSign*dblStep;
+			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
+			vecNewSphereVector = vecSphereVector + [0 -ap_offset 0 0 0 0];
+			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		elseif any(strcmp(eventdata.Modifier,'shift'))
 			% Shift-up: increase DV angle
 			angle_change = [1;0]*dblSign*dblStep;

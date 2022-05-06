@@ -124,10 +124,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%build gui data
 	sGUI=struct;
 	sGUI.sProbeCoords = sProbeCoords;
-	sGUI.probe_vector_cart = [];
-	sGUI.tv = tv;
-	sGUI.av = av;
-	sGUI.st = st;
+	sGUI.sAtlas = sAtlas;
 	sGUI.cmap = colormap(hAxAreas); % Atlas colormap
 	sGUI.bregma = vecBregma; % Bregma in atlas voxels for external referencing
 	sGUI.probe_length = dblProbeLength; % Length of probe in atlas voxels
@@ -182,11 +179,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	PH_LoadProbeLocation(hMain,sProbeCoords,sAtlas);
 	
 	%update angle
-	PH_UpdateProbeAngle(hMain,[0 0]);
+	%PH_UpdateProbeAngle(hMain,[0 0]);
 	
 	% Display the first slice and update the probe position
-	PH_UpdateSlice(hMain);
-	PH_UpdateProbeCoordinates(hMain);
+	%PH_UpdateSlice(hMain);
+	%PH_UpdateProbeCoordinates(hMain);
 	
 	% Display controls
 	PH_DisplayControls;
