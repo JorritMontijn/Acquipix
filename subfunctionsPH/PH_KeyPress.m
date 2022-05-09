@@ -18,25 +18,25 @@ function PH_KeyPress(hMain,eventdata)
 		dblStep = gui_data.step_size;
 		if isempty(eventdata.Modifier)
 			% Up: move probe anterior
-			ap_offset = mean(gui_data.sAtlas.VoxelSize)*dblSign*dblStep;
+			dblMoveAP = mean(gui_data.sAtlas.VoxelSize)*dblSign*dblStep;
 			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
-			vecNewSphereVector = vecSphereVector + [0 -ap_offset 0 0 0 0];
+			vecNewSphereVector = vecSphereVector - [0 dblMoveAP 0 0 0 0];
 			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		elseif any(strcmp(eventdata.Modifier,'shift'))
-			% Shift-up: increase DV angle
-			angle_change = [1;0]*dblSign*dblStep;
-			PH_UpdateProbeAngle(hMain,angle_change);
+			% Shift-up: increase AP angle
+			dblRotateAP = dblSign*dblStep;
+			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
+			vecNewSphereVector = vecSphereVector - [0 0 0 0 dblRotateAP 0];
+			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		elseif any(strcmp(eventdata.Modifier,'alt'))
 			% Alt-up: raise probe
-			probe_offset = 10*dblSign*dblStep;
-			old_probe_vector = PH_GetProbeVector(hMain);
+			dblMoveUpDown = mean(gui_data.sAtlas.VoxelSize)*dblSign*dblStep;
+			vecCartOld = PH_GetProbeVector(hMain);
+			vecDelta = diff(vecCartOld,[],1)./ ...
+				norm(diff(vecCartOld,[],1))*dblMoveUpDown;
+			vecCartNew = bsxfun(@minus,vecCartOld,vecDelta);
 			
-			move_probe_vector = diff(old_probe_vector,[],1)./ ...
-				norm(diff(old_probe_vector,[],1))*probe_offset;
-			
-			new_probe_vector = bsxfun(@plus,old_probe_vector,move_probe_vector);
-			
-			PH_SetProbeLocation(hMain,new_probe_vector);
+			PH_UpdateProbeCoordinates(hMain,PH_CartVec2SphVec(vecCartNew));
 		end
 		
 	elseif strcmp(eventdata.Key,'rightarrow') || strcmp(eventdata.Key,'leftarrow')
@@ -44,14 +44,16 @@ function PH_KeyPress(hMain,eventdata)
 		dblStep = gui_data.step_size;
 		if isempty(eventdata.Modifier)
 			% Right: move probe right
-			ml_offset = 10*dblSign*dblStep;
-			old_probe_vector = PH_GetProbeVector(hMain);
-			new_probe_vector = old_probe_vector + [0 0 ml_offset; 0 0 ml_offset];
-			PH_SetProbeLocation(hMain,new_probe_vector);
+			dblMoveML = mean(gui_data.sAtlas.VoxelSize)*dblSign*dblStep;
+			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
+			vecNewSphereVector = vecSphereVector - [dblMoveML 0 0 0 0 0];
+			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		elseif any(strcmp(eventdata.Modifier,'shift'))
 			% Ctrl-right: increase vertical angle
-			angle_change = [0;1]*dblSign*dblStep;
-			PH_UpdateProbeAngle(hMain,angle_change);
+			dblRotateML = dblSign*dblStep;
+			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
+			vecNewSphereVector = vecSphereVector - [0 0 0 dblRotateML 0 0];
+			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		end
 		
 	elseif strcmp(eventdata.Key,'c')

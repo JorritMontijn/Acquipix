@@ -15,23 +15,29 @@ function vecLocationBrainIntersection = PH_GetBrainIntersection(probe_vector_car
 	probe_ref_bottom = probe_line_endpoints(2,[1,2,3]);
 	probe_ref_vector = [probe_ref_top;probe_ref_bottom];
 	
-	% Get the positions of the probe and trajectory reference
-	intAtlasDownsample = 5;
-	trajectory_n_coords = max(abs(diff(probe_ref_vector,[],1)))/intAtlasDownsample;
+	%get locations along probe
+	trajectory_n_coords = sqrt(sum(diff(probe_ref_vector,[],1).^2));
 	[trajectory_xcoords,trajectory_ycoords,trajectory_zcoords] = deal( ...
 		linspace(probe_ref_vector(1,1),probe_ref_vector(2,1),trajectory_n_coords), ...
 		linspace(probe_ref_vector(1,2),probe_ref_vector(2,2),trajectory_n_coords), ...
 		linspace(probe_ref_vector(1,3),probe_ref_vector(2,3),trajectory_n_coords));
+	%limit to atlas size
+	vecSizeAtlas = size(av);
+	trajectory_xcoords(trajectory_xcoords<1) = 1;
+	trajectory_ycoords(trajectory_ycoords<1) = 1;
+	trajectory_zcoords(trajectory_zcoords<1) = 1;
+	trajectory_xcoords(trajectory_xcoords>vecSizeAtlas(1)) = vecSizeAtlas(1);
+	trajectory_ycoords(trajectory_ycoords>vecSizeAtlas(2)) = vecSizeAtlas(2);
+	trajectory_zcoords(trajectory_zcoords>vecSizeAtlas(3)) = vecSizeAtlas(3);
 	
-	% Get brain labels across the probe and trajectory, and intersection with brain
-	trajectory_areas = interp3(single(av(1:intAtlasDownsample:end,1:intAtlasDownsample:end,1:intAtlasDownsample:end)), ...
-		round(trajectory_xcoords/intAtlasDownsample),round(trajectory_ycoords/intAtlasDownsample),round(trajectory_zcoords/intAtlasDownsample),'nearest');
+	%get areas
+	trajectory_area_ids = single(av(sub2ind(vecSizeAtlas,round(trajectory_xcoords),round(trajectory_ycoords),round(trajectory_zcoords))));
 	
-	%if vecRefVector(1) >= 0
-		trajectory_brain_idx = find(trajectory_areas > 1,1,'first');
-	%else
-	%	trajectory_brain_idx = find(trajectory_areas > 1,1,'last');
-	%end
+	if diff(probe_ref_vector(:,3)) >= 0
+		trajectory_brain_idx = find(trajectory_area_ids > 1,1,'last');
+	else
+		trajectory_brain_idx = find(trajectory_area_ids > 1,1,'first');
+	end
 	vecLocationBrainIntersection = ...
 		[trajectory_xcoords(trajectory_brain_idx),trajectory_ycoords(trajectory_brain_idx),trajectory_zcoords(trajectory_brain_idx)]';
 end

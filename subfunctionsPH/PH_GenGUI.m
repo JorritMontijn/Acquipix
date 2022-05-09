@@ -41,7 +41,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	h = plot3(hAxAtlas, matBrainMesh(:,1), matBrainMesh(:,2), matBrainMesh(:,3), 'Color', vecGridColor);
 	%set(hAxAtlas, 'ZDir', 'reverse')
 	hold(hAxAtlas,'on');
-	axis(hAxAtlas,'vis3d','equal','manual','off');
+	axis(hAxAtlas,'vis3d','equal','manual','off','ij');
 	
 	view([220,30]);
 	caxis([0 300]);

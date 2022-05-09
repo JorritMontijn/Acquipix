@@ -26,9 +26,9 @@ function sAtlas = RP_PrepABA(tv_accf,av_accf,st)
 	% - the probe has two angles: ML and AP where (0;0) degrees is a vertical insertion
 	%
 	%
-	%The ABA CCF coordinates are (x=-AP,y=-DV,z=ML)
-	%imagesc(squeeze(av(x,:,:))) is coronal slice (ML by -DV, where DV=0 is dorsal, and DV=max is ventral)
-	%imagesc(squeeze(av(:,y,:))) is axial slice (ML by -AP, where AP=0 is anterior, AP=max is posterior)
+	%The ABA CCF coordinates are (x=-AP,y=-DV,z=-ML)
+	%imagesc(squeeze(av(x,:,:))) is coronal slice (-ML by -DV, where DV=0 is dorsal, and DV=max is ventral)
+	%imagesc(squeeze(av(:,y,:))) is axial slice (-ML by -AP, where AP=0 is anterior, AP=max is posterior)
 	%imagesc(squeeze(av(:,:,z))) is saggital slice (-DV by -AP, DV=0 is dorsal; AP=0 is anterior)
 	%
 	%Paxinos coordinates are (x=ML,y=AP,z=DV)
@@ -37,7 +37,7 @@ function sAtlas = RP_PrepABA(tv_accf,av_accf,st)
 	%imagesc(squeeze(av(:,:,z))) is axial slice (ML by AP, AP=0 is posterior, and AP=max is anterior)
 	%
 	%In Paxinos coordinates, coordinates relative to bregma (bregma - X) mean that -AP is posterior,
-	%+AP is anterior, -DV is dorsal, +DV is ventral
+	%+AP is anterior, -DV is dorsal, +DV is ventral, -ML is left, +ML is right
 	%
 	%To transform ABA CCF to Paxinos, we therefore do the following:
 	%av = permute(av_accf(end:-1:1,end:-1:1,:), [3 1 2]);
@@ -61,8 +61,8 @@ function sAtlas = RP_PrepABA(tv_accf,av_accf,st)
 	cmap=sLoad.cmap;
 	
 	%% transform atlas coordinates
-	av = permute(av_accf(end:-1:1,end:-1:1,:), [3 1 2]);
-	tv = permute(tv_accf(end:-1:1,end:-1:1,:), [3 1 2]);
+	av = permute(av_accf(end:-1:1,end:-1:1,end:-1:1), [3 1 2]);
+	tv = permute(tv_accf(end:-1:1,end:-1:1,end:-1:1), [3 1 2]);
 	vecBregmaInv = size(av_accf) - vecBregma_accf;
 	vecBregma = vecBregmaInv([3 1 2]);
 	matBrainMeshRev = matBrainMesh_accf(:,[2 1 3]);

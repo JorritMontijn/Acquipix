@@ -3,7 +3,7 @@ function vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	%   vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	%
 	%matCartVector = [x1 y1 z1; x2 y2 z2], where [x1 y1 z1] is probe tip
-	%vecSphereVector = [x1 y1 z1 deg-AP deg-ML length]
+	%vecSphereVector = [x1 y1 z1 deg-ML deg-AP length]
 	
 	%get dx,dy,dz
 	vecRefVector = matCartVector(2,:) - matCartVector(1,:);
@@ -11,10 +11,9 @@ function vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	[azimuth,elevation,r] = cart2sph(vecRefVector(1),vecRefVector(2),vecRefVector(3));%ML, AP,depth (DV)
 	
 	%extract angles in degrees
-	dblInverterML = double(vecRefVector(2) < 0)*2-1;
-	dblAngleAP = rad2deg(azimuth);
-	dblAngleML = rad2deg(elevation);
-	vecAngles = mod([dblAngleAP dblAngleML-90],360);
-	vecSphereVector = [matCartVector(1,:) vecAngles r];
+	dblInverterML = double(vecRefVector(1) < 0)*2-1;
+	dblAngleAP = mod(rad2deg(azimuth)-180,360);
+	dblAngleML = 90-rad2deg(elevation);
+	vecSphereVector = [matCartVector(1,:) dblAngleML dblAngleAP r];
 end
 

@@ -1,28 +1,35 @@
-function PH_SetProbePosition(hMain,varargin)
+function PH_SetProbePosition(hMain)
 	
-	% Get guidata
-	gui_data = guidata(hMain);
+	%get gui data
+	sGUI = guidata(hMain);
 	
-	% Prompt for angles
+	% Prompt for location
 	prompt_text = { ...
-		'AP position (\mum from bregma)', ...
 		'ML position (\mum from bregma)', ...
-		'Depth (\mum below bregma)', ...
-		'AP angle', ....
-		'ML angle'};
-	cellInput = inputdlg(prompt_text,'Set probe position',1);
+		'AP position (\mum from bregma)', ...
+		'ML angle (deg)', ....
+		'AP angle (deg)',...
+		'Depth of probe (\mum from brain entry)', ...
+		'Length of probe (\mum)', ...
+		};
+	
+	cellInput = inputdlg(prompt_text,'Set probe position in Paxinos coordinates',1);
 	if isempty(cellInput)
 		return
 	end
+	
+	%transform input
+	if isempty(cellInput{end})
+		cellInput{end} = '3840';
+	end
+	if isempty(cellInput{end-1})
+		cellInput{end-1} = cellInput{end};
+	end
 	cellInput(cellfun(@isempty,cellInput)) = {'0'};
-	new_probe_position = cellfun(@str2num,cellInput)';
+	vecBregmaVector = cellfun(@str2num,cellInput)';
+	vecSphereVector = PH_BregmaVec2SphVec(vecBregmaVector,sGUI.sAtlas);
 	
-	% Convert probe position: mm->CCF and degrees->radians
-	probe_ccf_coordinates = round(gui_data.bregma - [new_probe_position(1) new_probe_position(3) new_probe_position(2)]/10);
-	probe_ccf_coordinates(2,:) = probe_ccf_coordinates(1,:) + [0 3840+new_probe_position(2) 0]/10;
-	
-	PH_SetProbeLocation(hMain,probe_ccf_coordinates);
-	PH_UpdateProbeAngle(hMain,new_probe_position(4:5));
-	
+	% set new location
+	PH_UpdateProbeCoordinates(hMain,vecSphereVector)
 end
 
