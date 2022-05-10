@@ -9,7 +9,7 @@ function PH_DeleteFcn(hObject,varargin)
 	
 	%ask to quit
 	opts = struct;
-	opts.Default = 'Confirm exit?';
+	opts.Default = 'Cancel';
 	opts.Interpreter = 'none';
 	strAns = questdlg('Are you sure you wish to exit?','Confirm exit','Save & Exit','Exit & Discard data','Cancel',opts);
 	switch strAns
@@ -17,11 +17,7 @@ function PH_DeleteFcn(hObject,varargin)
 			%retrieve original data
 			sProbeCoords = sGUI.sProbeCoords;
 			
-			%add adjusted position
-			sProbeAdjusted = sGUI.output;
-			sGUI.sProbeAdjusted = sProbeAdjusted;
-			sProbeCoords.sProbeAdjusted = sProbeAdjusted;
-			
+			%name
 			if isfield(sProbeCoords,'name')
 				strDefName = sProbeCoords.name;
 			else
@@ -29,6 +25,7 @@ function PH_DeleteFcn(hObject,varargin)
 			end
 			%export probe coord file
 			try
+				if isempty(sProbeCoords.folder),error('dummy error');end
 				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
 			catch
 				[strFile,strPath]=uiputfile('*.*','Save file as',strDefName);
@@ -39,6 +36,7 @@ function PH_DeleteFcn(hObject,varargin)
 				sProbeCoords.name = strFile;
 				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
 			end
+			fprintf('Saved probe coordinates to %s\n',fullpath(sProbeCoords.folder,sProbeCoords.name));
 			
 			%update gui &close
 			hObject.UserData = 'close';
@@ -50,6 +48,7 @@ function PH_DeleteFcn(hObject,varargin)
 			sGUI.sProbeCoords = [];
 			hObject.UserData = 'close';
 			guidata(hObject,sGUI);
+			PH_DeleteFcn(hObject);
 		case 'Cancel'
 			return;
 	end

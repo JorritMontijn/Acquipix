@@ -10,7 +10,7 @@ function sAtlas = RP_PrepABA(tv_accf,av_accf,st)
 	%	- st: structure tree [1327×22 table]
 	%	- Bregma: location of bregma in modified coordinates
 	%	- VoxelSize: size of a single entry in microns [10 10 10]
-	%	- BrainGrid: mesh of brain outline [23382×3 double]
+	%	- BrainMesh: mesh of brain outline [23382×3 double]
 	%	- ColorMap: color map for brain areas [1327×3 double]
 	%
 	%Note on axes:
@@ -78,4 +78,5 @@ function sAtlas = RP_PrepABA(tv_accf,av_accf,st)
 	sAtlas.VoxelSize = vecVoxelSize;
 	sAtlas.BrainMesh = matBrainMesh; %transform to coordinates in microns?
 	sAtlas.ColorMap = cmap;
+	sAtlas.Type = 'Allen-CCF-Mouse';
 end

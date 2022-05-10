@@ -1,7 +1,7 @@
 %align probe to atlas
 
 %% ask what to load
-
+%clear all;
 %% load atlas
 intUseMouseOrRat = 1;
 sRP = RP_populateStructure();
@@ -65,7 +65,6 @@ catch
 	strNewPath = strOldPath;
 end
 strEphysPath=uigetdir(strNewPath,'Select kilosort data folder');
-cd(strOldPath);
 %if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
 %	return;
 %end
@@ -81,9 +80,32 @@ if isempty(sEphysData)
 	%return;
 end
 sClusters = PH_PrepEphys(sFile,sEphysData,sProbeCoords.ProbeLengthMicrons);
+close(hMsg);
+
+% load or compute zeta if ephys file is not an Acquipix format
+if isempty(sClusters) || strcmp(sClusters.strZetaTit,'Contamination')
+	%select
+	[strZetaFile,strZetaPath] =uigetfile(strNewPath,'Select event time or ZETA file');
+
+	%load
+	sLoad = load(fullpath(strZetaPath,strZetaFile));
+	
+	%process
+	error here
+	sSynthData = sLoad.sSynthData;
+	vecDepth = cell2vec({sSynthData.sCluster.Depth});
+	vecZetaP = cellfun(@min,{sSynthData.sCluster.ZetaP});
+	cellSpikes = cellSpikes;
+	
+	%save
+	sClusters.vecDepth = vecDepth;
+	sClusters.vecZeta = norminv(1-(vecZetaP/2));
+	sClusters.strZetaTit = 'ZETA (z-score)';
+	sClusters.cellSpikes = cellSpikes;
+end
 
 % close message
-close(hMsg);
+cd(strOldPath);
 
 %% run GUI
 [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_GenGUI(sAtlas,sProbeCoords,sClusters);

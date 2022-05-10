@@ -24,6 +24,17 @@ function PH_UpdateProbeCoordinates(hMain,vecSphereVector)
 	sGUI.sProbeCoords.sProbeAdjusted.probe_vector_intersect = vecLocationBrainIntersection;
 	sGUI.sProbeCoords.sProbeAdjusted.probe_vector_bregma = probe_vector_bregma;
 	
+	%get locations along probe
+	[probe_area_ids,probe_area_boundaries,probe_area_centers] = PH_GetProbeAreas(probe_vector_cart,sGUI.sAtlas.av);
+	probe_area_idx = probe_area_ids(round(probe_area_centers));
+	probe_area_labels = sGUI.sAtlas.st.acronym(probe_area_idx);
+	probe_area_full = sGUI.sAtlas.st.name(probe_area_idx);
+	
+	%add locations to GUI data
+	sGUI.sProbeCoords.sProbeAdjusted.probe_area_ids = probe_vector_cart;
+	sGUI.sProbeCoords.sProbeAdjusted.probe_area_labels = probe_area_labels;
+	sGUI.sProbeCoords.sProbeAdjusted.probe_area_full = probe_area_full;
+	
 	% update gui
 	set(sGUI.handles.probe_vector_cart,'XData',probe_vector_cart(:,1), ...
 		'YData',probe_vector_cart(:,2),'ZData',probe_vector_cart(:,3));
@@ -33,27 +44,6 @@ function PH_UpdateProbeCoordinates(hMain,vecSphereVector)
 		'YData',probe_vector_cart(1,2),'ZData',probe_vector_cart(1,3));
 	guidata(hMain, sGUI);
 	
-	%get locations along probe
-	probe_n_coords = sqrt(sum(diff(probe_vector_cart,[],1).^2));
-	[probe_xcoords,probe_ycoords,probe_zcoords] = deal( ...
-		linspace(probe_vector_cart(2,1),probe_vector_cart(1,1),probe_n_coords), ...
-		linspace(probe_vector_cart(2,2),probe_vector_cart(1,2),probe_n_coords), ...
-		linspace(probe_vector_cart(2,3),probe_vector_cart(1,3),probe_n_coords));
-	%limit to atlas size
-	vecSizeAtlas = size(sGUI.sAtlas.av);
-	probe_xcoords(probe_xcoords<1) = 1;
-	probe_ycoords(probe_ycoords<1) = 1;
-	probe_zcoords(probe_zcoords<1) = 1;
-	probe_xcoords(probe_xcoords>vecSizeAtlas(1)) = vecSizeAtlas(1);
-	probe_ycoords(probe_ycoords>vecSizeAtlas(2)) = vecSizeAtlas(2);
-	probe_zcoords(probe_zcoords>vecSizeAtlas(3)) = vecSizeAtlas(3);
-	
-	%get areas
-	probe_area_ids = single(sGUI.sAtlas.av(sub2ind(vecSizeAtlas,round(probe_xcoords),round(probe_ycoords),round(probe_zcoords))));
-	vecBoundaries = [find(~isnan(probe_area_ids),1,'first') find(diff(probe_area_ids) ~= 0) find(~isnan(probe_area_ids),1,'last')];
-	probe_area_boundaries = intersect(unique(vecBoundaries),find(~isnan(probe_area_ids))); %remove nans
-	probe_area_centers = probe_area_boundaries(1:end-1) + diff(probe_area_boundaries)/2;
-	probe_area_labels = sGUI.sAtlas.st.acronym(probe_area_ids(round(probe_area_centers)));
 	
 	% Update the text
 	probe_text = ['Brain intersection at: ' ....
@@ -71,9 +61,13 @@ function PH_UpdateProbeCoordinates(hMain,vecSphereVector)
 	dblVoxelSize = mean(sGUI.sAtlas.VoxelSize);
 	yyaxis(sGUI.handles.axes_probe_areas,'right');
 	set(sGUI.handles.probe_areas_plot,'YData',[1:length(probe_area_ids)]*dblVoxelSize,'CData',probe_area_ids(:));
-	set(sGUI.handles.axes_probe_areas,'YTick',probe_area_centers*dblVoxelSize,'YTickLabels',probe_area_labels);
+	%set(sGUI.handles.axes_probe_areas,'YTick',probe_area_centers*dblVoxelSize,'YTickLabels',probe_area_labels);
+	
+	set(sGUI.handles.axes_probe_areas,'YTick',probe_area_boundaries(2:end)*dblVoxelSize,'YTickLabels',probe_area_full);
+	set(sGUI.handles.axes_probe_areas,'YTickLabelRotation',70);
+	
 	yyaxis(sGUI.handles.axes_probe_areas2,'right');
-	set(sGUI.handles.probe_areas_plot2,'YData',[1:length(probe_area_ids)]*10,'CData',probe_area_ids(:));
+	set(sGUI.handles.probe_areas_plot2,'YData',[1:length(probe_area_ids)]*dblVoxelSize,'CData',probe_area_ids(:));
 	set(sGUI.handles.axes_probe_areas2,'YTick',probe_area_centers*dblVoxelSize,'YTickLabels',probe_area_labels);
 	
 	%save current data

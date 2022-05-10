@@ -15,30 +15,41 @@ function vecSphereVector = PH_BregmaVec2SphVec(vecBregmaVector,sAtlas)
 	%parameters. The sixth element is the length of the probe in microns.
 	
 	%transform to atlas space
-	dblAtlasML = sAtlas.Bregma(1) + (vecBregmaVector(1) / sAtlas.VoxelSize(1));
+	dblAtlasML = sAtlas.Bregma(1) - (vecBregmaVector(1) / sAtlas.VoxelSize(1));
 	dblAtlasAP = sAtlas.Bregma(2) + (vecBregmaVector(2) / sAtlas.VoxelSize(2));
 	dblAngleML_deg = vecBregmaVector(3);
 	dblAngleAP_deg = vecBregmaVector(4);
 	dblDepthAtlas = vecBregmaVector(5) / sAtlas.VoxelSize(end); %only valid if voxels are isometric
 	dblLengthAtlas = vecBregmaVector(6) / sAtlas.VoxelSize(end); %only valid if voxels are isometric
 	
-	%calculate tip location relative to entry
-	[dX,dY,dZ] = sph2cart(deg2rad(dblAngleML_deg+0),deg2rad(dblAngleAP_deg+90),dblDepthAtlas);
+	%get dx,dy,dz
+	[dZ,dY,dX] = sph2cart(deg2rad(-dblAngleAP_deg),deg2rad(dblAngleML_deg),dblLengthAtlas);
 	
 	%find highest point of brain at these ML,AP coordinates
-	vecBrainEntry = vecBregmaVector(1:3) + sAtlas.Bregma;
-	if dX < 0
+	vecBrainEntry = [dblAtlasML dblAtlasAP sAtlas.Bregma(3)];
+	if dZ < 0
 		intDV = find(sAtlas.av(vecBrainEntry(1),vecBrainEntry(2),:) > 1,1,'first');
 	else
 		intDV = find(sAtlas.av(vecBrainEntry(1),vecBrainEntry(2),:) > 1,1,'last');
 	end
-	vecTipLoc = [dblAtlasML-dX dblAtlasAP-dY intDV-dZ];
+	vecBrainEntry(3) = intDV;
 	
-	%compile
-	vecSphereVector = nan(1,6);
-	vecSphereVector(1:3) = vecTipLoc;
-	vecSphereVector(4) = dblAngleML_deg;
-	vecSphereVector(5) = dblAngleAP_deg;
-	vecSphereVector(6) = dblLengthAtlas;
+	%if probe is completely in brain
+	vecTipLoc = [dblAtlasML-dX dblAtlasAP-dY intDV-dZ];
+	vecSphereVectorDeep = nan(1,6);
+	vecSphereVectorDeep(1:3) = vecTipLoc;
+	vecSphereVectorDeep(4) = dblAngleML_deg;
+	vecSphereVectorDeep(5) = dblAngleAP_deg;
+	vecSphereVectorDeep(6) = dblLengthAtlas;
+	
+	%move probe up
+	dblMoveUpDown = 1 - (dblDepthAtlas / dblLengthAtlas);
+	matCartOld = PH_SphVec2CartVec(vecSphereVectorDeep);
+	vecDelta = diff(matCartOld,[],1)./ ...
+		norm(diff(matCartOld,[],1))*dblMoveUpDown;
+	matCartNew = bsxfun(@plus,matCartOld,dblLengthAtlas*vecDelta);
+	
+	%get sphere vector
+	vecSphereVector = PH_CartVec2SphVec(matCartNew);
 end
 

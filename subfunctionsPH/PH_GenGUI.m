@@ -44,7 +44,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	hAxAtlas = subplot(2,3,1);
 	%vecGridColor = [0 0 0 0.3];
 	vecGridColor = [0.7 0.7 0.7];
-	h = plot3(hAxAtlas, matBrainMesh(:,1), matBrainMesh(:,2), matBrainMesh(:,3), 'Color', vecGridColor);
+	hMesh = plot3(hAxAtlas, matBrainMesh(:,1), matBrainMesh(:,2), matBrainMesh(:,3), 'Color', vecGridColor);
 	%set(hAxAtlas, 'ZDir', 'reverse')
 	hold(hAxAtlas,'on');
 	axis(hAxAtlas,'vis3d','equal','manual','off','ij');
@@ -52,8 +52,8 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	view([220,30]);
 	caxis([0 300]);
 	[ml_max,ap_max,dv_max] = size(tv);
-	xlim([-1,ap_max+1])
-	ylim([-1,ml_max+1])
+	xlim([-1,ml_max+1])
+	ylim([-1,ap_max+1])
 	zlim([-1,dv_max+1])
 	h = rotate3d(hAxAtlas);
 	h.Enable = 'on';
@@ -103,7 +103,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%% Position the axes
 	%set(axes_atlas,'Position',[-0.15,-0.1,1,1.2]);
 	%set(axes_probe_areas,'Position',[0.7,0.45,0.03,0.5]);
-	set(hAxAtlas,'Position',[-0.15,-0.1,0.8,1.2]);
+	if strcmp(sAtlas.Type,'Allen-CCF-Mouse')
+		set(hAxAtlas,'Position',[-0.15,-0.1,0.8,1.2]);
+	elseif strcmp(sAtlas.Type,'Sprague-Dawley-Rat')
+		set(hAxAtlas,'Position',[-0.1,0,0.7,1.2]);
+	end
 	set(hAxZeta,'Position',[0.6,0.5,0.3,0.4]);
 	set(hAxAreas,'Position',[0.93,0.5,0.02,0.4]);
 	set(hAxClusters,'Position',[0.6,0.065,0.1,0.4]);
@@ -119,8 +123,15 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	ptrButtonLoad = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
 		'String',sprintf('Help'),...
 		'Units','normalized',...
-		'Position',[0.95 0.95 0.03 0.03],...
+		'Position',[0.93 0.95 0.03 0.03],...
 		'Callback',@PH_DisplayControls);
+	
+	%% make freeze/unfreeze button
+	ptrButtonFreeze = uicontrol(hMain,'Style','togglebutton','FontSize',11,...
+		'String',sprintf('Freeze'),...
+		'Units','normalized',...
+		'Position',[0.01 0.94 0.04 0.03],...
+		'Callback',@PH_ToggleFreeze);
 	
 	%% assign values to structure
 	% Set the current axes to the atlas (dirty, but some gca requirements)
@@ -136,16 +147,22 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sGUI.structure_plot_idx = []; % Plotted structures
 	sGUI.step_size = 1;
 	
-	%Store handles
-	sGUI.handles.cortex_outline = matBrainMesh;
+	% user interface handles
+	sGUI.handles.hMain = hMain;
+	sGUI.handles.ptrButtonLoad = ptrButtonLoad;
+	sGUI.handles.ptrButtonFreeze = ptrButtonFreeze;
+	
+	% plotting handles
+	sGUI.handles.cortex_outline = hMesh;
 	sGUI.handles.structure_patch = []; % Plotted structures
 	sGUI.handles.axes_atlas = hAxAtlas; % Axes with 3D atlas
 	sGUI.handles.axes_probe_areas = hAxAreas; % Axes with probe areas
 	sGUI.handles.axes_probe_areas2 = hAxAreas2; % Axes with probe areas
 	sGUI.handles.slice_plot = surface('EdgeColor','none'); % Slice on 3D atlas
 	sGUI.handles.slice_volume = 'av'; % The volume shown in the slice
-	
 	sGUI.handles.bregma = scatter3(sGUI.handles.axes_atlas,vecBregma(1),vecBregma(2),vecBregma(3),100,'g.','linewidth',1); %bregma
+	
+	%probe-related handles
 	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',1); % will contain histology points
 	sGUI.handles.probe_vector_cart = line([-100 -200],[-100 -200],[-100 -200],'Color','b'); % will contain atlas voxel-based location
 	sGUI.handles.probe_tip = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'b.','linewidth',1); % will contain probe tip location
@@ -159,19 +176,19 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sGUI.handles.probe_zeta = hAxZeta;
 	sGUI.handles.probe_zeta_bounds = gobjects;
 	
+	%other
 	sGUI.probe_coordinates_text = probe_coordinates_text; % Probe coordinates text
 	sGUI.lastPress = tic;
 	sGUI.boolReadyForExit = false;
 	sGUI.output = [];
 	
-	%set slice alpha
+	%set slice alpha (makes it slow)
 	%alpha(sGUI.handles.slice_plot,0.65)
 	
 	% Set functions for key presses
 	hManager = uigetmodemanager(hMain);
 	[hManager.WindowListenerHandles.Enabled] = deal(false);
 	set(hMain,'KeyPressFcn',@PH_KeyPress);
-	%set(hMain,'KeyReleaseFcn',@PH_KeyRelease);
 	
 	% Upload gui_data
 	guidata(hMain, sGUI);
@@ -182,13 +199,6 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	
 	%set initial position
 	PH_LoadProbeLocation(hMain,sProbeCoords,sAtlas);
-	
-	%update angle
-	%PH_UpdateProbeAngle(hMain,[0 0]);
-	
-	% Display the first slice and update the probe position
-	%PH_UpdateSlice(hMain);
-	%PH_UpdateProbeCoordinates(hMain);
 	
 	% Display controls
 	PH_DisplayControls;

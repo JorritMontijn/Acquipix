@@ -15,6 +15,7 @@ function vecBregmaVector = PH_SphVec2BregmaVec(vecSphereVector,vecLocBrainInters
 	%brain entry
 	vecBregmaVector = nan(1,6);
 	vecBregmaVector(1:2) = (sAtlas.Bregma(1:2) - flat(vecLocBrainIntersect(1:2))') .* sAtlas.VoxelSize(1:2);
+	vecBregmaVector(2) = -vecBregmaVector(2);
 	%ML angle
 	if mod(vecSphereVector(4),360) > 180
 		vecBregmaVector(3) = mod(vecSphereVector(4),360) - 360;
