@@ -33,6 +33,12 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	hMain = figure('Toolbar','none','Menubar','none','color','w', ...
 		'Name','Coordinate adjuster','Units','normalized','Position',[0.05,0.05,0.9,0.9],...
 		'CloseRequestFcn',@PH_DeleteFcn);
+	try
+		%OpenGL is way faster than painters for 3d stuff
+		hMain.Renderer = 'OpenGL';
+	catch
+		errordlg('OpenGL acceleration failed: try updating your GPU drivers','OpenGL error');
+	end
 	
 	% Set up the atlas axes
 	hAxAtlas = subplot(2,3,1);
@@ -52,7 +58,6 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	h = rotate3d(hAxAtlas);
 	h.Enable = 'on';
 	h.ActionPostCallback = @PH_UpdateSlice;
-	
 	
 	% Set up the probe area axes
 	hAxAreas = subplot(2,3,3);

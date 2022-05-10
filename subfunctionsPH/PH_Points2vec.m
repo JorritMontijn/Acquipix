@@ -31,15 +31,13 @@ function [vecSphereVector,vecLocBrainIntersect,matRefVector] = PH_Points2vec(sPr
 	%get angles
 	vecD = diff(matRefVector);
 	vecNormD = vecD./norm(vecD);
-	[azimuth,elevation,r] = cart2sph(vecNormD(1),vecNormD(2),vecNormD(3));%ML, AP,depth (DV)
+	vecSphereVector1 = PH_CartVec2SphVec(matRefVector);
 	
 	%extract angles in degrees
-	dblInverterML = double(matRefVector(2) < 0)*2-1;
-	dblAngleAP = rad2deg(azimuth);
-	dblAngleML = rad2deg(elevation);
-	vecAngles = mod([dblAngleAP dblAngleML-90],360);
+	dblAngleML = vecSphereVector1(4);
+	dblAngleAP = vecSphereVector1(5);
 	
 	%set correct probe tip & length
-	vecSphereVector = [vecProbeLoc(:)'-(vecNormD*dblProbeLength) vecAngles dblProbeLength];
+	vecSphereVector = [vecProbeLoc(:)'-(vecNormD*dblProbeLength) dblAngleML dblAngleAP dblProbeLength];
 end
 	

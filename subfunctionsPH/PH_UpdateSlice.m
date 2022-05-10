@@ -1,4 +1,4 @@
-function PH_UpdateSlice(hMain)
+function PH_UpdateSlice(hMain,varargin)
 	% Get guidata
 	sGUI = guidata(hMain);
 	

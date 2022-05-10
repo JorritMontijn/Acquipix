@@ -23,11 +23,11 @@ function vecSphereVector = PH_BregmaVec2SphVec(vecBregmaVector,sAtlas)
 	dblLengthAtlas = vecBregmaVector(6) / sAtlas.VoxelSize(end); %only valid if voxels are isometric
 	
 	%calculate tip location relative to entry
-	[dX,dY,dZ] = sph2cart(deg2rad(dblAngleAP_deg),deg2rad(dblAngleML_deg+90),dblDepthAtlas);
+	[dX,dY,dZ] = sph2cart(deg2rad(dblAngleML_deg+0),deg2rad(dblAngleAP_deg+90),dblDepthAtlas);
 	
 	%find highest point of brain at these ML,AP coordinates
 	vecBrainEntry = vecBregmaVector(1:3) + sAtlas.Bregma;
-	if dZ < 0
+	if dX < 0
 		intDV = find(sAtlas.av(vecBrainEntry(1),vecBrainEntry(2),:) > 1,1,'first');
 	else
 		intDV = find(sAtlas.av(vecBrainEntry(1),vecBrainEntry(2),:) > 1,1,'last');

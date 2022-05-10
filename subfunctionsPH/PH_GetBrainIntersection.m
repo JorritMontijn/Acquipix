@@ -32,8 +32,7 @@ function vecLocationBrainIntersection = PH_GetBrainIntersection(probe_vector_car
 	
 	%get areas
 	trajectory_area_ids = single(av(sub2ind(vecSizeAtlas,round(trajectory_xcoords),round(trajectory_ycoords),round(trajectory_zcoords))));
-	
-	if diff(probe_ref_vector(:,3)) >= 0
+	if diff(probe_vector_cart(:,1)) <= 0
 		trajectory_brain_idx = find(trajectory_area_ids > 1,1,'last');
 	else
 		trajectory_brain_idx = find(trajectory_area_ids > 1,1,'first');

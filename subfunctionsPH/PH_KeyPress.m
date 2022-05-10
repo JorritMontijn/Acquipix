@@ -26,7 +26,7 @@ function PH_KeyPress(hMain,eventdata)
 			% Shift-up: increase AP angle
 			dblRotateAP = dblSign*dblStep;
 			vecSphereVector = PH_CartVec2SphVec(PH_GetProbeVector(hMain));
-			vecNewSphereVector = vecSphereVector - [0 0 0 0 dblRotateAP 0];
+			vecNewSphereVector = vecSphereVector + [0 0 0 0 dblRotateAP 0];
 			PH_UpdateProbeCoordinates(hMain,vecNewSphereVector)
 		elseif any(strcmp(eventdata.Modifier,'alt'))
 			% Alt-up: raise probe

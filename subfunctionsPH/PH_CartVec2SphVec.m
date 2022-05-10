@@ -8,12 +8,24 @@ function vecSphereVector = PH_CartVec2SphVec(matCartVector)
 	%get dx,dy,dz
 	vecRefVector = matCartVector(2,:) - matCartVector(1,:);
 	%calculate angle
-	[azimuth,elevation,r] = cart2sph(vecRefVector(1),vecRefVector(2),vecRefVector(3));%ML, AP,depth (DV)
+	[azimuth,elevation,r] = cart2sph(vecRefVector(3),vecRefVector(2),vecRefVector(1));%ML, AP,depth (DV)
 	
 	%extract angles in degrees
-	dblInverterML = double(vecRefVector(1) < 0)*2-1;
-	dblAngleAP = mod(rad2deg(azimuth)-180,360);
-	dblAngleML = 90-rad2deg(elevation);
-	vecSphereVector = [matCartVector(1,:) dblAngleML dblAngleAP r];
+	dblAngleAP = rad2deg(azimuth);
+	dblAngleML = rad2deg(elevation);
+	if dblAngleAP < -90 && dblAngleML > 0
+		dblAngleAP = dblAngleAP + 180;
+		dblAngleML = 180 -dblAngleML;
+	elseif dblAngleAP < -90 && dblAngleML < 0
+		dblAngleAP = dblAngleAP + 180;
+		dblAngleML = -dblAngleML - 180;
+	elseif dblAngleAP > 90 && dblAngleML > 0
+		dblAngleAP = dblAngleAP - 180;
+		dblAngleML = -dblAngleML + 180;
+	elseif dblAngleAP > 90 && dblAngleML < 0
+		dblAngleAP = dblAngleAP - 180;
+		dblAngleML = -dblAngleML - 180;
+	end
+	vecSphereVector = [matCartVector(1,:) dblAngleML -dblAngleAP r];
 end
 

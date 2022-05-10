@@ -7,8 +7,8 @@ function PH_UpdateProbeCoordinates(hMain,vecSphereVector)
 	probe_vector_cart = PH_SphVec2CartVec(vecSphereVector);
 	vecLocationBrainIntersection = PH_GetBrainIntersection(probe_vector_cart,sGUI.sAtlas.av);
 	probe_vector_bregma = PH_SphVec2BregmaVec(vecSphereVector,vecLocationBrainIntersection,sGUI.sAtlas);
-	fprintf('PH_UpdateProbeCoordinates:\n');
-	fprintf(' Sphere: %s\n',sprintf('%d ',round(probe_vector_sph)));
+	%fprintf('PH_UpdateProbeCoordinates:\n');
+	%fprintf(' Sphere: %s\n',sprintf('%d ',round(probe_vector_sph)));
 	%fprintf(' Cart: %s\n',sprintf('%d ',round(probe_vector_cart)));
 	%fprintf(' Brain: %s\n',sprintf('%d ',round(vecLocationBrainIntersection)));
 	%fprintf(' Bregma: %s\n',sprintf('%d ',round(probe_vector_bregma)));

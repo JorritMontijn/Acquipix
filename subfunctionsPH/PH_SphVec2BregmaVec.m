@@ -9,7 +9,7 @@ function vecBregmaVector = PH_SphVec2BregmaVec(vecSphereVector,vecLocBrainInters
 	%bregma vector is 6-element vector: [ML AP ML-deg AP-deg depth length], with ML and AP being brain
 	%entry coordinates relative to bregma in microns, ML-deg and AP-deg the probe angles in degrees,
 	%and depth is the depth in microns of the tip of the probe from the brain entry point. Note that
-	%the DV coordinates in the bregma-vector system are therefore inferred from the other
+	%the DV coordinates of the tip in the bregma-vector system are therefore inferred from the other
 	%parameters. The sixth element is the length of the probe in microns.
 	
 	%brain entry
@@ -30,7 +30,7 @@ function vecBregmaVector = PH_SphVec2BregmaVec(vecSphereVector,vecLocBrainInters
 	
 	%depth
 	vecD = vecLocBrainIntersect(:)' - vecSphereVector(1:3);
-	[azimuth,elevation,dblDepth] = cart2sph(vecD(1),vecD(2),vecD(3));%ML, AP,depth (DV)
+	[azimuth,elevation,dblDepth] = cart2sph(vecD(3),vecD(2),vecD(1));%ML, AP,depth (DV)
 	vecBregmaVector(5) = dblDepth * sAtlas.VoxelSize(end); %only valid if voxels are isometric
 	vecBregmaVector(6) = vecSphereVector(6) * sAtlas.VoxelSize(end); %only valid if voxels are isometric
 end
