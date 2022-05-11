@@ -1,7 +1,18 @@
 function sClusters = PH_PrepEphys(sFile,sEphysData,dblProbeLength)
-	%define depths and spike numbers
+	%check inputs
 	sClusters = [];
 	if isempty(sEphysData),return;end
+	if ~exist('dblProbeLength','var') || isempty(dblProbeLength)
+		dblProbeLength = max(sEphysData.ycoords); %should work, but kilosort might drop channels
+	end
+	
+	%work-around using global in case the probe length is wrong
+	global gForceProbeLength_PH_PrepEphys;
+	if ~isempty(gForceProbeLength_PH_PrepEphys)
+		dblProbeLength = gForceProbeLength_PH_PrepEphys;
+	end
+	
+	%get depths
 	[vecTemplateIdx,dummy,spike_templates_reidx] = unique(sEphysData.spikeTemplates);
 	vecUseClusters = vecTemplateIdx+1;
 	vecNormSpikeCounts = mat2gray(log10(accumarray(spike_templates_reidx,1)+1));
@@ -43,6 +54,7 @@ function sClusters = PH_PrepEphys(sFile,sEphysData,dblProbeLength)
 	
 	%add extra data
 	sClusters = struct;
+	sClusters.dblProbeLength = dblProbeLength;
 	sClusters.vecUseClusters = vecUseClusters;
 	sClusters.vecNormSpikeCounts = vecNormSpikeCounts;
 	sClusters.vecDepth = vecDepth;

@@ -1,4 +1,4 @@
-function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sClusters)
+function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxMuaIm,hAxClust,sClusters)
 	%% get data
 	if isempty(sClusters) || ~isfield(sClusters,'vecDepth') || isempty(sClusters.vecDepth)
 		title(hAxZeta,'No Ephys data loaded');
@@ -55,9 +55,9 @@ function PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClust,sClusters)
 	
 	%% Plot multiunit correlation
 	matMuaScaled = mua_corr./max(mua_corr(:));
-	hAxMua.Children(1).XData = depth_group_centers;
-	hAxMua.Children(1).YData = depth_group_centers;
-	hAxMua.Children(1).CData = cat(3,ones(size(matMuaScaled)),1-matMuaScaled,1-matMuaScaled);
+	hAxMuaIm.XData = depth_group_centers;
+	hAxMuaIm.YData = depth_group_centers;
+	hAxMuaIm.CData = cat(3,ones(size(matMuaScaled)),1-matMuaScaled,1-matMuaScaled);
 	title(hAxMua,'MUA correlation');
 	set(hAxMua,'FontSize',12)
 	

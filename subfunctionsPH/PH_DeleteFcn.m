@@ -28,13 +28,7 @@ function PH_DeleteFcn(hObject,varargin)
 				if isempty(sProbeCoords.folder),error('dummy error');end
 				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
 			catch
-				[strFile,strPath]=uiputfile('*.*','Save file as',strDefName);
-				if isempty(strFile) || (numel(strFile)==1 && strFile==0)
-					return;
-				end
-				sProbeCoords.folder = strPath;
-				sProbeCoords.name = strFile;
-				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
+				PH_SaveProbeFile(hObject);
 			end
 			fprintf('Saved probe coordinates to %s\n',fullpath(sProbeCoords.folder,sProbeCoords.name));
 			

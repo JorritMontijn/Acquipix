@@ -1,8 +1,12 @@
 %align probe to atlas
+%change name to NeuroFinder in separate repo
 
 %% ask what to load
 %clear all;
+
 %% load atlas
+global boolIgnoreNeuroFinderRenderer;
+boolIgnoreNeuroFinderRenderer = false;
 intUseMouseOrRat = 1;
 sRP = RP_populateStructure();
 if intUseMouseOrRat == 1
@@ -34,26 +38,7 @@ end
 
 %% load coords file
 strDefaultPath = sRP.strProbeLocPath;
-sProbeCoords = PH_OpenCoordsFile(strDefaultPath);
-dblProbeLength = 3840;%in microns (hardcode, sometimes kilosort2 drops channels)
-
-%select probe nr
-if isempty(sProbeCoords)
-	sProbeCoords.folder = '';
-	sProbeCoords.name = ['default'];
-	sProbeCoords.cellPoints{1} = [sAtlas.Bregma; sAtlas.Bregma - [0 0 dblProbeLength]./sAtlas.VoxelSize];
-	sProbeCoords.intProbeIdx = 1;
-	sProbeCoords.Type = ['native'];
-else
-	%transform probe coordinates
-	sProbeCoords = PH_ExtractProbeCoords(sProbeCoords);
-	
-	%select probe
-	intProbeIdx = PH_SelectProbeNr(sProbeCoords,sAtlas);
-	sProbeCoords.intProbeIdx = intProbeIdx;
-end
-sProbeCoords.ProbeLength = dblProbeLength ./ sAtlas.VoxelSize(end); %in native atlas size
-sProbeCoords.ProbeLengthMicrons = dblProbeLength; %in microns
+sProbeCoords = PH_LoadProbeFile(sAtlas,strDefaultPath);
 
 %% load ephys
 %select file
@@ -64,44 +49,20 @@ catch
 	strOldPath = cd();
 	strNewPath = strOldPath;
 end
-strEphysPath=uigetdir(strNewPath,'Select kilosort data folder');
-%if isempty(strEphysPath) || (numel(strEphysPath)==1 && strEphysPath==0)
-%	return;
-%end
-
-%generate dummy sFile with minimal information
-sFile = struct;
-sFile.sClustered.folder = strEphysPath;
-
-%global sFile
-hMsg = msgbox('Loading electrophysiological data, please wait...','Loading ephys');
-sEphysData = PH_LoadEphys(sFile);
-if isempty(sEphysData)
-	%return;
-end
-sClusters = PH_PrepEphys(sFile,sEphysData,sProbeCoords.ProbeLengthMicrons);
-close(hMsg);
+%open ephys data
+sClusters = PH_OpenEphys(strNewPath);
 
 % load or compute zeta if ephys file is not an Acquipix format
 if isempty(sClusters) || strcmp(sClusters.strZetaTit,'Contamination')
 	%select
-	[strZetaFile,strZetaPath] =uigetfile(strNewPath,'Select event time or ZETA file');
-
-	%load
-	sLoad = load(fullpath(strZetaPath,strZetaFile));
-	
-	%process
-	error here
-	sSynthData = sLoad.sSynthData;
-	vecDepth = cell2vec({sSynthData.sCluster.Depth});
-	vecZetaP = cellfun(@min,{sSynthData.sCluster.ZetaP});
-	cellSpikes = cellSpikes;
+	sZetaResp = PH_OpenZeta(sClusters,strNewPath);
 	
 	%save
-	sClusters.vecDepth = vecDepth;
-	sClusters.vecZeta = norminv(1-(vecZetaP/2));
-	sClusters.strZetaTit = 'ZETA (z-score)';
-	sClusters.cellSpikes = cellSpikes;
+	if ~isempty(sZetaResp) && isfield(sZetaResp,'vecZetaP')
+		sClusters.vecDepth = sZetaResp.vecDepth;
+		sClusters.vecZeta = norminv(1-(sZetaResp.vecZetaP/2));
+		sClusters.strZetaTit = 'ZETA (z-score)';
+	end
 end
 
 % close message

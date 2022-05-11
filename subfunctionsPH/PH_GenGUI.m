@@ -11,6 +11,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%	Created by Jorrit Montijn
 	
 	%% get atlas variables
+	global boolIgnoreNeuroFinderRenderer;
 	vecBregma = sAtlas.Bregma;% bregma in paxinos coordinates (x=ML,y=AP,z=DV)
 	vecVoxelSize= sAtlas.VoxelSize;% voxel size
 	matBrainMesh = sAtlas.BrainMesh;
@@ -28,16 +29,40 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	dblProbeLength = sProbeCoords.ProbeLength;
 	sClusters.dblProbeLength = sProbeCoords.ProbeLengthMicrons;
 	
+	%probe tracker
+	%neuro finder
+	%probe locator
 	%% Set up the gui
 	%main figure
-	hMain = figure('Toolbar','none','Menubar','none','color','w', ...
-		'Name','Coordinate adjuster','Units','normalized','Position',[0.05,0.05,0.9,0.9],...
+	hMain = figure('Menubar','none','color','w', ...
+		'Name','NeuroFinder: Coordinate adjuster','Units','normalized','Position',[0.05,0.05,0.9,0.9],...
 		'CloseRequestFcn',@PH_DeleteFcn);
-	try
-		%OpenGL is way faster than painters for 3d stuff
-		hMain.Renderer = 'OpenGL';
-	catch
-		errordlg('OpenGL acceleration failed: try updating your GPU drivers','OpenGL error');
+	
+	%test renderer
+	if isempty(boolIgnoreNeuroFinderRenderer) || boolIgnoreNeuroFinderRenderer(1) == 0
+		sRenderer = opengl('data');
+		if ~strcmpi(hMain.Renderer,'OpenGL')
+			%display message
+			if ~strcmpi(sRenderer.HardwareSupportLevel,'full')
+				warndlg(sprintf(...
+					'The graphics renderer was not set to full hardware-accelerated OpenGL. \n\nI will change this now, but you might need to restart MATLAB. If you get any graphics errors, set the variable boolIgnoreNeuroFinderRenderer in the main function to true.'),...
+					'Graphics renderer');
+			end
+			
+			% try changing settings
+			try
+				%OpenGL is way faster than painters for 3d stuff
+				hMain.Renderer = 'OpenGL';
+				opengl('save','hardware');
+			catch
+				errordlg('OpenGL acceleration failed: try updating your GPU drivers.','OpenGL error');
+				opengl('save','software');
+				hMain.Renderer = 'painters';
+			end
+		end
+	else
+		opengl('save','software');
+		hMain.Renderer = 'painters';
 	end
 	
 	% Set up the atlas axes
@@ -45,12 +70,11 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%vecGridColor = [0 0 0 0.3];
 	vecGridColor = [0.7 0.7 0.7];
 	hMesh = plot3(hAxAtlas, matBrainMesh(:,1), matBrainMesh(:,2), matBrainMesh(:,3), 'Color', vecGridColor);
-	%set(hAxAtlas, 'ZDir', 'reverse')
 	hold(hAxAtlas,'on');
 	axis(hAxAtlas,'vis3d','equal','manual','off','ij');
 	
-	view([220,30]);
-	caxis([0 300]);
+	view([35,25]);
+	%caxis([0 300]);
 	[ml_max,ap_max,dv_max] = size(tv);
 	xlim([-1,ml_max+1])
 	ylim([-1,ap_max+1])
@@ -94,8 +118,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	set(hAxClusters,'XLim',[0,dblProbeLengthMicrons],'YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
 	
 	hAxMua = subplot(2,4,7);
-	hAxMuaPlot=imagesc(hAxMua,magic(3));
-	%ylabel(hAxMua,'Depth (\mum)');
+	hAxMuaIm=imagesc(hAxMua,magic(3));
 	xlabel(hAxMua,'Depth (\mum)');
 	axis(hAxMua,'equal');
 	set(hAxMua,'YTickLabel','','XLim',[0,dblProbeLengthMicrons],'YLim',[0,dblProbeLengthMicrons],'YColor','k','YDir','reverse');
@@ -119,19 +142,56 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 		'Units','normalized','Position',[0,0.95,1,0.05], ...
 		'BackgroundColor','w','HorizontalAlignment','left','FontSize',12);
 	
-	%% make help button
-	ptrButtonLoad = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
-		'String',sprintf('Help'),...
-		'Units','normalized',...
-		'Position',[0.93 0.95 0.03 0.03],...
-		'Callback',@PH_DisplayControls);
-	
-	%% make freeze/unfreeze button
+	%% make buttons
+	% freeze/unfreeze
 	ptrButtonFreeze = uicontrol(hMain,'Style','togglebutton','FontSize',11,...
 		'String',sprintf('Freeze'),...
 		'Units','normalized',...
 		'Position',[0.01 0.94 0.04 0.03],...
 		'Callback',@PH_ToggleFreeze);
+	
+	%reset location
+	ptrButtonReset = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Reset'),...
+		'Units','normalized',...
+		'Position',[0.06 0.94 0.04 0.03],...
+		'Callback',@PH_ResetFcn);
+	
+	%load probe file
+	ptrButtonLoadProbe = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Load probe file'),...
+		'Units','normalized',...
+		'Position',[0.11 0.94 0.065 0.03],...
+		'Callback',@PH_LoadProbeFcn);
+	
+	%save probe file
+	ptrButtonSave = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Save probe file'),...
+		'Units','normalized',...
+		'Position',[0.185 0.94 0.065 0.03],...
+		'Callback',@PH_SaveProbeFile);
+	
+	% load zeta
+	ptrButtonLoadEphys = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Load ephys'),...
+		'Units','normalized',...
+		'Position',[hAxZeta.Position(1)-0.03 0.94 0.06 0.03],...
+		'Callback',@PH_LoadEphysFcn);
+	
+	%load ephys
+	ptrButtonLoadZeta = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Load tuning'),...
+		'Units','normalized',...
+		'Position',[ptrButtonLoadEphys.Position(1)+ptrButtonLoadEphys.Position(3)+0.01 0.94 0.06 0.03],...
+		'Callback',@PH_LoadZetaFcn);
+	
+	%help
+	ptrButtonHelp = uicontrol(hMain,'Style','pushbutton','FontSize',11,...
+		'String',sprintf('Help'),...
+		'Units','normalized',...
+		'Position',[0.93 0.95 0.03 0.03],...
+		'Callback',@PH_DisplayControls);
+	
 	
 	%% assign values to structure
 	% Set the current axes to the atlas (dirty, but some gca requirements)
@@ -140,6 +200,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	%build gui data
 	sGUI=struct;
 	sGUI.sProbeCoords = sProbeCoords;
+	sGUI.sClusters = sClusters;
 	sGUI.sAtlas = sAtlas;
 	sGUI.cmap = colormap(hAxAreas); % Atlas colormap
 	sGUI.bregma = vecBregma; % Bregma in atlas voxels for external referencing
@@ -149,8 +210,13 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	
 	% user interface handles
 	sGUI.handles.hMain = hMain;
-	sGUI.handles.ptrButtonLoad = ptrButtonLoad;
 	sGUI.handles.ptrButtonFreeze = ptrButtonFreeze;
+	sGUI.handles.ptrButtonReset = ptrButtonReset;
+	sGUI.handles.ptrButtonLoadProbe = ptrButtonLoadProbe;
+	sGUI.handles.ptrButtonSave = ptrButtonSave;
+	sGUI.handles.ptrButtonLoadEphys = ptrButtonLoadEphys;
+	sGUI.handles.ptrButtonLoadZeta = ptrButtonLoadZeta;
+	sGUI.handles.ptrButtonHelp = ptrButtonHelp;
 	
 	% plotting handles
 	sGUI.handles.cortex_outline = hMesh;
@@ -163,13 +229,14 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	sGUI.handles.bregma = scatter3(sGUI.handles.axes_atlas,vecBregma(1),vecBregma(2),vecBregma(3),100,'g.','linewidth',1); %bregma
 	
 	%probe-related handles
-	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',1); % will contain histology points
-	sGUI.handles.probe_vector_cart = line([-100 -200],[-100 -200],[-100 -200],'Color','b'); % will contain atlas voxel-based location
-	sGUI.handles.probe_tip = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'b.','linewidth',1); % will contain probe tip location
-	sGUI.handles.probe_intersect = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'rx','linewidth',1); %will contain brain intersection
+	sGUI.handles.probe_points = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'g.','linewidth',2); % will contain histology points
+	sGUI.handles.probe_vector_cart = line([-100 -200],[-100 -200],[-100 -200],'Color','b','linewidth',1.5); % will contain atlas voxel-based location
+	sGUI.handles.probe_tip = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'b.','linewidth',2); % will contain probe tip location
+	sGUI.handles.probe_intersect = scatter3(sGUI.handles.axes_atlas,-100,-100,-100,100,'rx','linewidth',2); %will contain brain intersection
 	sGUI.handles.probe_areas_plot = hAxAreasPlot; % Color-coded probe regions
 	sGUI.handles.probe_areas_plot2 = hAxAreasPlot2; % Color-coded probe regions
 	sGUI.handles.probe_xcorr = hAxMua;
+	sGUI.handles.probe_xcorr_im = hAxMuaIm;
 	sGUI.handles.probe_xcorr_bounds = gobjects;
 	sGUI.handles.probe_clust = hAxClusters;
 	sGUI.handles.probe_clust_bounds = gobjects;
@@ -195,7 +262,7 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	
 	%% run initial functions
 	%plot ephys
-	PH_PlotProbeEphys(hAxZeta,hAxMua,hAxClusters,sClusters);
+	PH_PlotProbeEphys(hAxZeta,hAxMua,hAxMuaIm,hAxClusters,sClusters);
 	
 	%set initial position
 	PH_LoadProbeLocation(hMain,sProbeCoords,sAtlas);
