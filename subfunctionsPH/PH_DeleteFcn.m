@@ -24,30 +24,17 @@ function PH_DeleteFcn(hObject,varargin)
 				strDefName = 'RecXXX_ProbeCoords.mat';
 			end
 			%export probe coord file
-			try
-				if isempty(sProbeCoords.folder),error('dummy error');end
-				save(fullpath(sProbeCoords.folder,sProbeCoords.name),'sProbeCoords');
-			catch
-				PH_SaveProbeFile(hObject);
-			end
-			fprintf('Saved probe coordinates to %s\n',fullpath(sProbeCoords.folder,sProbeCoords.name));
+			PH_SaveProbeFile(hObject);
 			
 			%update gui &close
 			hObject.UserData = 'close';
 			sGUI.sProbeCoords = sProbeCoords;
 			guidata(hObject,sGUI);
+			PH_DeleteFcn(hObject);
 		case 'Exit & Discard data'
-			sGUI.output = [];
-			sGUI.sProbeAdjusted = [];
-			sGUI.sProbeCoords = [];
 			hObject.UserData = 'close';
 			guidata(hObject,sGUI);
-			
-			%close gui after short delay to allow data collection
-			hDeleteTimer = timer;
-			hDeleteTimer.StartDelay = 0.2;
-			hDeleteTimer.TimerFcn = {@PH_DelayDeleteFcn, hObject};
-			start(hDeleteTimer);
+			PH_DeleteFcn(hObject);
 		case 'Cancel'
 			return;
 	end
