@@ -3,6 +3,10 @@
 
 %% ask what to load
 %clear all;
+%Universal Probe Finder Using Neurophysiology
+%UPFUN
+%Multi Species Probe Aligner
+
 
 %% load atlas
 global boolIgnoreNeuroFinderRenderer;
@@ -26,7 +30,8 @@ if intUseMouseOrRat == 1
 	sAtlas = RP_PrepABA(tv,av,st);
 else
 	%load RATlas
-	strSpragueDawleyAtlasPath = 'F:\Data\Ratlas';
+	%strSpragueDawleyAtlasPath = 'F:\Data\Ratlas';
+	strSpragueDawleyAtlasPath = 'E:\Ratlas';
 	if (~exist('tv','var') || isempty(tv)) || (~exist('av','var') || isempty(av)) || (~exist('st','var') || isempty(st)) || ~all(size(av) == [512 1024 512])
 		[tv,av,st] = RP_LoadSDA(strSpragueDawleyAtlasPath);
 		if isempty(tv),return;end
@@ -74,7 +79,10 @@ cd(strOldPath);
 %% wait until done
 waitfor(hMain,'UserData','close');
 sGUI = guidata(hMain);
-close(hMain);
+try
+	close(hMain);
+catch
+end
 
 %check if output is present
 if isfield(sGUI,'sProbeAdjusted')

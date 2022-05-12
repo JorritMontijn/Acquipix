@@ -21,10 +21,6 @@ function [tv,av,st] = RP_LoadSDA(strSpragueDawleyAtlasPath)
 		av = niftiread(fullpath(strSpragueDawleyAtlasPath,'WHS_SD_rat_atlas_v4.nii')); %annotated volume
 		st = readtable(fullpath(strSpragueDawleyAtlasPath,'WHS_SD_rat_atlas_v4.label'),'filetype','text',...
 			'Delimiter', '\t ', 'MultipleDelimsAsOne', true, 'HeaderLines', 14);
-		
-		%tv2 = readNPY(fullpath(strAllenCCFPath,'template_volume_10um.npy')); % grey-scale "background signal intensity"
-		%av2 = readNPY(fullpath(strAllenCCFPath,'annotation_volume_10um_by_index.npy')); % the number at each pixel labels the area, see note below
-		%st2 = PH_loadStructureTree(fullpath(strAllenCCFPath,'structure_tree_safe_2017.csv')); % a table of what all the labels mean
 		close(hMsg);
 	catch ME
 		close(hMsg);

@@ -42,7 +42,12 @@ function PH_DeleteFcn(hObject,varargin)
 			sGUI.sProbeCoords = [];
 			hObject.UserData = 'close';
 			guidata(hObject,sGUI);
-			PH_DeleteFcn(hObject);
+			
+			%close gui after short delay to allow data collection
+			hDeleteTimer = timer;
+			hDeleteTimer.StartDelay = 0.2;
+			hDeleteTimer.TimerFcn = {@PH_DelayDeleteFcn, hObject};
+			start(hDeleteTimer);
 		case 'Cancel'
 			return;
 	end
