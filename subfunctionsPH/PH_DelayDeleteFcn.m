@@ -5,10 +5,5 @@ function PH_DelayDeleteFcn(hTimer,eventdata,hObject)
 			delete(hObject);
 		catch
 		end
-		try
-			delete(hTimer);
-		catch
-		end
-		return;
 	end
 end
