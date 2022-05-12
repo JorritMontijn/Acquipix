@@ -7,6 +7,7 @@ function sRP = RP_defaultValues()
 	sRP.strEyeTrackingPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strProbeLocPath = 'D:\Data\Raw\Neuropixels';
 	sRP.strAllenCCFPath = 'F:\Data\AllenCCF';
+	sRP.strSpragueDawleyPath = 'F:\Data\Ratlas';
 	
 	%% default search keys
 	%spikeglx
