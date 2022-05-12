@@ -5,7 +5,7 @@
 %clear all;
 %Universal Probe Finder Using Neurophysiology
 %UPFUN
-%Multi Species Probe Aligner
+%Multi Species Probe Aligner 
 function getProbeHistology
 	%% load atlas
 	global boolIgnoreNeuroFinderRenderer;
