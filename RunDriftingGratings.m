@@ -6,10 +6,11 @@ clearvars -except sStimPresets sStimParamsSettings sExpMeta;
 
 %% define variables
 fprintf('Starting %s [%s]\n',mfilename,getTime);
-intStimSet = 1;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
+intStimSet = 3;% 1=0:15:359, reps20; 2=[0 5 90 95], reps 400 with noise; 3= size tuning
 boolUseSGL = true;
 boolUseNI = true;
 boolDebug = false;
+boolGammaCorrectScreen = true;
 if exist('sExpMeta','var')
 	%defaults
 	dblPupilLightMultiplier = 1; %strength of infrared LEDs
@@ -74,7 +75,7 @@ if ~exist('sStimParamsSettings','var') || isempty(sStimParamsSettings) || ~(strc
 	sStimParamsSettings.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
 	sStimParamsSettings.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 	sStimParamsSettings.intBackground = round(mean(sStimParamsSettings.vecBackgrounds)*255);
-	sStimParamsSettings.vecContrasts = 100; %contrast; [0-100]
+	sStimParamsSettings.vecContrasts = 100; %contrast; [0-100] 100 or [10 20 30 40 60 80 100]
 	sStimParamsSettings.vecSpatialFrequencies = 0.05; %Spat Frequency in cyc/deg 0.08
 	sStimParamsSettings.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 else
@@ -274,6 +275,13 @@ try
 		Screen('Preference', 'SkipSyncTests', 1);
 		[ptrWindow,vecRect] = Screen('OpenWindow', intUseScreen,sStimParams.intBackground,vecInitRect);
 	end
+	
+	%calibrate monitor
+	if boolGammaCorrectScreen && exist('C:\Users\neuropixels\Desktop\GammaCorrection\gammaTable.mat','file')
+		load("C:\Users\neuropixels\Desktop\GammaCorrection\gammaTable.mat");
+		Screen('LoadNormalizedGammaTable', ptrWindow, gammaTable*[1 1 1]);
+	end
+	
 	%window variables
 	sStimParams.ptrWindow = ptrWindow;
 	sStimParams.vecRect = vecRect;
