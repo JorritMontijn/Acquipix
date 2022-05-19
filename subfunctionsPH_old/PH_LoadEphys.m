@@ -1,6 +1,10 @@
 function sEphysData = PH_LoadEphys(sFile)
 	%get location
 	strPathKS = sFile.sClustered.folder;
+	if isempty(strPathKS) || strPathKS(1) == 0
+		sEphysData = [];
+		return;
+	end
 	
 	%load data
 	sEphysData = loadKSdir(strPathKS);

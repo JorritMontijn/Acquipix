@@ -20,9 +20,14 @@ function [hMain,hAxAtlas,hAxAreas,hAxAreasPlot,hAxZeta,hAxClusters,hAxMua] = PH_
 	if isfield(sProbeCoords,'probe_ccf')
 		%AP_histology output
 		matProbeVector = sProbeCoords.probe_ccf(sProbeCoords.intProbeIdx);
-	elseif isfield(sProbeCoords,'cellPoints')
+	elseif isfield(sProbeCoords,'cellPoints') && ~isempty(sProbeCoords.cellPoints)
 		%cell array of points per probe
 		matProbeVector = sProbeCoords.cellPoints{sProbeCoords.intProbeIdx};
+	elseif isfield(sProbeCoords,'cellPoints')
+		matProbeV = [0   0   0;...AP depth ML (wrt atlas at (0,0,0))
+			0   384   0];
+		vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
+		matProbeVector = bsxfun(@plus,matProbeV,vecBregma);
 	else
 		%file not recognized
 		error([mfilename ':UnknownFormat'],'Probe location file format is not recognized');
