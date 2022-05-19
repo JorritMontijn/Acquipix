@@ -81,12 +81,12 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	if strcmpi(strStimType,'SquareGrating')
 		%build the square-wave grating
 		matMod = mod(matMapXSuperSample2_deg-dblDegsPerSpatCycle*dblPhase01,dblDegsPerSpatCycle);  %every pixPerCycle pixels the grid flips back to 0 with an offset of phaseOffset
-		matGratSuperSample2 = (matMod >= dblDegsPerSpatCycle/2)*(dblContrast/100); %create logical 1s and 0s to build the black/white grating
+		matGratSuperSample2 = (matMod >= dblDegsPerSpatCycle/2)*(dblContrast/100) + (1 - dblContrast/100)/2; %create logical 1s and 0s to build the black/white grating
 	elseif strcmpi(strStimType,'SineGrating')
 		%build the sine-wave grating
 		matCycles = (matMapXSuperSample2_deg-dblDegsPerSpatCycle*dblPhase01)/dblDegsPerSpatCycle;
 		matWave = sin(matCycles*2*pi)/2+0.5;  %every pixPerCycle pixels the grid flips back to 0 with an offset of phaseOffset
-		matGratSuperSample2 = matWave*(dblContrast/100); %create logical 1s and 0s to build the black/white grating
+		matGratSuperSample2 = matWave*(dblContrast/100) + (1 - dblContrast/100)/2; %create logical 1s and 0s to build the black/white grating
 	else
 		error([mfilename ':StimTypeUnknown'],sprintf('Stimulus type "%s" not recognized',strStimType));
 	end

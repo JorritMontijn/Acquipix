@@ -22,7 +22,7 @@ function [intPresetsCreated,cellExperiments] = assertPresets()
 				intPresetIdx = saveStimPreset(sStimPresets,strExp);
 				intPresetsCreated = intPresetsCreated + 1;
 			elseif strcmp(strExp,'RunDriftingGratings')
-				for intSet=1:3
+				for intSet=1:5
 					if intSet == 1
 						sStimPresets = struct;
 						sStimPresets.strExpType = strExp;
@@ -50,6 +50,7 @@ function [intPresetsCreated,cellExperiments] = assertPresets()
 						sStimPresets = struct;
 						sStimPresets.strExpType = strExp;
 						sStimPresets.intNumRepeats = 16;
+						sStimPresets.vecStimulusSize_deg = [4 6 9 14 21 32 48 72];
 						sStimPresets.vecOrientations = [0 45 90 135];
 						sStimPresets.vecOrientationNoise = 0;
 						sStimPresets.dblSecsBlankAtStart = 3;
@@ -57,7 +58,34 @@ function [intPresetsCreated,cellExperiments] = assertPresets()
 						sStimPresets.dblSecsStimDur = 1;
 						sStimPresets.dblSecsBlankPost = 0.1000;
 						sStimPresets.dblSecsBlankAtEnd = 3;
-						sStimPresets.vecStimulusSize_deg = [4 6 9 14 21 32 48 72];
+						
+					elseif intSet == 4
+						sStimPresets = struct;
+						sStimPresets.strExpType = strExp;
+						sStimPresets.intNumRepeats = 20;
+						sStimPresets.vecOrientations = 0:15:345;
+						sStimPresets.vecOrientationNoise = 0;
+						sStimPresets.dblSecsBlankAtStart = 3;
+						sStimPresets.dblSecsBlankPre = 0.4000;
+						sStimPresets.dblSecsStimDur = 1;
+						sStimPresets.dblSecsBlankPost = 0.1000;
+						sStimPresets.dblSecsBlankAtEnd = 3;
+					elseif intSet == 5
+						sStimPresets = struct;
+						sStimPresets.strStimType = 'SineGrating';
+						sStimPresets.strExpType = strExp;
+						sStimPresets.intNumRepeats = 12;
+						sStimPresets.vecStimPosX_deg = 0; % deg; relative to subject
+						sStimPresets.vecStimPosY_deg = 0; % deg; relative to subject
+						sStimPresets.vecContrasts = [2 4 8 16 32 64 100];
+						sStimPresets.vecOrientations = 0:30:359;
+						sStimPresets.vecOrientationNoise = 0;
+						sStimPresets.dblSecsBlankAtStart = 3;
+						sStimPresets.dblSecsBlankPre = 0.4000;
+						sStimPresets.dblSecsStimDur = 1;
+						sStimPresets.dblSecsBlankPost = 0.1000;
+						sStimPresets.dblSecsBlankAtEnd = 3;
+						
 					end
 					intPresetIdx = saveStimPreset(sStimPresets,strExp);
 					intPresetsCreated = intPresetsCreated + 1;
