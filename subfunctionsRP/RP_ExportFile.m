@@ -20,6 +20,8 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sMetaVar = sRP.sMetaVar;
 	
 	%get probe location
+	fix the following for new probe finder: [vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sGUI.sProbeCoords,sGUI.sClusters.vecDepth);
+	
 	sProbeCoords = sFile.sProbeCoords;
 	vecDepthAreaIdx = sProbeCoords.sProbeAdjusted.probe_areas;
 	cellDepthArea = st.safe_name(vecDepthAreaIdx);
