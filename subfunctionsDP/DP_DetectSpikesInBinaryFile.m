@@ -111,10 +111,8 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 	end
 	
 	%define variables
-	intNewFreq = 1000;
-	dblFreqConverter = dblSampRate/intNewFreq;
-	vecSpikeCh = gpuArray.zeros(5e4,1, 'uint16');
-	vecSpikeT = gpuArray.zeros(5e4,1, 'uint32'); %subsample to 1 kHz
+	vecSpikeCh = zeros(5e4,1, 'uint16');
+	vecSpikeT = zeros(5e4,1, 'int64');
 	intSpikeCounter = 0;
 	
 	%get starting times
@@ -154,10 +152,10 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 		%save time of spike (xi) and channel (xj)
 		if intSpikeCounter+numel(vecCh)>numel(vecSpikeCh)
 			vecSpikeCh(2*numel(vecSpikeCh)) = 0; % if necessary, extend the variable which holds the spikes
-			vecSpikeT(2*numel(vecSpikeCh)) = 0; % if necessary, extend the variable which holds the spikes
+			vecSpikeT(2*numel(vecSpikeT)) = 0; % if necessary, extend the variable which holds the spikes
 		end
-		vecSpikeCh(intSpikeCounter + [1:numel(vecCh)]) = vecCh; % collect the channel identities for the detected spikes
-		vecSpikeT(intSpikeCounter + [1:numel(vecT)]) = (vecT+intStart)/dblFreqConverter; % collect the channel identities for the detected spikes
+		vecSpikeCh(intSpikeCounter + [1:numel(vecCh)]) = gather(vecCh); % collect the channel identities for the detected spikes
+		vecSpikeT(intSpikeCounter + [1:numel(vecT)]) = (int64(gather(vecT))+intStart); % collect the channel identities for the detected spikes
 		
 		intSpikeCounter = intSpikeCounter + numel(vecCh);
 	end
