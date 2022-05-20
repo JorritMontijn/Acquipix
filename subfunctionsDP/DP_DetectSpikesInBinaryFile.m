@@ -94,6 +94,11 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 		[b, a] = butter(3, dblHighPassFreq/dblSampRate*2, 'high');
 	end
 	
+	%set class
+	if ~exist('strClass','var') || isempty(strClass)
+		strClass = 'int16';
+	end
+	
 	%open file
 	intSamp0 = max(intStartT, 0);
 	ptrFile = fopen(strBinFile, 'rb');
@@ -130,7 +135,7 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 		end
 		
 		%load data
-		matDataArray = fread(ptrFile, vecSizeA);
+		matDataArray = fread(ptrFile, vecSizeA, sprintf('int16=>%s',strClass));
 		
 		%reorder to chan map & transfer to gpu
 		matBuffer = gpuArray(matDataArray(vecChanMap,:));
@@ -143,7 +148,8 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 		matMins = DP_FindMins(matFiltered, 30, 1, intType); % get local minima as min value in +/- 30-sample range
 		vecSpkInd = find(matFiltered<(matMins+1e-3) & matFiltered<dblSpkTh); % take local minima that cross the negative threshold
 		[vecT, vecCh] = ind2sub(size(matFiltered), vecSpkInd); % back to two-dimensional indexing
-		vecCh(vecT<intWinEdge | vecT>intBuffT-intWinEdge) = []; % filtering may create transients at beginning or end. Remove those.
+		vecCh(vecT<intWinEdge | vecT>(intBuffT-intWinEdge)) = []; % filtering may create transients at beginning or end. Remove those.
+		vecT(vecT<intWinEdge | vecT>(intBuffT-intWinEdge)) = []; % filtering may create transients at beginning or end. Remove those.
 		
 		%save time of spike (xi) and channel (xj)
 		if intSpikeCounter+numel(vecCh)>numel(vecSpikeCh)

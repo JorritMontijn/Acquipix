@@ -23,6 +23,7 @@ function [matDataArray,intFeof] = DP_ReadBin(intSamp0, intReadSamps, sMeta, strF
 	%2021-06-28; Updated by Jorrit Montijn, based on ReadBin() by Bill
 	%Karsh. Changes include: single-channel and multi-channel reads, e.g.
 	%to load only the synchronization channel
+	
 	%%
 	%{
 	intSamp0=-inf
