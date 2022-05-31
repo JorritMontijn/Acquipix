@@ -50,7 +50,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	sFigRP.ptrPanelPaths = uipanel('Parent',ptrMainGUI,'BackgroundColor',vecMainColor,...
 		'Units','pixels','Title','Master paths','FontSize',10);
 	dblPH = 30;
-	dblPanelHeight = dblPH*(intPathNum+2.5);
+	dblPanelHeight = dblPH*(intPathNum+3.5);
 	vecLocPanelMP = [10 vecPosGUI(4)-dblPanelHeight-10 vecPosGUI(3)-20 dblPanelHeight];
 	set(sFigRP.ptrPanelPaths,'Position',vecLocPanelMP);
 	
@@ -72,6 +72,21 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		sFigRP.(strOutFieldText) = uicontrol(sFigRP.ptrPanelPaths,'Style','text','HorizontalAlignment','left','String','','FontSize',10,'BackgroundColor',[1 1 1],...
 			'Position',vecLocText);
 	end
+	
+	%add atlas selector
+	sRP.sAtlasParams = PF_getAtlasIni();
+	cellAtlases = {sRP.sAtlasParams.name};
+	
+	vecLocSetPath = vecLocSetPath + [0 -dblPH-4 0 0];
+	sFigRP.ptTextSelectAtlas = uicontrol(sFigRP.ptrPanelPaths,'Style','text','String','Select atlas:','FontSize',11,'BackgroundColor',[0.9 0.9 0.9],...
+		'Position',vecLocSetPath);
+	
+	vecLocText = [vecLocSetPath(1)+vecLocSetPath(3)+10 vecLocSetPath(2)+6 450 20];
+	sFigRP.ptrListSelectAtlas = uicontrol(sFigRP.ptrPanelPaths,'Style','popupmenu','FontSize',11,...
+		'String',cellAtlases,...
+		'Position',vecLocText,...
+		sFigRP.strTooltipField,'Select which brain atlas to use',...
+		'Callback',@ptrListSelectAtlas_Callback);
 	
 	%%
 	%%{
@@ -193,9 +208,14 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	%unlock
 	uiunlock(sFigRP);
 	
-	%% check if external dependencies (kilosort, npy and spikes) are installed
-	dblKilosortVersion = RP_AssertKilosort();
+	%% check if external dependencies (UniversalProbeFinder, kilosort, npy and spikes) are installed
 	strInstallMsg = '';
+	dblProbeFinderVersion = RP_AssertProbeFinder();
+	if isempty(dblProbeFinderVersion) || dblProbeFinderVersion ~= 1
+		%build message
+		strInstallMsg = [strInstallMsg 'UniversalProbeFinder not found; please install from "https://github.com/JorritMontijn/UniversalProbeFinder"' newline];
+	end
+	dblKilosortVersion = RP_AssertKilosort();
 	if isempty(dblKilosortVersion) || dblKilosortVersion < 2
 		%build message
 		strInstallMsg = [strInstallMsg 'Kilosort not found; please install from "https://github.com/MouseLand/Kilosort"' newline];
@@ -211,7 +231,6 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 		%build message
 		strInstallMsg = [strInstallMsg 'Phy-helpers not found; please install from "https://github.com/cortex-lab/spikes/tree/master/preprocessing/phyHelpers"' newline];
 	end
-	
 	
 	if ~isempty(strInstallMsg)
 		%disp msg
@@ -487,18 +506,10 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 			if isfield(sRP.sFiles(intFile),'sSynthesis') && ~isempty(sRP.sFiles(intFile).sSynthesis)
 				indReady(intFileIdx) = true;
 			end
-			%assign default coordinates
+			%assign placeholder
 			if ~isfield(sRP.sFiles(intFile),'sProbeCoords') || isempty(sRP.sFiles(intFile).sProbeCoords)
-				matProbeLoc =[...
-					0   0   0;...AP depth ML (wrt atlas at (0,0,0))
-					0   384   0];
-				vecBregma = [540,0,570];% bregma in accf; [AP,DV,ML]
-				matProbeLoc = bsxfun(@plus,matProbeLoc,vecBregma);
-				sRP.sFiles(intFile).sProbeCoords = struct;
-				sRP.sFiles(intFile).sProbeCoords.intProbeIdx = 1;
-				sRP.sFiles(intFile).sProbeCoords.cellPoints = {matProbeLoc};
+				sRP.sFiles(intFile).sProbeCoords = [];
 			end
-	
 		end
 		if ~all(indReady)
 			ptrMsg = dialog('Position',[600 400 270 100],'Name','Not all files ready');
@@ -526,30 +537,39 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					sFile = sRP.sFiles(intFile);
 					
 					%load AllenCCF
-					if ~isfield(sRP,'st') || isempty(sRP.st)
-						[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
-						if isempty(tv),return;end
-						sRP.tv = tv;
-						sRP.av = av;
-						sRP.st = st;
+					if ~isfield(sRP,'sAtlas') || isempty(sRP.sAtlas)
+						ptrListSelectAtlas_Callback;
 					end
 					
+					%prepare ephys data
+					sClusters = EL_PrepEphys_AS(sFile.sSynthesis.folder);
+					
 					%% plot grid
-					hMain = PH_GenGUI(sRP.av,sRP.tv,sRP.st,sFile);
+					hMain = PH_GenGUI(sRP.sAtlas,sFile.sProbeCoords,sClusters);
 					
 					%% wait until done
 					waitfor(hMain,'UserData','close');
 					sGUI = guidata(hMain);
-					close(hMain);
 					
 					%sFiles(intFile).sProbeCoords = sProbeCoords;
 					%check if output is present
-					if isfield(sGUI,'sProbeCoords') && ~isempty(sGUI.sProbeCoords) && isfield(sGUI,'sProbeAdjusted') && isfield(sGUI.sProbeAdjusted,'probe_vector')
+					if isfield(sGUI,'sProbeCoords') && ~isempty(sGUI.sProbeCoords) && isfield(sGUI.sProbeCoords,'sProbeAdjusted') && isfield(sGUI.sProbeCoords.sProbeAdjusted,'probe_area_full_per_cluster')
+						%extract data
+						sProbeCoords = sGUI.sProbeCoords;
+						
+						%save a copy of the probe coords file
+						strRec = sFile.sMeta.strNidqName;
+						strProbeFile = [strcat(strRec,'_ProbeCoords'),'.mat'];
+						strFullFileProbeCoords = fullpath(sFile.sEphysNidq.folder,strProbeFile);
+						save(strFullFileProbeCoords,'sProbeCoords');
+						
+						%add data
+						sRP.sFiles(intFile).sProbeCoords=sProbeCoords;
+						sRP.sFiles(intFile).sProbeCoords.folder = sFile.sEphysNidq.folder;
+						sRP.sFiles(intFile).sProbeCoords.name = strProbeFile;
+						
 						%update parameter list
 						vecColor = [0 0.8 0];
-						sProbeCoords = sGUI.sProbeCoords;
-						sProbeCoords.sProbeAdjusted = sGUI.sProbeAdjusted;
-						sRP.sFiles(intFile).sProbeCoords = sProbeCoords;
 						sFigRP.sPointers(intFile).Coords.String = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
 						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ['Probe track/coordinate data at: ' fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name)];
 						sFigRP.sPointers(intFile).Coords.ForegroundColor = vecColor;

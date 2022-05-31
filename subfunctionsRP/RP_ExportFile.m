@@ -1,44 +1,24 @@
 function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	
-	%load ABA
-	intResultFlag = -1;
-	if (~isfield(sRP,'tv') || isempty(sRP.tv)) || (~isfield(sRP,'av') || isempty(sRP.av)) || (~isfield(sRP,'st') || isempty(sRP.st))
-		[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
-		if isempty(tv),return;end
-		sRP.tv = tv;
-		sRP.av = av;
-		sRP.st = st;
-	end
-	tv = sRP.tv;
-	av = sRP.av;
-	st = sRP.st;
-	
 	%get synthesized data
 	sSynthesis = sFile.sSynthesis;
 	sLoad = load(fullpath(sSynthesis.folder,sSynthesis.name));
 	sSynthData = sLoad.sSynthData;
 	sMetaVar = sRP.sMetaVar;
+	sProbeCoords = sFile.sProbeCoords;
+	
+	%check if atlas is correct
+	if ~strcmpi(sProbeCoords.AtlasType,sRP.sAtlas.Type)
+		intResultFlag = 0;
+		errordlg(sprintf('Current atlas is %s, but coord file atlas is %s!',sRP.sAtlas.Type,sProbeCoords.AtlasType),'Atlas mismatch');
+		return;
+	end
 	
 	%get probe location
-	fix the following for new probe finder: [vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sGUI.sProbeCoords,sGUI.sClusters.vecDepth);
-	
-	sProbeCoords = sFile.sProbeCoords;
-	vecDepthAreaIdx = sProbeCoords.sProbeAdjusted.probe_areas;
-	cellDepthArea = st.safe_name(vecDepthAreaIdx);
-	%calculate probe angles
-	vecRefVector= (sProbeCoords.sProbeAdjusted.probe_vector(:,1) - sProbeCoords.sProbeAdjusted.probe_vector(:,2));
-	[azimuth,elevation,r] = cart2sph(vecRefVector(1),vecRefVector(3),vecRefVector(2));%ML, AP,depth (DV)
-	dblAngleAP = rad2deg(azimuth) + 90;
-	dblAngleML = rad2deg(elevation);
-	vecAngles = mod([dblAngleAP dblAngleML]+180,360)-180;
-	vecBrainIntersect = (flat(PH_GetBregma())-flat(sProbeCoords.sProbeAdjusted.probe_intersect([1 3 2])))*10;
-	vecLoc_AP_ML = round([vecBrainIntersect(1) -vecBrainIntersect(3)]); %positive ML is right hemisphere
-	intProbeDepth = round(sqrt(sum((sProbeCoords.sProbeAdjusted.probe_intersect - sProbeCoords.sProbeAdjusted.probe_vector(:,2)).^2))*10)* ...
-		sign(sProbeCoords.sProbeAdjusted.probe_vector(3,2)-sProbeCoords.sProbeAdjusted.probe_intersect(3));
-	intEntryStructure = av(round(sProbeCoords.sProbeAdjusted.probe_intersect(1)),...
-		round(sProbeCoords.sProbeAdjusted.probe_intersect(3)),round(sProbeCoords.sProbeAdjusted.probe_intersect(2)));
-	strEntryStructure = st.safe_name{intEntryStructure};
-	dblProbeLength = sqrt(sum((sProbeCoords.sProbeAdjusted.probe_vector(:,1) - sProbeCoords.sProbeAdjusted.probe_vector(:,2)).^2))*10;
+	dblProbeLength = sProbeCoords.ProbeLengthOriginal;
+	vecIntersect = round(sProbeCoords.sProbeAdjusted.probe_vector_intersect);
+	intEntryStructure = sRP.sAtlas.av(vecIntersect(1),vecIntersect(2),vecIntersect(3));
+	strEntryStructure = sRP.sAtlas.st.name{intEntryStructure};
 	
 	%get cluster depths
 	strPathKilosort = sFile.sClustered.folder;
@@ -53,11 +33,11 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	intClustNum = numel(vecClusters);
 	for intClust=1:intClustNum
 		intClustIdx = vecClusters(intClust);
-		intDepth = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
-		intDominantChannel = ceil(intDepth/10);
-		sCluster(intClust).Depth = intDepth;
-		sCluster(intClust).Area = cellDepthArea{intDominantChannel};
-		sCluster(intClust).DepthBelowIntersect = intDepth-dblProbeLength+intProbeDepth;
+		intDepth = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx))); 
+		
+		sCluster(intClust).Depth = intDepth;%depth on probe
+		sCluster(intClust).Area = sProbeCoords.sProbeAdjusted.probe_area_full_per_cluster{intClust};
+		sCluster(intClust).DepthBelowIntersect = sProbeCoords.sProbeAdjusted.depth_per_cluster(intClust);
 	end
 	
 	%get sources
@@ -70,7 +50,15 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 		cellRec = strsplit(sJson.recording,'_');
 		sJson.subject = cellRec{1};
 	end
-	sJson.probe_coords = sprintf('AP=%d;ML=%d;Depth=%d;AP-ang=%d;ML-ang=%d',round([vecLoc_AP_ML intProbeDepth vecAngles]));
+	sJson.probe_coords = sprintf('AP=%d;ML=%d;ML-ang=%d;AP-ang=%d;Depth=%d;Length=%d',round([...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.ML...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.AP...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_ML...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_AP...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.Depth...
+		sProbeCoords.sProbeAdjusted.stereo_coordinates.Probe_Length...
+		]));
+	
 	sJson.entry_structure = strrep(strEntryStructure,' ','_');
 	if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end
 	
@@ -132,8 +120,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sAP.sCluster = sCluster;
 	sAP.sSources = sSources;
 	sAP.sJson = sJson;
-	sAP.vecProbeCoords = [vecLoc_AP_ML intProbeDepth vecAngles]; %AP, ML, depth, AP-angle, ML-angle
-	sAP.ProbeCoordsDesc = 'AP, ML, depth, AP-angle, ML-angle';
+	sAP.stereo_coordinates = sProbeCoords.sProbeAdjusted.stereo_coordinates;
 	%add misc NI channels to AP structure
 	if isfield(sSynthData,'sMiscNI')
 		cellFields = fieldnames(sSynthData.sMiscNI);

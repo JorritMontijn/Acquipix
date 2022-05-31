@@ -23,51 +23,50 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 			strName = [];
 		end
 		
-		%open coords file
-		strDefaultPath = sRP.strProbeLocPath;
-		[cellPoints,strFile,strPath] = PH_OpenCoordsFile(strDefaultPath,strName);
-		if ~isempty(cellPoints)
-			%load AllenCCF
-			if ~isfield(sRP,'st') || isempty(sRP.st)
-				[tv,av,st] = RP_LoadABA(sRP.strAllenCCFPath);
-				if isempty(tv),return;end
-				sRP.tv = tv;
-				sRP.av = av;
-				sRP.st = st;
-			end
-			
-			% get probe nr
-			strRec = sRP.sFiles(intFile).sMeta.strNidqName;
-			intProbeIdx = PH_SelectProbeNr(cellPoints,strRec,sRP.tv,sRP.av,sRP.st);
-			if isempty(intProbeIdx),return;end
-			
-			%set file name & folder
-			strProbeFile = [strcat(strRec,'_ProbeCoords'),'.mat'];
-			strFullFileProbeCoords = fullpath(sRP.sFiles(intFile).sEphysNidq.folder,strProbeFile);
-			
-			%which probe number?
-			if isempty(sRP.sFiles(intFile).sProbeCoords),sRP.sFiles(intFile).sProbeCoords=[];end
-			sRP.sFiles(intFile).sProbeCoords.folder = sRP.sFiles(intFile).sEphysNidq.folder;
-			sRP.sFiles(intFile).sProbeCoords.name = strProbeFile;
-			sRP.sFiles(intFile).sProbeCoords.sourcefolder = strPath;
-			sRP.sFiles(intFile).sProbeCoords.sourcefile = strFile;
-			sRP.sFiles(intFile).sProbeCoords.cellPoints = cellPoints;
-			sRP.sFiles(intFile).sProbeCoords.intProbeIdx = intProbeIdx;
-			
-			%export probe coord file
-			sProbeCoords = sRP.sFiles(intFile).sProbeCoords;
-			save(strFullFileProbeCoords,'sProbeCoords');
+		%load atlas
+		if ~isfield(sRP,'sAtlas') || isempty(sRP.sAtlas)
+			ptrListSelectAtlas_Callback();
 		end
 		
+		%open coords file
+		strDefaultPath = sRP.strProbeLocPath;
+		[sProbeCoords,strFile,strPath] = PH_LoadProbeFile(sRP.sAtlas,strDefaultPath,strName);
+		if ~isfield(sProbeCoords,'sourceatlas') && ~isfield(sProbeCoords,'sProbeAdjusted')
+			errordlg('This is not a SliceFinder or ProbeFinder file','Wrong file type');
+			return
+		elseif ~isfield(sProbeCoords,'sProbeAdjusted') && ~strcmpi(sProbeCoords.sourceatlas,sRP.sAtlas.Type)
+			errordlg(sprintf('Atlas of probe file %s is not the same as the currently loaded atlas!',sProbeCoords.sourceatlas),'Wrong atlas loaded');
+			return
+		elseif ~isfield(sProbeCoords,'sProbeAdjusted') && ~isfield(sProbeCoords,'sourceatlas')
+			errordlg('This is not a SliceFinder or ProbeFinder file','Wrong file type');
+			return
+		end
+		
+		%save a copy of the probe coords file
+		strRec = sRP.sFiles(intFile).sMeta.strNidqName;
+		strProbeFile = [strcat(strRec,'_ProbeCoords'),'.mat'];
+		strFullFileProbeCoords = fullpath(sRP.sFiles(intFile).sEphysNidq.folder,strProbeFile);
+		
+		%add data
+		sRP.sFiles(intFile).sProbeCoords=sProbeCoords;
+		sRP.sFiles(intFile).sProbeCoords.folder = sRP.sFiles(intFile).sEphysNidq.folder;
+		sRP.sFiles(intFile).sProbeCoords.name = strProbeFile;
+		sRP.sFiles(intFile).sProbeCoords.sourcefolder = strPath;
+		sRP.sFiles(intFile).sProbeCoords.sourcefile = strFile;
+		
+		%export probe coord file
+		sProbeCoords = sRP.sFiles(intFile).sProbeCoords;
+		save(strFullFileProbeCoords,'sProbeCoords');
+
 		%update button
-		if isfield(sRP.sFiles(intFile),'sProbeCoords') && ~isempty(sRP.sFiles(intFile).sProbeCoords)
-			strText = num2str(intProbeIdx);
+		if isfield(sRP.sFiles(intFile).sProbeCoords,'sProbeAdjusted') && isfield(sRP.sFiles(intFile).sProbeCoords.sProbeAdjusted,'probe_area_full_per_cluster')
+			strText = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
+			vecColor = [0 0.8 0];
+			strTip = ['Adjusted probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
+		else
+			strText = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [1 0.5 0];
 			strTip = ['Raw probe track/coordinate data at: ' sRP.sFiles(intFile).sProbeCoords.sourcefolder];
-		else
-			strText = 'N';
-			vecColor = [0.8 0 0];
-			strTip = 'Did not find probe track/coordinate data';
 		end
 		sFigRP.sPointers(intFile).Coords.String = strText;
 		sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = strTip;
@@ -76,9 +75,10 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 		%unlock gui
 		uiunlock(sFigRP);
 		drawnow;
-	catch
+	catch ME
 		%unlock gui
 		uiunlock(sFigRP);
 		drawnow;
+		rethrow(ME)
 	end
 end
