@@ -544,7 +544,7 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 					%prepare ephys data
 					sClusters = EL_PrepEphys_AS(sFile.sSynthesis.folder);
 					
-					%% plot grid
+					%% open probefinder
 					hMain = PH_GenGUI(sRP.sAtlas,sFile.sProbeCoords,sClusters);
 					
 					%% wait until done
