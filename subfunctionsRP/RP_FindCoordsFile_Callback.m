@@ -31,14 +31,11 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 		%open coords file
 		strDefaultPath = sRP.strProbeLocPath;
 		[sProbeCoords,strFile,strPath] = PH_LoadProbeFile(sRP.sAtlas,strDefaultPath,strName);
-		if ~isfield(sProbeCoords,'sourceatlas') && ~isfield(sProbeCoords,'sProbeAdjusted')
+		if ~isfield(sProbeCoords,'sourceatlas') && ~isfield(sProbeCoords,'sProbeAdjusted') && ~(isfield(sProbeCoords,'cellPoints') && ~isempty(sProbeCoords.cellPoints) && ~isempty(sProbeCoords.cellPoints{1}))
 			errordlg('This is not a SliceFinder or ProbeFinder file','Wrong file type');
 			return
-		elseif ~isfield(sProbeCoords,'sProbeAdjusted') && ~strcmpi(sProbeCoords.sourceatlas,sRP.sAtlas.Type)
+		elseif isfield(sProbeCoords,'sourceatlas') && ~strcmpi(sProbeCoords.sourceatlas,sRP.sAtlas.Type)
 			errordlg(sprintf('Atlas of probe file %s is not the same as the currently loaded atlas!',sProbeCoords.sourceatlas),'Wrong atlas loaded');
-			return
-		elseif ~isfield(sProbeCoords,'sProbeAdjusted') && ~isfield(sProbeCoords,'sourceatlas')
-			errordlg('This is not a SliceFinder or ProbeFinder file','Wrong file type');
 			return
 		end
 		
