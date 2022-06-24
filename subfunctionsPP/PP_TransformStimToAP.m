@@ -7,6 +7,20 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 	%get all fields
 	cellFields = fieldnames(sStimBlock);
 	
+    %save NI timestamp onsets
+    if isfield(sStimBlock,'ActOnNI')
+        vecActOnNI = sStimBlock.ActOnNI;
+    else
+        vecActOnNI = [];
+    end
+
+     %save NI timestamp offsets
+    if isfield(sStimBlock,'ActOffNI')
+        vecActOffNI = sStimBlock.ActOffNI;
+    else
+        vecActOffNI = [];
+    end
+
 	%define order of preference for time indices & stim type indicator, remove all others
 	for intType=1:3
 		%define fields in order
@@ -64,6 +78,10 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 		sStimBlock = rmfield(sStimBlock,cellStimBlockFields(indRemove));
 	end
 	
+    %add NI timestamps
+    sStimBlock.ActOnNI = vecActOnNI;
+    sStimBlock.ActOffNI = vecActOffNI;
+
 	%sort fields by type; char>scalar>vector>matrix>cell>struct>other
 	indIsChar = structfun(@ischar,sStimBlock);
 	indIsScalar = structfun(@isnumeric,sStimBlock) & structfun(@isscalar,sStimBlock) & ~indIsChar;

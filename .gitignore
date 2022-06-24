@@ -3,6 +3,7 @@ StimPresets/*.mat
 Scenes/**
 backup/**
 Local/**
+AcquipixMetavars*.mat
 *.asv
 data/**
 *.ini

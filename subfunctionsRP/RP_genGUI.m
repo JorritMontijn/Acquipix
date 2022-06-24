@@ -199,12 +199,15 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 	ptrMainGUI.Name = 'Recording Processor';
 	
 	% Move the window to the center of the screen.
-	movegui(ptrMainGUI,'center')
+	movegui(ptrMainGUI,'center');
 	
 	% Make the UI visible.
 	ptrMainGUI.Visible = 'on';
 	sFigRP.ptrMainGUI = ptrMainGUI;
 	
+    %load atlas
+    ptrListSelectAtlas_Callback();
+
 	%unlock
 	uiunlock(sFigRP);
 	

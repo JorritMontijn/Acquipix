@@ -1,136 +1,149 @@
-function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
-	
-	%get synthesized data
-	sSynthesis = sFile.sSynthesis;
-	sLoad = load(fullpath(sSynthesis.folder,sSynthesis.name));
-	sSynthData = sLoad.sSynthData;
-	sMetaVar = sRP.sMetaVar;
-	sProbeCoords = sFile.sProbeCoords;
-	
-	%check if atlas is correct
-	if ~strcmpi(sProbeCoords.AtlasType,sRP.sAtlas.Type)
-		intResultFlag = 0;
-		errordlg(sprintf('Current atlas is %s, but coord file atlas is %s!',sRP.sAtlas.Type,sProbeCoords.AtlasType),'Atlas mismatch');
-		return;
-	end
-	
-	%get probe location
-	dblProbeLength = sProbeCoords.ProbeLengthOriginal;
-	vecIntersect = round(sProbeCoords.sProbeAdjusted.probe_vector_intersect);
-	intEntryStructure = sRP.sAtlas.av(vecIntersect(1),vecIntersect(2),vecIntersect(3));
-	strEntryStructure = sRP.sAtlas.st.name{intEntryStructure};
-	
-	%get cluster depths
-	strPathKilosort = sFile.sClustered.folder;
-	sSpikes = loadKSdir(strPathKilosort);
-	vecAllSpikeClust = sSpikes.clu;
-	vecClusters = unique(vecAllSpikeClust);
-	
-	%get cluster data
-	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
-	%assign cluster data
+    function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
+    
+    %get synthesized data
+    sSynthesis = sFile.sSynthesis;
+    sLoad = load(fullpath(sSynthesis.folder,sSynthesis.name));
+    sSynthData = sLoad.sSynthData;
+    sMetaVar = sRP.sMetaVar;
+    sProbeCoords = sFile.sProbeCoords;
+    
+    %check if atlas is correct
+    if ~strcmpi(sProbeCoords.AtlasType,sRP.sAtlas.Type)
+        intResultFlag = 0;
+        errordlg(sprintf('Current atlas is %s, but coord file atlas is %s!',sRP.sAtlas.Type,sProbeCoords.AtlasType),'Atlas mismatch');
+        return;
+    end
+    
+    %get probe location
+    dblProbeLength = sProbeCoords.ProbeLengthOriginal*mean(sProbeCoords.VoxelSize);
+    vecIntersect = round(sProbeCoords.sProbeAdjusted.probe_vector_intersect);
+    intEntryStructure = sRP.sAtlas.av(vecIntersect(1),vecIntersect(2),vecIntersect(3));
+    strEntryStructure = sRP.sAtlas.st.name{intEntryStructure};
+    
+    %get cluster depths
+    strPathKilosort = sFile.sClustered.folder;
+    sSpikes = loadKSdir(strPathKilosort);
+    vecAllSpikeClust = sSpikes.clu;
+    vecClusters = unique(vecAllSpikeClust);
+    
+    %get cluster data
+    [spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
+    
+    %get depths
+    intClustNum = numel(vecClusters);
+    vecDepth = nan(1,intClustNum);
+    for intClust=1:intClustNum
+        intClustIdx = vecClusters(intClust);
+        vecDepth(intClust) = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
+    end
+    
+    %get areas
+    [vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sProbeCoords,vecDepth);
+    
+    %assign cluster data
+    intCurrentProbeLength = floor(sProbeCoords.sProbeAdjusted.probe_vector_sph(end));
 	sCluster = sSynthData.sCluster;
-	intClustNum = numel(vecClusters);
-	for intClust=1:intClustNum
-		intClustIdx = vecClusters(intClust);
-		intDepth = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx))); 
-		
-		sCluster(intClust).Depth = intDepth;%depth on probe
-		sCluster(intClust).Area = sProbeCoords.sProbeAdjusted.probe_area_full_per_cluster{intClust};
-		sCluster(intClust).DepthBelowIntersect = sProbeCoords.sProbeAdjusted.depth_per_cluster(intClust);
-	end
-	
-	%get sources
-	sSources = sSynthData.sSources;
-	sSources.sProbeCoords = sProbeCoords;
-	
-	%get json data
-	sJson = sSynthData.sJson;
-	if isempty(sJson.subject)
-		cellRec = strsplit(sJson.recording,'_');
-		sJson.subject = cellRec{1};
-	end
-	sJson.probe_coords = sprintf('AP=%d;ML=%d;ML-ang=%d;AP-ang=%d;Depth=%d;Length=%d',round([...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.ML...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.AP...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_ML...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_AP...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.Depth...
-		sProbeCoords.sProbeAdjusted.stereo_coordinates.Probe_Length...
-		]));
-	
-	sJson.entry_structure = strrep(strEntryStructure,' ','_');
-	if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end
-	
-	%build output name & check if it exists
-	if numel(sJson.subject) > 3 && strcmp(sJson.subject(1:3),'Rec'),sJson.subject=sJson.subject(4:end);end
-	strSubject = sJson.subject;
-	strRecDate = sJson.date;
-	strRecording = sJson.recording;
-	strOutputRoot = strcat(strSubject,'_',strRecDate);
-	strAPFileOut = strcat(strOutputRoot,'_AP.mat');
-	strOutputPath = sRP.strOutputPath;
-	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
-	if exist(strAPFileTarget,'file')
-		strOldPath = cd(strOutputPath);
-		[strAPFileOut,strOutputPath] = uiputfile('*.mat','Select file to write AP output',strAPFileOut);
-		cd(strOldPath);
-		
-		if isempty(strAPFileOut) || (numel(strAPFileOut)==1 && strAPFileOut == 0)
-			return;
-		end
-	end
-	strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
-	sJson.file_preproAP = strAPFileTarget;
-	
-	%overwrite data with current metavars
-	cellFields = fieldnames(sJson);
-	for intField=1:numel(cellFields)
-		strField = cellFields{intField};
-		if isfield(sMetaVar,strField)
-			sJson.(strField) = sMetaVar.(strField);
-		end
-	end
-	
-	%% prune cellStim and move originals to sSources
-	cellBlock = sSynthData.cellStim;
-	sSources.cellBlock = cellBlock;
-	for intBlock=1:numel(cellBlock)
-		cellBlock{intBlock} = PP_TransformStimToAP(cellBlock{intBlock});
-	end
-	sSources.sMetaNI = sSynthData.sMetaNI;
-	
-	%% save json
-	%save json file
-	strJsonData = jsonencode(sJson);
-	strJsonData = strrep(strJsonData,'\','/'); %we're not using escape characters, so just transform everything to forward slashes
-	strJsonFileOut = strrep(strAPFileOut,'_AP.mat','_session.json');
-	strJsonTarget = fullpath(sSynthesis.folder,strJsonFileOut);
-	fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
-	ptrFile = fopen(strJsonTarget,'w');
-	fprintf(ptrFile,strJsonData);
-	fclose(ptrFile);
-	
-	%build AP structure
-	sAP = struct;
-	sAP.cellBlock = cellBlock;
-	if isfield(sSynthData,'sPupil') && ~isempty(sSynthData.sPupil)
-		sAP.sPupil = PP_TransformPupilToAP(sSynthData.sPupil);
-	end
-	sAP.sCluster = sCluster;
-	sAP.sSources = sSources;
-	sAP.sJson = sJson;
-	sAP.stereo_coordinates = sProbeCoords.sProbeAdjusted.stereo_coordinates;
-	%add misc NI channels to AP structure
-	if isfield(sSynthData,'sMiscNI')
-		cellFields = fieldnames(sSynthData.sMiscNI);
-		for intField=1:numel(cellFields)
-			sAP.(cellFields{intField}) = sSynthData.sMiscNI.(cellFields{intField});
-		end
-	end
-	
-	%save
-	fprintf('Saving AP data to %s [%s]\n',strAPFileTarget,getTime);
-	save(strAPFileTarget,'sAP');
-	intResultFlag = 1;
+    intClustNum = numel(vecClusters);
+    dblLengthFactor = intCurrentProbeLength/sProbeCoords.ProbeLengthOriginal;
+    for intClust=1:intClustNum
+        dblDepth = vecDepth(intClust) * dblLengthFactor;
+    
+        sCluster(intClust).Depth = vecDepth(intClust);%depth on probe
+        sCluster(intClust).Area = cellClustAreaFull{intClust};
+        sCluster(intClust).DepthBelowIntersect = dblDepth;%depth in brain
+    end
+    
+    %get sources
+    sSources = sSynthData.sSources;
+    sSources.sProbeCoords = sProbeCoords;
+    
+    %get json data
+    sJson = sSynthData.sJson;
+    if isempty(sJson.subject)
+        cellRec = strsplit(sJson.recording,'_');
+        sJson.subject = cellRec{1};
+    end
+    sJson.probe_coords = sprintf('AP=%d;ML=%d;ML-ang=%d;AP-ang=%d;Depth=%d;Length=%d',round([...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.ML...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.AP...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_ML...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.Angle_AP...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.Depth...
+        sProbeCoords.sProbeAdjusted.stereo_coordinates.Probe_Length...
+        ]));
+    
+    sJson.entry_structure = strrep(strEntryStructure,' ','_');
+    if strcmp(sJson.subject(end),'_'),sJson.subject(end)=[];end
+    
+    %build output name & check if it exists
+    if numel(sJson.subject) > 3 && strcmp(sJson.subject(1:3),'Rec'),sJson.subject=sJson.subject(4:end);end
+    strSubject = sJson.subject;
+    strRecDate = sJson.date;
+    strRecording = sJson.recording;
+    strOutputRoot = strcat(strSubject,'_',strRecDate);
+    strAPFileOut = strcat(strOutputRoot,'_AP.mat');
+    strOutputPath = sRP.strOutputPath;
+    strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
+    if exist(strAPFileTarget,'file')
+        strOldPath = cd(strOutputPath);
+        [strAPFileOut,strOutputPath] = uiputfile('*.mat','Select file to write AP output',strAPFileOut);
+        cd(strOldPath);
+    
+        if isempty(strAPFileOut) || (numel(strAPFileOut)==1 && strAPFileOut == 0)
+            return;
+        end
+    end
+    strAPFileTarget = fullpath(strOutputPath,strAPFileOut);
+    sJson.file_preproAP = strAPFileTarget;
+    
+    %overwrite data with current metavars
+    cellFields = fieldnames(sJson);
+    for intField=1:numel(cellFields)
+        strField = cellFields{intField};
+        if isfield(sMetaVar,strField)
+            sJson.(strField) = sMetaVar.(strField);
+        end
+    end
+    
+    %% prune cellStim and move originals to sSources
+    cellBlock = sSynthData.cellStim;
+    sSources.cellBlock = cellBlock;
+    for intBlock=1:numel(cellBlock)
+        cellBlock{intBlock} = PP_TransformStimToAP(cellBlock{intBlock});
+    end
+    sSources.sMetaNI = sSynthData.sMetaNI;
+    
+    %% save json
+    %save json file
+    strJsonData = jsonencode(sJson);
+    strJsonData = strrep(strJsonData,'\','/'); %we're not using escape characters, so just transform everything to forward slashes
+    strJsonFileOut = strrep(strAPFileOut,'_AP.mat','_session.json');
+    strJsonTarget = fullpath(sSynthesis.folder,strJsonFileOut);
+    fprintf('Saving json metadata to %s [%s]\n',strJsonTarget,getTime);
+    ptrFile = fopen(strJsonTarget,'w');
+    fprintf(ptrFile,strJsonData);
+    fclose(ptrFile);
+    
+    %build AP structure
+    sAP = struct;
+    sAP.cellBlock = cellBlock;
+    if isfield(sSynthData,'sPupil') && ~isempty(sSynthData.sPupil)
+        sAP.sPupil = PP_TransformPupilToAP(sSynthData.sPupil);
+    end
+    sAP.sCluster = sCluster;
+    sAP.sSources = sSources;
+    sAP.sJson = sJson;
+    sAP.stereo_coordinates = sProbeCoords.sProbeAdjusted.stereo_coordinates;
+    %add misc NI channels to AP structure
+    if isfield(sSynthData,'sMiscNI')
+        cellFields = fieldnames(sSynthData.sMiscNI);
+        for intField=1:numel(cellFields)
+            sAP.(cellFields{intField}) = sSynthData.sMiscNI.(cellFields{intField});
+        end
+    end
+    
+    %save
+    fprintf('Saving AP data to %s [%s]\n',strAPFileTarget,getTime);
+    save(strAPFileTarget,'sAP');
+    intResultFlag = 1;
 end

@@ -55,7 +55,7 @@ end
 %% load SpikeGLX data and fill in some values
 %get initial ops struct
 ops = struct;
-run(fullfile(strPathToConfigFile, 'configFile384_Montijn.m'));
+run(fullfile(strPathToConfigFile, 'configFile384_Npx3B2.m'));
 ops.fbinary = fullfile(rootZ, fs(1).name);
 
 %load GLX data
