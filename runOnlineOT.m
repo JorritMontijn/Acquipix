@@ -400,6 +400,16 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%update text
 	SC_updateTextInformation({''});
 	
+	%show relaxing picture
+	try 
+		figure;
+		imshow(imread('OT_KeepCalmAndRelax.tif'));
+		axis('equal','off');
+		axis('image');
+		
+	catch
+		return;
+	end
 end
 function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define globals

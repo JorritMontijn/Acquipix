@@ -81,6 +81,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 	
 	%% get NI I/O box data
 	%get current scan number for IM streams
+	warning('off','CalinsNetMex:connectionClosed');
 	intCurCountNI = GetScanCount(sStream.hSGL, intStreamNI);
 	
 	%check if this is the initial fetch
@@ -275,8 +276,11 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		[gVecSubNewSpikeCh,gVecSubNewSpikeT,dblSubNewTotT] = DP_DetectSpikes(matSubNewData, sP);
 		vecSubNewSpikeCh = gather(gVecSubNewSpikeCh);
 		vecSubNewSpikeT = gather(gVecSubNewSpikeT);
+		strClassCh = class(vecSubNewSpikeCh);
+		strClassT = class(vecSubNewSpikeT);
+		
 		%remove spikes in overlap
-		indRemSp = vecSubNewSpikeT < (uint32(dblUseOverlapT*1000)-1);
+		indRemSp = vecSubNewSpikeT < cast(dblUseOverlapT*1000-1,strClassT);
 		vecSubNewSpikeT(indRemSp) = [];
 		vecSubNewSpikeCh(indRemSp) = [];
 		%clear gpuArrays
@@ -284,7 +288,7 @@ function [sFig,sStream,boolDidSomething] = StreamCore(sFig,sStream,f_updateTextI
 		gVecSubNewSpikeCh = [];
 		
 		% assign data
-		intStartT = uint32(vecSubNewTime(1)*1000);
+		intStartT = cast(vecSubNewTime(1)*1000,strClassT);
 		sStream.dblCurrT = vecSubNewTime(end);
 		if numel(vecSubNewSpikeCh) > 0
 			sStream.vecSubSpikeCh = cat(1,sStream.vecSubSpikeCh,vecSubNewSpikeCh(:));

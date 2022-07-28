@@ -288,7 +288,7 @@ function OT_redraw(varargin)
 		scatter(sFig.ptrAxesHandle,vecStimOriDeg,vecUseResp,'kx');
 	end
 	hold(sFig.ptrAxesHandle,'on');
-	errorbar(sFig.ptrAxesHandle,vecUnique,vecPlotRespMean,vecPlotRespErr);
+	errorbar(sFig.ptrAxesHandle,vecUnique,vecPlotRespMean,vecPlotRespErr,'color',lines(1));
 	hold(sFig.ptrAxesHandle,'off');
 	
 	%clean up figure
