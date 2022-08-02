@@ -36,6 +36,10 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			if ~strcmp(strNidqPath(end),filesep),strNidqPath(end+1)=filesep;end
 			sMeta = DP_ReadMeta(strNidqFile, strNidqPath);
 			[dummy,strNidqName] = fileparts(sMeta.fileName);
+			if isempty(strNidqName)
+				strNidqName = strNidqFile;
+				warning([mfilename ':NidqNameEmpty'],sprintf('field "fileName" of NI meta file is empty: using raw filename for %s',strNidqName));
+			end
 			strNidqName = strrep(strNidqName,'.nidq','');
 			sMeta.strNidqName = strNidqName;
 			
@@ -46,8 +50,8 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 			
 			if exist('ptrText','var') && ~isempty(ptrText)
 				try
-				ptrText.String = sprintf('Compiling data library...\nFound %d recordings',sum(~indDelete(1:intFile)));
-				drawnow;
+					ptrText.String = sprintf('Compiling data library...\nFound %d recordings',sum(~indDelete(1:intFile)));
+					drawnow;
 				catch
 				end
 			end
