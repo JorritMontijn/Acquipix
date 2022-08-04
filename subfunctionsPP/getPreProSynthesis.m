@@ -579,7 +579,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 				intResampNum = 50;
 				intPlot = 0;
 				intLatencyPeaks = 0;
-				[dblZetaP,vecLatencies,sZETA] = getZeta(vecSpikeTimes,matStimOnOff,dblUseMaxDur,intResampNum,intPlot,intLatencyPeaks);
+				[dblZetaP,sZETA] = zetatest(vecSpikeTimes,matStimOnOff,dblUseMaxDur,intResampNum,intPlot,intLatencyPeaks);
 				dblMeanP=sZETA.dblMeanP;
 				if isempty(sZETA) || ~isfield(sZETA,'dblMeanP'),continue;end
 			end
@@ -601,8 +601,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).NonStationarity = sOut.dblNonstationarityIndex;
 		sCluster(intCluster).Violations1ms = sOut.dblViolIdx1ms;
 		sCluster(intCluster).Violations2ms = sOut.dblViolIdx2ms;
-		sCluster(intCluster).Contamination = vecKilosortContamination(intCluster);
-		sCluster(intCluster).KilosortGood = vecKilosortGood(intCluster);
+		sCluster(intCluster).Contamination = vecKilosortContamination(vecClustIdx_KSC==intClustIdx); %#ok<PFBNS>
+		sCluster(intCluster).KilosortGood = vecKilosortGood(vecClustIdx_KSG==intClustIdx); %#ok<PFBNS>
 		sCluster(intCluster).ZetaP = ZetaP;
 		sCluster(intCluster).MeanP = MeanP;
 		
@@ -699,10 +699,18 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%clusters & spikes
 	sSynthData.sCluster = sCluster;
 	
-	%NI meta file &  misc data
+	%meta data
 	sSynthData.sMetaNI = sMetaNI;
 	sSynthData.sMiscNI = sMiscNI;
+	if isfield(sFile,'sMetaAP')
+		sSynthData.sMetaAP = sFile.sMetaAP;
+	end
+	if isfield(sFile,'sMetaLF')
+		sSynthData.sMetaLF = sFile.sMetaLF;
+	end
+	
 	%sAP.strFileLFP = strFileLFP;
+	
 	
 	%source files
 	sSources = sFile;
@@ -716,6 +724,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sJson.file_ni = sMetaNI.fileName;
 	%add to struct
 	sSynthData.sJson = sJson;
+	sSynthData.ProcessingDate = getDate;
 	
 	%% save synthesis
 	%save AP

@@ -24,35 +24,34 @@
     strPathKilosort = sFile.sClustered.folder;
     sSpikes = loadKSdir(strPathKilosort);
     vecAllSpikeClust = sSpikes.clu;
-    vecClusters = unique(vecAllSpikeClust);
+    vecClustIdx = unique(vecAllSpikeClust);
     
     %get cluster data
     [spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
     
     %get depths
-    intClustNum = numel(vecClusters);
+    intClustNum = numel(vecClustIdx);
     vecDepth = nan(1,intClustNum);
     for intClust=1:intClustNum
-        intClustIdx = vecClusters(intClust);
+        intClustIdx = vecClustIdx(intClust);
         vecDepth(intClust) = dblProbeLength-round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
     end
     
     %get areas
     [vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sProbeCoords,vecDepth);
     
-    %assign cluster data
-    intCurrentProbeLength = floor(sProbeCoords.sProbeAdjusted.probe_vector_sph(end));
+	%assign cluster data
+	intCurrentProbeLength = floor(sProbeCoords.sProbeAdjusted.probe_vector_sph(end));
 	sCluster = sSynthData.sCluster;
-    intClustNum = numel(vecClusters);
-    dblLengthFactor = intCurrentProbeLength/sProbeCoords.ProbeLengthOriginal;
-    for intClust=1:intClustNum
-        dblDepth = vecDepth(intClust) * dblLengthFactor;
-    
-        sCluster(intClust).Depth = vecDepth(intClust);%depth on probe
-        sCluster(intClust).Area = cellClustAreaFull{intClust};
-        sCluster(intClust).DepthBelowIntersect = dblDepth;%depth in brain
-    end
-    
+	intClustNum = numel(vecClustIdx);
+	dblLengthFactor = intCurrentProbeLength/sProbeCoords.ProbeLengthOriginal;
+	for intClust=1:intClustNum
+		dblDepth = vecDepth(intClust) * dblLengthFactor;
+		sCluster(intClust).Depth = vecDepth(intClust);%depth on probe
+		sCluster(intClust).Area = cellClustAreaFull{intClust};
+		sCluster(intClust).DepthBelowIntersect = dblDepth;%depth in brain
+	end
+	
     %get sources
     sSources = sSynthData.sSources;
     sSources.sProbeCoords = sProbeCoords;
