@@ -550,7 +550,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%check if zeta is present
 	try
-		getZeta(1:10,[1 3 5],2,2);
+		zetatest(1:10,[1 3 5],2,2);
 		boolUseZeta = true;
 	catch
 		boolUseZeta = false;
@@ -715,6 +715,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%source files
 	sSources = sFile;
 	sSources.sMetaVar = sRP.sMetaVar;
+	sSources.vecChanIdx = vecChanIdx;
+	sSources.matChanPos = matChanPos;
 	sSynthData.sSources = sSources;
 	
 	% json metadata
