@@ -121,8 +121,8 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 	%get starting times
 	intReadSamps = min(intBuffT, intTotSamples - intSamp0);
 	vecSizeA = [intSavedChans, intReadSamps];
-	vecStartBatches = (1 + intStartT):intBuffT:min(intTotSamples,intStopT);
-	intLastBatch = intTotSamples-vecStartBatches(end)-1;
+	vecStartBatches = int64((1 + intStartT):intBuffT:min(intTotSamples,intStopT));
+	intLastBatch = min(intTotSamples,intStopT)-vecStartBatches(end)+1;
 	
 	% detect rough spike timings
 	matCarryOver = zeros(0,strClass);
@@ -179,7 +179,7 @@ function [vecSpikeCh,vecSpikeT,intTotT] = DP_DetectSpikesInBinaryFile(strFilenam
 	delete(hWaitbar);
 	
 	%calculate outputs
-	intTotT = (intBuffT*intBatch + intLastBatch);
+	intTotT = (intBuffT*(intBatch-1) + intLastBatch);
 	if isempty(intTotT),intTotT=0;end
 	vecSpikeCh = vecSpikeCh(1:intSpikeCounter);
 	vecSpikeT = vecSpikeT(1:intSpikeCounter);
