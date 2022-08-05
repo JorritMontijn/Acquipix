@@ -24,7 +24,19 @@ function OT_redraw(varargin)
 	%% update trial-average data matrix
 	sStimObject = sOT.sStimObject;
 	intTrials = min([sOT.intEphysTrialN sOT.intStimTrialN]);
-	if intTrials > sOT.intRespTrialN
+	
+	%get selected channels
+	vecUseSpkChans = sOT.vecSpkChans;
+	intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
+	intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
+	vecSelectChans = intMinChan:intMaxChan;
+	intUseCh = numel(vecUseSpkChans);
+	if isfield(sOT,'matRespStim')
+		matRespStim = sOT.matRespStim;
+	else
+		matRespStim = [];
+	end
+	if intTrials > sOT.intRespTrialN || numel(vecSelectChans) ~= size(matRespStim,1)
 		%% calc RF estimate
 		%update variables
 		vecOriDegs = cell2mat({sStimObject(:).Orientation});
@@ -36,12 +48,6 @@ function OT_redraw(varargin)
 		vecStimOnT = sOT.vecDiodeOnT(1:intTrials); %on times of all stimuli (diode on time)
 		vecStimDurT = sOT.vecStimOffT(1:intTrials) - sOT.vecStimOnT(1:intTrials); %stim duration (reliable NI timestamps difference)
 		vecStimOffT = vecStimOnT + vecStimDurT; %off times of all stimuli (diode on + dur time)
-		%get selected channels
-		vecUseSpkChans = sOT.vecSpkChans;
-		intMaxChan = min(sOT.intMaxChan,numel(vecUseSpkChans));
-		intMinChan = min(sOT.intMinChan,numel(vecUseSpkChans));
-		vecSelectChans = intMinChan:intMaxChan;
-		intUseCh = numel(vecUseSpkChans);
 		%fprintf('intUseCh=%d; selectchans=%d-%d\n',intUseCh,intMinChan,intMaxChan);
 		
 		%base, stim
