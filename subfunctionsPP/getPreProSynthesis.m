@@ -599,6 +599,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		%get responsiveness
 		ZetaP = nan(1,numel(cellStim));
 		MeanP = nan(1,numel(cellStim));
+		dPrimeLR = nan(1,numel(cellStim));
 		for intStim=1:numel(cellStim)
 			matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
 			
@@ -616,6 +617,18 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			end
 			ZetaP(intStim) = dblZetaP;
 			MeanP(intStim) = dblMeanP;
+			
+			%check if drifting grating
+			if isfield(cellStim{intStim}.structEP,'Orientation') && numel(cellStim{intStim}.structEP.Orientation) == numel(cellStim{intStim}.structEP.vecStimOnTime)
+				indDirRight = abs(rad2deg(circ_dist(deg2rad(cellStim{intStim}.structEP.Orientation),0))) <= 30;
+				indDirLeft = abs(rad2deg(circ_dist(deg2rad(cellStim{intStim}.structEP.Orientation),180))) <= 30;
+				if sum(indDirRight) > 2 && sum(indDirLeft) > 2
+					vecSpikeCounts = getSpikeCounts(vecSpikeTimes,cellStim{intStim}.structEP.vecStimOnTime,cellStim{intStim}.structEP.vecStimOffTime);
+					vecRate = vecSpikeCounts ./ (cellStim{intStim}.structEP.vecStimOffTime - cellStim{intStim}.structEP.vecStimOnTime);
+					
+					dPrimeLR(intStim) = getdprime2(vecRate(indDirRight),vecRate(indDirLeft))
+				end
+			end
 		end
 		
 		%assign to object
@@ -636,6 +649,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).KilosortGood = vecKilosortGood(vecClustIdx_KSG==intClustIdx); %#ok<PFBNS>
 		sCluster(intCluster).ZetaP = ZetaP;
 		sCluster(intCluster).MeanP = MeanP;
+		sCluster(intCluster).dPrimeLR = dPrimeLR;
 		
 		%msg
 		fprintf('Cell %d/%d, Z-p=%.3f,M-p=%.3f, Non-stat=%.3f, Viol=%.3f, Contam=%.3f [%s]\n',...

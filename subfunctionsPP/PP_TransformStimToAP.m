@@ -71,7 +71,7 @@ function sStimBlock = PP_TransformStimToAP(sStimBlock)
 	%stochastic variables, such as Phase and OrientationNoise
 	if isfield(sStimBlock,'sStimObject')
 		cellProtectedNames = {'vecStimOnTime','vecStimOffTime','vecTrialStimTypes',...
-			'Phase','OrientationNoise'};
+			'Phase','Orientation'};
 		cellStimObjectFields = fieldnames(sStimBlock.sStimObject);
 		cellStimBlockFields = fieldnames(sStimBlock);
 		indRemove = contains(cellStimBlockFields,cellStimObjectFields) & ~contains(cellStimBlockFields,cellProtectedNames);
