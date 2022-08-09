@@ -8,14 +8,6 @@ function RP_FindCoordsFile_Callback(hObject,eventdata,intFile)
 		uilock(sFigRP);
 		drawnow;
 		
-		%delete old coords file
-		try
-			sRP.sFiles(intFile).sProbeCoords = [];
-			strOldFile = fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name);
-			delete(strOldFile);
-		catch
-		end
-		
 		%get name
 		if isfield(sRP.sFiles(intFile).sMeta,'strNidqName')
 			strName = sRP.sFiles(intFile).sMeta.strNidqName;

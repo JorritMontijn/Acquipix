@@ -574,7 +574,9 @@ function [sFigRP,sRP] = RP_genGUI(varargin)
 						%update parameter list
 						vecColor = [0 0.8 0];
 						sFigRP.sPointers(intFile).Coords.String = num2str(sRP.sFiles(intFile).sProbeCoords.intProbeIdx);
-						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ['Probe track/coordinate data at: ' fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name)];
+						sFigRP.sPointers(intFile).Coords.(sFigRP.strTooltipField) = ...
+							['Probe track/coordinate data at: ' fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name) newline...
+							'Date: ' datemod(fullpath(sRP.sFiles(intFile).sProbeCoords.folder,sRP.sFiles(intFile).sProbeCoords.name))];
 						sFigRP.sPointers(intFile).Coords.ForegroundColor = vecColor;
 						drawnow;
 					end

@@ -119,7 +119,8 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sSynthesis') && ~isempty(sFiles(intFile).sSynthesis)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['Combined data at: ' fullpath(sFiles(intFile).sSynthesis.folder,sFiles(intFile).sSynthesis.name)];
+			strTip = ['Combined data at: ' fullpath(sFiles(intFile).sSynthesis.folder,sFiles(intFile).sSynthesis.name) newline...
+				'Date: ' datemod(fullpath(sFiles(intFile).sSynthesis.folder,sFiles(intFile).sSynthesis.name))];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -134,7 +135,8 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sClustered') && ~isempty(sFiles(intFile).sClustered)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['Clustered data at: ' fullpath(sFiles(intFile).sClustered.folder,sFiles(intFile).sClustered.name)];
+			strTip = ['Clustered data at: ' fullpath(sFiles(intFile).sClustered.folder,sFiles(intFile).sClustered.name) newline...
+				'Date: ' datemod(fullpath(sFiles(intFile).sClustered.folder,sFiles(intFile).sClustered.name))];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -153,7 +155,7 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 			vecColor = [0 0.8 0];
 			strTip = sprintf('Found %d pupil files:',intPupilFileNum);
 			for intPupilFile=1:numel(sFiles(intFile).sPupilFiles)
-				strTip = [strTip newline sFiles(intFile).sPupilFiles(intPupilFile).name];
+				strTip = [strTip newline sFiles(intFile).sPupilFiles(intPupilFile).name ' from ' datemod(fullpath(sFiles(intFile).sPupilFiles(intPupilFile).folder,sFiles(intFile).sPupilFiles(intPupilFile).name))];
 			end
 		else
 			strText = '0';
@@ -169,7 +171,8 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords) && isfield(sFiles(intFile).sProbeCoords,'sProbeAdjusted') && ~isempty(sFiles(intFile).sProbeCoords.sProbeAdjusted)
 			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [0 0.8 0];
-			strTip = ['Adjusted probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name)];
+			strTip = ['Adjusted probe track/coordinate data at: ' fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name) newline...
+				'Date: ' datemod(fullpath(sFiles(intFile).sProbeCoords.folder,sFiles(intFile).sProbeCoords.name))];
 		elseif isfield(sFiles(intFile),'sProbeCoords') && ~isempty(sFiles(intFile).sProbeCoords)
 			strText = num2str(sFiles(intFile).sProbeCoords.intProbeIdx);
 			vecColor = [1 0.5 0];
@@ -210,11 +213,13 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 			if isfield(sFiles(intFile),'sMetaAP') && isfield(sFiles(intFile).sMetaAP,'IsTcat') && sFiles(intFile).sMetaAP.IsTcat
 				strText = 'Y';
 				vecColor = [0 0 0.8];
-				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name];
+				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name newline...
+					'Date: ' datemod(fullpath(sFiles(intFile).sEphysAp.folder,sFiles(intFile).sEphysAp.name))];
 			else
 				strText = 'Y';
 				vecColor = [0 0.8 0];
-				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name];
+				strTip = ['AP channel data at: ' sFiles(intFile).sEphysAp.name newline...
+					'Date: ' datemod(fullpath(sFiles(intFile).sEphysAp.folder,sFiles(intFile).sEphysAp.name))];
 			end
 		else
 			strText = 'N';
@@ -230,7 +235,8 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sEphysLf') && ~isempty(sFiles(intFile).sEphysLf)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['LFP channel data at: ' sFiles(intFile).sEphysLf.name];
+			strTip = ['LFP channel data at: ' sFiles(intFile).sEphysLf.name newline...
+				'Date: ' datemod(fullpath(sFiles(intFile).sEphysLf.folder,sFiles(intFile).sEphysLf.name))];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
@@ -245,7 +251,8 @@ function [ptrPanelParent,ptrSlider,ptrPanelTitle,sPointers] = RP_genSliderPanel(
 		if isfield(sFiles(intFile),'sEphysNidq') && ~isempty(sFiles(intFile).sEphysNidq)
 			strText = 'Y';
 			vecColor = [0 0.8 0];
-			strTip = ['NI stream data at: ' sFiles(intFile).sEphysNidq.name];
+			strTip = ['NI stream data at: ' sFiles(intFile).sEphysNidq.name newline...
+				'Date: ' datemod(fullpath(sFiles(intFile).sEphysNidq.folder,sFiles(intFile).sEphysNidq.name))];
 		else
 			strText = 'N';
 			vecColor = [0.8 0 0];
