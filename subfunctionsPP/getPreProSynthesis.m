@@ -393,7 +393,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			sPupil.vecPupilTimeFixed = sOldSynthData.sPupil.vecPupilTimeFixed;
 			
 			%add to structure
-			cellStim{intLogFile}.structEP.vecPupilOnsetCorrections = sOldSynthData.cellStim{intLogFile}.structEP.vecPupilOnsetCorrections;
+			if isfield(cellStim{intLogFile}.structEP,'vecPupilOnsetCorrections')
+				cellStim{intLogFile}.structEP.vecPupilOnsetCorrections = sOldSynthData.cellStim{intLogFile}.structEP.vecPupilOnsetCorrections;
+			end
 		else
 			%downsample sync lum
 			vecPupilSyncLum = interp1(vecPupilFullSyncLumT,vecPupilFullSyncLum,sPupil.vecPupilTime);
