@@ -99,14 +99,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		indUsePulsePeriods([1 end]) = false;
 		dblSampRateImec = mean(vecDiffPulsesImec(indUsePulsePeriods));
 		%compare real and pre-calibrated rate
-		dblCalibratedRateImec = str2double(sMetaAp.imSampRate);
-		dblImecRateError=(1-(dblSampRateImec/dblCalibratedRateImec));
+		dblImecRateFromMetaData = str2double(sMetaAp.imSampRate);
+		dblImecRateError=(1-(dblSampRateImec/dblImecRateFromMetaData));
 		dblImecRateErrorPercentage  = dblImecRateError*100;
 		%max deviation
 		dblMaxFault = str2double(sMetaAp.fileTimeSecs)*dblImecRateError;
 		if dblImecRateErrorPercentage < -1e-2 || dblImecRateErrorPercentage > 1e-2 || abs(dblMaxFault) > 1e-2
 			warning([mfilename 'E:SampRateFault'],'IMEC stream is badly calibrated; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, pulse-based rate is %.6f Hz!',...
-				dblImecRateErrorPercentage,dblMaxFault*1000,dblCalibratedRateImec,dblSampRateImec);
+				dblImecRateErrorPercentage,dblMaxFault*1000,dblImecRateFromMetaData,dblSampRateImec);
 		end
 	elseif exist('sMetaAp','var') && isfield(sMetaAp,'imSampRate')
 		dblSampRateImec = str2double(sMetaAp.imSampRate);
