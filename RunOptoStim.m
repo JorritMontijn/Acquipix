@@ -84,8 +84,10 @@ if boolUseSGL
 	
 	%retrieve some parameters
 	intStreamNI = -1;
-	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
-	
+	dblSampRateNI_rec = GetSampleRate(hSGL, intStreamNI);
+    intStreamIM = 0; %needs to be adjusted if there are more than one probe
+	dblSampRateIM_rec = GetSampleRate(hSGL, intStreamIM);
+    
 	%% check disk space available
 	%strDataDirSGL = GetDataDir(hSGL);
 	%jFileObj = java.io.File(strDataDirSGL);
@@ -265,7 +267,7 @@ try
 		
 		%log NI timestamp
 		if boolUseSGL
-			dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+			dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampRateNI_rec;
 		else
 			dblStimOnNI = nan;
 		end
@@ -278,7 +280,7 @@ try
 		
 		%log NI timestamp
 		if boolUseSGL
-			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampRateNI_rec;
 		else
 			dblStimOffNI = nan;
 		end
@@ -299,7 +301,7 @@ try
 	structEP.cellPulseDur = cellPulseDur(1:intTrial);
 	structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 	structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
+	save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL','dblSampRateNI_rec','dblSampRateIM_rec');
 	
 	%% end-wait
 	hTicExpStop = tic;
@@ -338,7 +340,7 @@ catch ME
 		structEP.cellPulseDur = cellPulseDur(1:intTrial);
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL','dblSampRateNI_rec','dblSampRateIM_rec');
 		
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
@@ -362,7 +364,7 @@ catch ME
 		structEP.cellPulseDur = cellPulseDur(1:intTrial);
 		structEP.vecStimOnNI = vecStimOnNI(1:intTrial);
 		structEP.vecStimOffNI = vecStimOffNI(1:intTrial);
-		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL');
+		save(fullfile(strLogDir,strFilename), 'structEP','sParamsSGL','dblSampRateNI_rec','dblSampRateIM_rec');
 		
 		%% close Daq IO
 		if boolUseNI && ~(exist('sExpMeta','var') && isfield(sExpMeta,'objDaqOut'))

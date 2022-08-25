@@ -56,7 +56,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sMetaNI = sFile.sMeta;
 	dblSampRateReportedNI = DP_SampRate(sMetaNI);
 	intFirstSample = str2double(sMetaNI.firstSample);
-	dblT0_NI = intFirstSample/dblSampRateReportedNI;
+	dblT0_NI_Reported = intFirstSample/dblSampRateReportedNI;
 	
 	% get recording configuration variables
 	sMetaVar = sRP.sMetaVar;
@@ -114,7 +114,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		dblSampRateImec = 30000;
 	end
 	
-	%get nidq sync pulses & correct by sync pulses
+	%get nidq sync pulses & calculate samp rates
 	if ~isempty(intSyncPulseCh)
 		%get ni sync pulses
 		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intSyncPulseCh,:));
@@ -128,9 +128,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecDiffPulses = sort(diff(vecSyncPulseOn));
 		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | zscore(vecDiffPulses) < 2;
 		indUsePulsePeriods([1 end]) = false;
-		dblImecRateInNItime = mean(vecDiffPulses(indUsePulsePeriods))/dblSampRateReportedNI;
-		dblMultiplyIMECby = dblImecRateInNItime/str2double(sMetaNI.syncSourcePeriod);
-		dblSampRateFaultPercentage = (1-(dblMultiplyIMECby))*100;
+        dblNISamprate = mean(vecDiffPulses(indUsePulsePeriods));
+        dblNIRateError=(1-(dblNISamprate/dblSampRateReportedNI));
+        dblSampRateFaultPercentage = dblNIRateError*100;
+        dblNICorrectionfactor = dblSampRateReportedNI/dblNISamprate;
 		if dblSampRateFaultPercentage < -1e-4 || dblSampRateFaultPercentage > 1e-4
 			warning([mfilename 'E:SampRateFault'],sprintf('Sampling rate fault is high: %e%%. I will correct this, but your calibration is probably off!',dblSampRateFaultPercentage));
 		end
@@ -268,13 +269,13 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOffNI = sOldSynthData.cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using old synthesis file. If this is not what you want, please remove the old synthesis file first. NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
-			dblT0_NI = dblT0_NI;
+			dblT0_NI_new = intFirstSample/dblNISamprate; %the true onset
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif isfield(cellStim{intLogFile}.structEP,'vecStimOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.vecStimOnNI))
-			dblT0_NI = dblT0_NI;
+			dblT0_NI_new = intFirstSample/dblNISamprate;
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			cellStim{intLogFile}.structEP.ActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI;
 			cellStim{intLogFile}.structEP.ActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
@@ -282,7 +283,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif ~isempty(vecStimOnScreenPD) %backup sync
-			dblT0_NI = 0;
+			dblT0_NI_Reported = 0;
 			warning([mfilename ':NoTimestampsNidq'],'No NI timestamps were found in the stimulus log; attempting back-up synchronization procedure...');
 			cellStim{intLogFile}.structEP.strSyncType = 'Bad: only onset pulses';
 			
@@ -349,17 +350,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimOnTime = sOldSynthData.cellStim{intLogFile}.structEP.vecStimOnTime;
 		elseif exist('vecStimOnScreenPD','var') && ~isempty(vecStimOnScreenPD)
 			dblMaxErr = 0.1;
-			vecPresStimOnT = vecStimActOnNI - dblT0_NI;
+			vecPresStimOnT = vecStimActOnNI - dblT0_NI_Reported;
 			vecSignalOnT = vecStimOnScreenPD/dblSampRateReportedNI;
 			[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
 			indReplace = abs(vecDiffOnT) > dblMaxErr;
 			dblMedianErr = median(vecDiffOnT(~indReplace));
 			if isnan(dblMedianErr),dblMedianErr=0;end
-			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - dblT0_NI;
+			vecStimOnTime(indReplace) = vecStimActOnNI(indReplace) - dblMedianErr - dblT0_NI_Reported;
 			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
 		else
 			dblMedianErr=0;
-			vecStimOnTime = vecStimActOnNI - dblT0_NI;
+			vecStimOnTime = vecStimActOnNI*dblNICorrectionfactor - dblT0_NI_new; %correct with true onset and new samp rate
 		end
 		
 		%get OFF times: ON + dur
@@ -425,7 +426,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			%interpolate to NI-based time
 			vecPupilTimeNI = interp1(vecFrameVid,vecTimeNI,sPupil.vecPupilVidFrame,'linear','extrap');
 			sPupil.vecPupilTimeNI = vecPupilTimeNI;
-			sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - dblT0_NI;
+			sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - dblT0_NI_Reported;
 			
 			%% use LED
 			%transform onset signals to ni time
@@ -433,7 +434,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			
 			%rename & align
 			vecReferenceT = vecStimOnTime;
-			vecNoisyHighResT = vecPupilSignalOnNI - dblMedianErr - dblT0_NI;
+			vecNoisyHighResT = vecPupilSignalOnNI - dblMedianErr - dblT0_NI_Reported;
 			%check if pupil time overlaps NI time
 			if vecReferenceT(round(numel(vecReferenceT)/3)) < vecNoisyHighResT(1) ...
 					|| vecReferenceT(2*round(numel(vecReferenceT)/3)) > vecNoisyHighResT(end)
@@ -533,9 +534,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	catch
 		sSpikes = loadKSdir(fullpath(strPathAP,'kilosort3'));
 	end
-	vecAllSpikeTimes = sSpikes.st;
-	vecAllSpikeClust = sSpikes.clu;
+	vecAllSpikeTimes = sSpikes.st;  %spiketimes based on old samprate
+    vecAllSpikeClust = sSpikes.clu;
 	vecClusters = unique(vecAllSpikeClust);
+    dblImecSampRateReported = sSpikes.sample_rate; %old samprate (rounded in kilosort output!)
 	
 	%% load chanmap file
 	if isfield(sFile.sClustered,'ops') && isfield(sFile.sClustered.ops,'chanMap')
@@ -574,9 +576,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	intClustNum = numel(vecClusters);
 	cellSpikes = cell(1,intClustNum);
 	vecDepth = nan(1,intClustNum);
+    samp_rate_correction_imec = dblImecSampRateReported/dblSampRateImec; %correct spiketimes with new, recalibrated rate
 	for intCluster=1:intClustNum
 		intClustIdx = vecClusters(intCluster);
-		cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx)*dblMultiplyIMECby;
+		cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx)*samp_rate_correction_imec;
 		vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
 	end
 	
