@@ -89,7 +89,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	end
 	
 	%make output dir
-	strDataOutputDir = fullpath(strDataDir, 'kilosort3');
+	strDataOutputDir = fullpath(strDataDir, 'kilosort');
 	mkdir(strDataOutputDir);
 	
 	%% check NI channel information
@@ -112,7 +112,12 @@ function sClustered = getPreProClustering(sFile,sRP)
 		
 		%save file
 		strSyncSY = fullpath(strDataOutputDir, 'syncSY.mat');
-		save(strSyncSY, 'syncSY','sMeta','-v7.3');
+		
+		try
+			save(strSyncSY, 'syncSY','sMeta','-v7.3');
+		catch sME
+			dispErr(sME);
+		end
 	else
 		syncSY = [];
 	end
@@ -155,12 +160,16 @@ function sClustered = getPreProClustering(sFile,sRP)
 	% save final results as rez2
 	fprintf('Saving final results in rez2  \n')
 	fname = fullpath(strDataOutputDir, 'rez2.mat');
-	save(fname, 'rez', 'ops','-v7.3');
+	try
+		save(fname, 'rez', 'ops','-v7.3');
+	catch sME
+		dispErr(sME);
+	end
 	
 	%get clustered file
 	sClustered = dir(fullpath(strDataDir,sRP.strEphysFindClustered));
 	if isempty(sClustered)
-		sClustered = dir(fullpath(strDataDir,'kilosort3',sRP.strEphysFindClustered));
+		sClustered = dir(fullpath(strDataDir,'kilosort',sRP.strEphysFindClustered));
 	end
 	sClustered.ops = ops;
 	sClustered.sNiCh = sNiCh;
