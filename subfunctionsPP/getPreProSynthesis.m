@@ -533,7 +533,11 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	try
 		sSpikes = loadKSdir(strPathAP);
 	catch
-		sSpikes = loadKSdir(fullpath(strPathAP,'kilosort3'));
+		try
+			sSpikes = loadKSdir(fullpath(strPathAP,'kilosort'));
+		catch
+			sSpikes = loadKSdir(fullpath(strPathAP,'kilosort3'));
+		end
 	end
 	vecAllSpikeTimes = sSpikes.st;  %spiketimes based on old samprate
 	vecAllSpikeClust = sSpikes.clu;
