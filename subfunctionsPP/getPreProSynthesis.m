@@ -383,6 +383,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.ActOffNI = vecStimActOffNI;
 		cellStim{intLogFile}.structEP.SampRateNI = dblNISamprate;
 		cellStim{intLogFile}.structEP.SampRateNI_Reported = dblSampRateReportedNI;
+		cellStim{intLogFile}.structEP.SampRateIM = dblSampRateImec;
+		cellStim{intLogFile}.structEP.SampRateIM_Reported = dblImecRateFromMetaData;
 		
 		%% align eye-tracking data
 		%if no pupil data present, continue
@@ -567,7 +569,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%% get cluster data
 	fprintf('Assigning spikes to clusters... [%s]\n',getTime);
 	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
-	
+	[vecClustIdx_WF,matClustWaveforms] = getWaveformPerCluster(sSpikes);
+		
 	%remove nans
 	for intStim=1:numel(cellStim)
 		matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
@@ -579,6 +582,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% prepare spiking cell array
 	intClustNum = numel(vecClusters);
+	if intClustNum ~= numel(vecClustIdx_WF)
+		error([mfilename ':ClustIdxMismatch'],sprintf('Cluster numbers do not match between waveforms and spikes for %s',strFileNidq));
+	end
 	cellSpikes = cell(1,intClustNum);
 	vecDepth = nan(1,intClustNum);
 	dblSampRateCorrectionImec = dblImecSampRateReported/dblSampRateImec; %correct spiketimes with new, recalibrated rate
@@ -652,6 +658,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).Cluster = intCluster;
 		sCluster(intCluster).IdxClust = intClustIdx;
 		sCluster(intCluster).SpikeTimes = vecSpikeTimes;
+		sCluster(intCluster).Waveform = matClustWaveforms(intCluster,:);
 		sCluster(intCluster).NonStationarity = sOut.dblNonstationarityIndex;
 		sCluster(intCluster).Violations1ms = sOut.dblViolIdx1ms;
 		sCluster(intCluster).Violations2ms = sOut.dblViolIdx2ms;
