@@ -130,7 +130,7 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		end
 		if ~isempty(sProbeCoords)
 			sLoad = load(fullpath(sProbeCoords.folder,sProbeCoords.name));
-			sProbeCoords = catstruct(sProbeCoords,sLoad.sProbeCoords);
+			sProbeCoords = catstruct(sLoad.sProbeCoords,sProbeCoords);
 		end
 		
 		%% raw stimulus files

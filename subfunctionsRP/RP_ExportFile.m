@@ -6,6 +6,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	sSynthData = sLoad.sSynthData;
 	sMetaVar = sRP.sMetaVar;
 	sProbeCoords = sFile.sProbeCoords;
+	fprintf('Exporting %s ... [%s]\n',sSynthesis.name,getTime);
 	
 	%check if atlas is correct
 	if ~strcmpi(sProbeCoords.AtlasType,sRP.sAtlas.Type)
