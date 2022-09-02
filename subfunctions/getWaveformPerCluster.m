@@ -41,7 +41,10 @@ function [vecClustIdx,matClustWaveforms] = getWaveformPerCluster(sSpikes,vecClus
 	for intT = 1:intTemplateNum
 		theseChanAmps = tempChanAmps(intT,:);
 		intMaxCh = find(theseChanAmps==max(theseChanAmps),1);
-		if isempty(intMaxCh),continue;end
+		if isempty(intMaxCh)
+			warning([mfilename ':EmptyTemplate'],sprintf('Template %d/%d is all NaN!',intT,intTemplateNum));
+			continue;
+		end
 		matMaxWF(intT,:) = tempsUnW(intT,:,find(theseChanAmps==max(theseChanAmps),1));
 	end
 	
