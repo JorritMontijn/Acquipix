@@ -24,6 +24,36 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	matChanPos = readNPY(fullpath(sFile.sClustered.folder,'channel_positions.npy'));
 	%load sync file if present
 	sFileSyncSY = dir(fullpath(sFile.sClustered.folder,'syncSY.mat'));
+	if isempty(sFileSyncSY)
+		% get metadata
+		strApFile = fullpath(sFile.sEphysAp.folder,sFile.sEphysAp.name);
+		sMeta = DP_ReadMeta(strApFile);
+		[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels
+		
+		% extract IM sync channel
+		ptrText.String = 'Extracting sync channel...';
+		if SY>0
+			vecTypeCh = cumsum([AP,LF,SY]);
+			intSyncCh = vecTypeCh(3);
+			[strPath,strFile,strExt]=fileparts(strApFile);
+			strExt = strrep(strExt,'meta','bin');
+			vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %sync pulse
+			syncSY = DP_GetUpDown(vecSyncAp);
+			
+			%save file
+			strSyncSY = fullpath(sFile.sClustered.folder, 'syncSY.mat');
+			
+			try
+				save(strSyncSY, 'syncSY','sMeta','-v7.3');
+			catch sME
+				dispErr(sME);
+			end
+			sFileSyncSY = dir(strSyncSY);
+		else
+			syncSY = [];
+		end
+	end
+	
 	if ~isempty(sFileSyncSY)
 		sSyncAp = load(fullpath(sFile.sClustered.folder,'syncSY.mat'));
 		syncSY = sSyncAp.syncSY;
@@ -108,10 +138,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			warning([mfilename 'E:SampRateFault'],'IMEC stream is badly calibrated; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, pulse-based rate is %.6f Hz!',...
 				dblImecRateErrorPercentage,dblMaxFault*1000,dblImecRateFromMetaData,dblSampRateImec);
 		end
-	elseif exist('sMetaAp','var') && isfield(sMetaAp,'imSampRate')
-		dblSampRateImec = str2double(sMetaAp.imSampRate);
 	else
-		dblSampRateImec = 30000;
+		error([mfilename 'E:SampRateFault'],'Cannot find sync pulses in IMEC stream!');
 	end
 	
 	%get nidq sync pulses & calculate samp rates
