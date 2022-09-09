@@ -31,7 +31,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels
 		
 		% extract IM sync channel
-		ptrText.String = 'Extracting sync channel...';
+		try,ptrText.String = 'Extracting sync channel...';drawnow;catch,end
 		if SY>0
 			vecTypeCh = cumsum([AP,LF,SY]);
 			intSyncCh = vecTypeCh(3);
