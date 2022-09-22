@@ -1,5 +1,6 @@
 %% Acquipix toolbox for visual stimulation, recording, and pre-processing with neuropixels
 %By Jorrit Montijn
+%Rev:2022-09-22 - v0.9.0
 %
 %This toolbox contains two components: acquisition scripts for running
 %experiments as well as pre-processing scripts to transform your
@@ -9,13 +10,17 @@
 %You can use the EyeTracking toolbox to record the mouse's eyetracking, and
 %experiment scripts such as RunDriftingGratings.m
 %
+%To start an experiment, type: RunExperiment
+%
 %% ii) Data pre-processing
-%After data acquisition, do the following steps:
-%1) run runPreProcessPix.m (or your personalized version) to cluster the
-%   data with Kilosort
-%2) run runEyeTrackerOffline.m (or your personalized version) to
-%   pre-process the eyetracking data
-%2a) optional: run runProcessPixClustering.m to look at your clusters in phy
-%3) run runPostProcessPix.m to combine stimulus timings & parameters,
-%   eye-tracking and electrophysiology into one file
-%4) run runPostProcessProbeAreas.m to add the brain area to each cluster
+%After data acquisition, you can pre-process your data using the GUI
+%
+%To start the pre-processor, type: runRecordingProcessor
+%
+%Please refer to the manual for more information: https://github.com/JorritMontijn/Acquipix
+
+%Created by Jorrit Montijn at the Circuits, Structure and Function group (KNAW-NIN)
+%
+%Rev:2022-09-22 - v0.9.0
+%	Initial beta release
+	
