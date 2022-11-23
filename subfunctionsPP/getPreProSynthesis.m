@@ -283,7 +283,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		try,ptrText.String = sprintf('Aligning data streams for block %d/%d...',intLogFile,intLogs);drawnow;catch,end
 		
 		fprintf('>Log file "%s" [%s]\n',sStimFiles(vecReorderStimFiles(intLogFile)).name,getTime)
-		cellStim{intLogFile} = load(fullpath(sStimFiles(vecReorderStimFiles(intLogFile)).folder,sStimFiles(vecReorderStimFiles(intLogFile)).name));
+		strLogPath = sStimFiles(vecReorderStimFiles(intLogFile)).folder;
+		cellStim{intLogFile} = load(fullpath(strLogPath,sStimFiles(vecReorderStimFiles(intLogFile)).name));
 		
 		if isfield(cellStim{intLogFile}.structEP,'strExpType')
 			strStimType = cellStim{intLogFile}.structEP.strExpType;
@@ -379,13 +380,33 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		elseif exist('vecStimOnScreenPD','var') && ~isempty(vecStimOnScreenPD)
 			dblMaxErr = 0.1;
 			vecPresStimOnT = vecStimActOnNI*dblNICorrectionfactor - dblT0_NI_new;
+			vecTimestampSecsRaw = vecPresStimOnT;
 			vecSignalOnT = vecStimOnScreenPD/dblNISamprate;
 			[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
+			vecTimestampSecsRefined = vecStimOnTime;
 			indReplace = abs(vecDiffOnT) > dblMaxErr;
 			dblMedianErr = median(vecDiffOnT(~indReplace));
 			if isnan(dblMedianErr),dblMedianErr=0;end
 			vecStimOnTime(indReplace) = vecPresStimOnT(indReplace) - dblMedianErr;
+			vecTimestampSecsRefinedCorrected = vecStimOnTime;
+			
+			% plot
+			strPlotRec = sStimFiles(vecReorderStimFiles(intLogFile)).name;
+			hFig = PP_AlignEphys(vecDiodeSignal,dblNISamprate,vecTimestampSecsRaw,vecTimestampSecsRefined,vecTimestampSecsRefinedCorrected,strPlotRec);
+			
+			%save sync output
+			strSyncMetricPath = fullpath(strLogPath,'EphysSyncMetrics');
+			if ~exist(strSyncMetricPath,'dir')
+				mkdir(strSyncMetricPath);
+			end
+			cellRecFile = strsplit(strPlotRec,'.');
+			strFileOut = sprintf('Log%02d_%s',intLogFile,strcat(strjoin(cellRecFile(1:(end-1)),'.')));
+			strFileEphysSync1 = fullpath(strSyncMetricPath,[strFileOut,'.tif']);
+			export_fig(strFileEphysSync1);
+			strFileEphysSync2 = fullpath(strSyncMetricPath,[strFileOut,'.pdf']);
+			export_fig(strFileEphysSync2);
 			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
+			fprintf('Summary saved to %s (%s)\n',strSyncMetricPath,strFileOut);
 		else
 			dblMedianErr=0;
 			vecStimOnTime = vecStimActOnNI*dblNICorrectionfactor - dblT0_NI_new; %correct with true onset and new samp rate
@@ -540,7 +561,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			maxfig;drawnow;
 			
 			%save output
-			strSyncMetricPath = fullpath(sRP.strOutputPath,'VideoSyncMetrics');
+			strSyncMetricPath = fullpath(strLogPath,'VideoSyncMetrics');
 			if ~exist(strSyncMetricPath,'dir')
 				mkdir(strSyncMetricPath);
 			end
