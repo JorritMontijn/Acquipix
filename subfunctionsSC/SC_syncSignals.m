@@ -4,13 +4,18 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	%optional input: sUserVars
 	%optional output: sSyncStruct
 	
+	%remove all events that are not close to the reference
+	dblPrePostWindow = 5;
+	indRemEvents = vecNoisyHighResT < (vecReferenceT(1)-dblPrePostWindow) ...
+		| vecNoisyHighResT > (vecReferenceT(end)+dblPrePostWindow);
+	vecNoisyHighResT(indRemEvents) = [];
+	
 	%go through onsets to check which one aligns with timings
 	intEventNum = numel(vecNoisyHighResT);
 	vecError = nan(1,intEventNum);
 	parfor intStartEvent=1:intEventNum
 		%select onsets
-		vecUseSignalOnT = vecNoisyHighResT(intStartEvent:end) - vecNoisyHighResT(intStartEvent);
-		%vecUseSignalOnT = vecSignalOnT - vecSignalOnT(intStartStim);
+		vecUseSignalOnT = vecNoisyHighResT(intStartEvent:end);
 		
 		%get ON times
 		[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecUseSignalOnT);
@@ -33,7 +38,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 		else
 			%message
 			fprintf('\n << Alignment certainty of %s is under 90%%, please check manually >>\n',sUserVars.strType);
-			[dblStartHiDefT,dblUserStartT] = askUserForSyncTimes(sUserVars.vecSignalVals,sUserVars.vecSignalTime,sUserVars.intBlockNr);
+			[dblStartHiDefT,dblUserStartT] = askUserForSyncTimes(sUserVars.vecSignalVals,sUserVars.vecSignalTime,sUserVars.intBlockNr,vecReferenceT);
 			
 			%re-align
 			[dblMin,intStartEvent] = min(abs(vecNoisyHighResT-dblStartHiDefT));
@@ -52,7 +57,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	
 	%re-run alignment for chosen stimulus
 	vecUseSignalOnT = vecNoisyHighResT(intStartEvent:end) - vecNoisyHighResT(intStartEvent);
-	[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecUseSignalOnT);
+	[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT-vecReferenceT(1),vecUseSignalOnT);
 	
 	%replace out-of-bounds values
 	dblMaxErrZ = 5;
@@ -64,17 +69,20 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	vecAlignedTime0 = vecRefinedT;
 	vecAlignedTime0(indReplace) = vecAlignedTime0(indReplace) + vecIntervalError(indReplace) + dblMedianError;
 	
+	%recenter
+	dblFirstError = vecAlignedTime0(1);
+	vecAlignedTime = vecAlignedTime0 + dblStartT;
+	dblAlignment = vecAlignedTime(1) - vecReferenceT(1);
+	
 	%get type
 	if exist('sUserVars','var') && isfield(sUserVars,'strType')
 		strType = [sUserVars.strType ' '];
 	else
 		strType = '';
 	end
-	fprintf('Mean absolute timing error is %.3fs for %ssync events; %d events corrected\n',dblMeanAbsErr,strType,sum(indReplace));
+	fprintf('Mean duration error after alignment by %.3fs is %.3fsfor %ssync events; %d events refined by median\n',...
+		dblAlignment,dblMeanAbsErr,strType,sum(indReplace));
 	
-	%recenter
-	dblFirstError = vecAlignedTime0(1);
-	vecAlignedTime = vecAlignedTime0 + dblStartT;
 	
 	%% build output
 	if nargout > 3

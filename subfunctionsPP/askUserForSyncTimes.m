@@ -1,6 +1,6 @@
-function [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
+function [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock,vecReferenceT)
 	%askUserForSyncTimes Request user input to synchronize on/offsets
-	%   [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock)
+	%   [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,vecPupilTime,intBlock,vecReferenceT)
 	
 	%filter to 0.1-30Hz
 	dblSampRatePupil = 1/median(diff(vecPupilTime));
@@ -14,6 +14,7 @@ function [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askU
 	hold on
 	plot(vecPupilTime,zscore(vecPupilSyncLum));
 	plot(vecPupilTime,boolPupilSync);
+	scatter(vecReferenceT,zeros(size(vecReferenceT)),'bx');
 	hold off
 	xlabel('Time (s)');
 	ylabel('Synchronization signal');
@@ -24,6 +25,7 @@ function [dblStartHiDefT,dblUserStartT,dblFinalStartHiDefT,dblUserFinalT] = askU
 	hold on
 	plot(vecPupilTime,vecFiltSyncLum./std(vecFiltSyncLum));
 	plot(vecPupilTime,boolPupilSync);
+	scatter(vecReferenceT,zeros(size(vecReferenceT)),'bx');
 	hold off
 	xlabel('Time (s)');
 	ylabel('Synchronization signal');

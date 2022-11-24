@@ -1,9 +1,9 @@
-function [vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecNoisyHighResT)
+function [vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecUseSignalOnT)
 	%OT_refineT As OT_getStimT, but no text. Refines event times
-	%	[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecNoisyHighResT)
+	%	[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecUseSignalOnT)
 	%
 	%vecReferenceT is the default: these times are known to be correct, but inaccurate
-	%vecNoisyHighResT is more precise, but may miss some signal changes or include spurious events
+	%vecUseSignalOnT is more precise, but may miss some signal changes or include spurious events
 	
 	%run loop from the last vecPresStimT entry that was less than dblMaxErrorT
 	%seconds before the first vecSignalChangeT
@@ -18,14 +18,14 @@ function [vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecNoisyH
 		
 		%find closest change
 		dblPresTime = vecRefinedT(intEvent-1);
-		vecOnsetDiffs = vecNoisyHighResT - dblPresTime - dblRefDeltaT;
+		vecOnsetDiffs = vecUseSignalOnT - dblPresTime - dblRefDeltaT;
 		[dummy,intMinIdx]= min(abs(vecOnsetDiffs));
 		dblMinT = vecOnsetDiffs(intMinIdx);
 		if isempty(dblMinT)
 			break;
 		else
 			%overwrite
-			vecRefinedT(intEvent) = vecNoisyHighResT(intMinIdx);
+			vecRefinedT(intEvent) = vecUseSignalOnT(intMinIdx);
 		end
 	end
 	%interval

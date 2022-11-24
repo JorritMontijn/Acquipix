@@ -262,16 +262,30 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		dblSampRatePupil = 1/median(diff(vecPupilFullSyncLumT));
 		
 		%filter to 0.1-30Hz
-		vecWindow2 = [0.5 30]./dblSampRatePupil;
+		vecWindow2 = [0.5 10]./dblSampRatePupil;
 		[fb,fa] = butter(2,vecWindow2,'bandpass');
 		vecFiltFullSyncLum = filtfilt(fb,fa, double(vecPupilFullSyncLum));
-		boolPupilSync1 = vecFiltFullSyncLum>(-std(vecFiltFullSyncLum)/2);
-		boolPupilSync2 = vecFiltFullSyncLum>(std(vecFiltFullSyncLum)/3);
 		
-		%get on/off
-		vecChangePupilSync1 = diff(boolPupilSync1);
-		vecChangePupilSync2 = diff(boolPupilSync2);
-		vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
+		%get pupil on/off, v1
+		intPupilOnOff=2;
+		if intPupilOnOff ==1
+			boolPupilSync1 = vecFiltFullSyncLum>(-std(vecFiltFullSyncLum)/2);
+			boolPupilSync2 = vecFiltFullSyncLum>(std(vecFiltFullSyncLum)/3);
+			
+			%get on/off
+			vecChangePupilSync1 = diff(boolPupilSync1);
+			vecChangePupilSync2 = diff(boolPupilSync2);
+			vecPupilSyncOn = (find(vecChangePupilSync1 == 1 | vecChangePupilSync2 == 1)+1);
+		else
+			%get pupil on/off, v2: same as ephys
+			
+			%get video sync pulses
+			[boolVecSyncPulsesVideo,dblCritValSyncVid] = DP_GetUpDown(vecFiltFullSyncLum,0.33,0.99);
+			
+			%realign IMEC time to NI stream
+			vecChangeVideoPulses = diff(boolVecSyncPulsesVideo);
+			vecPupilSyncOn = (find(vecChangeVideoPulses == 1)+1);
+		end
 		vecPupilSyncOnT = vecPupilFullSyncLumT(vecPupilSyncOn);
 	end
 	
@@ -359,7 +373,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
 			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~isempty(vecDiodeSignal)
 				vecSubSampled = double(vecDiodeSignal(1:100:end));
-				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblNISamprate/100),numel(vecSubSampled)),intLogFile);
+				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblNISamprate/100),numel(vecSubSampled)),intLogFile,vecStimActOnSecs);
 			end
 			%ensure same starting time
 			vecStimActOnNI = vecStimActOnSecs + dblStartT;
@@ -456,7 +470,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			
 			if isempty(sPupil.sSyncData)
 				%generate artificial clock times
-				[dblStartStimT,dblUserStartT,dblFinalStimT,dblUserFinalT] = askUserForSyncTimes(vecPupilSyncLum,sPupil.vecPupilTime,intLogFile);
+				[dblStartStimT,dblUserStartT,dblFinalStimT,dblUserFinalT] = askUserForSyncTimes(vecFiltSyncLum,sPupil.vecPupilTime,intLogFile,[]);
 				fprintf('Using %.3fs as start and %.3fs as end for block %d\n',dblStartStimT,dblFinalStimT,intLogFile);
 				matSyncData = nan(4,2);
 				matSyncData(1,:) = [dblStartStimT dblFinalStimT];
@@ -475,14 +489,29 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecFrameVid = matSyncData(2,:); %video frame # since video start (t0=0)
 			vecTimeNI = matSyncData(3,:)*dblNICorrectionfactor; %ni time in secs; corresponds to stim times
 			
+			%remove empty entries
+			indRem = isnan(vecTimeNI) | vecTimeNI==0;
+			vecTimeVid(indRem) = [];
+			vecFrameVid(indRem) = [];
+			vecTimeNI(indRem) = [];
+			
 			%interpolate to NI-based time
-			vecPupilTimeNI = interp1(vecFrameVid,vecTimeNI,sPupil.vecPupilVidFrame,'linear','extrap');
+			vecPupilTimeNI = interp1(vecFrameVid,vecTimeNI,sPupil.vecPupilVidFrame,'linear');
+			indExtrapolate = isnan(vecPupilTimeNI);
+			
+			%get average linear correspondance
+			x=sPupil.vecPupilVidFrame(~indExtrapolate);
+			y=vecPupilTimeNI(~indExtrapolate);
+			p = polyfit(x,y,1);
+			vecPupilTimeNI(indExtrapolate) = sPupil.vecPupilVidFrame(indExtrapolate)*p(1) + p(2);
 			sPupil.vecPupilTimeNI = vecPupilTimeNI;
 			sPupil.vecPupilTimeFixed = vecPupilTimeNI - dblMedianErr - dblT0_NI_new;
 			
 			%% use LED
 			%transform onset signals to ni time
-			vecPupilSignalOnNI = interp1(vecFrameVid,vecTimeNI,vecPupilSyncOn,'linear','extrap');
+			vecPupilSignalOnNI = interp1(vecFrameVid,vecTimeNI,vecPupilSyncOn,'linear');
+			indExtrapolate2 = isnan(vecPupilSignalOnNI);
+			vecPupilSignalOnNI(indExtrapolate2) = vecPupilSyncOn(indExtrapolate2)*p(1) + p(2);
 			
 			%rename & align
 			vecReferenceT = vecStimOnTime;
@@ -495,14 +524,25 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 				strTitle = 'Insufficient overlap';
 			else
 				%correct times with LED
-				dblOffsetT = -0.05;
-				intTrials = numel(vecStimOnTime);
-				vecPupilOnsetCorrections = nan(1,intTrials);
-				for intT=1:intTrials
-					[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))+dblOffsetT);
-					vecRefT = vecRefT+dblOffsetT;
-					[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(vecTraceInTrial,vecRefT);
-					vecPupilOnsetCorrections(intT) = dblOnset;%+dblPrevOnset;
+				intType=1;
+				if intType==1
+					sUserVars = struct;
+					sUserVars.vecSignalVals = vecPupilSyncLum;
+					sUserVars.vecSignalTime = sPupil.vecPupilTimeFixed;
+					sUserVars.intBlockNr = intLogFile;
+					sUserVars.strType = sStimFiles(vecReorderStimFiles(intLogFile)).name;
+					[vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecReferenceT,vecNoisyHighResT,sUserVars);
+					vecPupilOnsetCorrections = vecAlignedTime-vecReferenceT;
+				else
+					dblOffsetT = -0.05;
+					intTrials = numel(vecStimOnTime);
+					vecPupilOnsetCorrections = nan(1,intTrials);
+					for intT=1:intTrials
+						[vecRefT,vecTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecFiltSyncLum,vecReferenceT(intT)+dblOffsetT,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime))+dblOffsetT);
+						vecRefT = vecRefT+dblOffsetT;
+						[dblOnset,dblValue,dblBaseVal,dblPeakT,dblPeakVal] = getOnset(vecTraceInTrial,vecRefT);
+						vecPupilOnsetCorrections(intT) = dblOnset;%+dblPrevOnset;
+					end
 				end
 				strTitle = 'Refined /w pulses';
 				
@@ -511,56 +551,67 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			end
 			
 			%% plot output
+			%calc constants
+			dblFrameDur =median(diff(sPupil.vecPupilTimeFixed));
+			dblStimDur  =median(diff(vecStimOnTime));
+			dblSignalSd = std(vecPupilSyncLum);
+			
+			%plot
 			hFig=figure;
 			subplot(2,3,1)
 			hold on
-			plot(vecPupilTimeNI,vecPupilSyncLum - mean(vecPupilSyncLum));
+			plot(sPupil.vecPupilTimeFixed,vecPupilSyncLum - mean(vecPupilSyncLum));
+			scatter(vecStimOnTime,1.1*dblSignalSd*ones(size(vecReferenceT)),'rx');
+			scatter(vecStimOnTime+vecPupilOnsetCorrections,1.0*dblSignalSd*ones(size(vecStimOnTime)),'bx');
 			hold off
-			xlabel('NI-based time (s)');
-			ylabel('Screen signal (raw)');
+			xlabel('NI-time after T0 (s)');
+			ylabel('Sync signal (raw)');
 			hold off;
 			title(sFile.sMeta.strNidqName,'interpreter','none');
-			drawnow;fixfig(gca,[],1);
+			drawnow;
 			%vecLimX = [-max(get(gca,'xlim'))/20 max(get(gca,'xlim'))];
 			vecLimX1 = [min(get(gca,'xlim')) max(get(gca,'xlim'))];
 			xlim(vecLimX1);
 			
-			subplot(2,3,2)
-			hold on
-			boolPupilSync = vecFiltSyncLum>(-std(vecFiltSyncLum)/2);
-			plot(sPupil.vecPupilTimeFixed,vecFiltSyncLum./std(vecFiltSyncLum));
-			plot(sPupil.vecPupilTimeFixed,boolPupilSync);
-			hold off
-			xlabel('NI-time after T0 (s)');
-			ylabel('Screen signal (smoothed)');
-			title(strTitle);
-			drawnow;fixfig(gca,[],1);
-			vecLimX = [min([get(gca,'xlim') 0]) max(get(gca,'xlim'))];
-			xlim(vecLimX);
-			
-			h=subplot(2,3,3);hold on
-			h.ColorOrder = redbluepurple(numel(vecStimOnTime));
-			[vecRefT,matTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecPupilSyncLum,vecStimOnTime+vecPupilOnsetCorrections-0.5,median(diff(sPupil.vecPupilTimeFixed)),median(diff(vecStimOnTime)));
+			h0=subplot(2,3,2);hold on
+			[vecRefT,matTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecFiltSyncLum,vecStimOnTime-0.5,dblFrameDur,dblStimDur);
 			plot(vecRefT-0.5,matTraceInTrial);
+			h0.ColorOrder = redbluepurple(numel(vecStimOnTime));
 			hold off
-			fixfig;
 			xlabel('Time after onset (s)');
 			ylabel('Sync signal (a.u.)')
+			title('Pulse alignment','interpreter','none');
 			
-			subplot(2,3,[4 5 6])
+			
+			h=subplot(2,3,3);hold on
+			[vecRefT,matTraceInTrial] = getTraceInTrial(sPupil.vecPupilTimeFixed,vecFiltSyncLum,vecStimOnTime+vecPupilOnsetCorrections-0.5,dblFrameDur,dblStimDur);
+			plot(vecRefT-0.5,matTraceInTrial);
+			h.ColorOrder = redbluepurple(numel(vecStimOnTime));
+			hold off
+			xlabel('Time after onset (s)');
+			ylabel('Sync signal (a.u.)')
+			title(strTitle,'interpreter','none');
+			
+			subplot(2,3,[4 5])
 			hold on
 			plot(sPupil.vecPupilTimeFixed,vecFiltSyncLum./std(vecFiltSyncLum));
 			scatter(vecStimOnTime,1.1*ones(size(vecReferenceT)),'rx');
 			scatter(vecStimOnTime+vecPupilOnsetCorrections,1.2*ones(size(vecStimOnTime)),'bx');
 			hold off
 			xlabel('Time after T0 (s)');
-			ylabel('Screen signal (smoothed)');
-			title('Red=NI, blue=synthesis');
-			drawnow;fixfig(gca);
-			xlim(vecLimX);
+			ylabel('Sync signal (smoothed)');
+			title('Red=NI, blue=refined');
+			xlim([min(vecStimOnTime)-1 max(vecStimOnTime)+dblStimDur+1]);
+			
+			subplot(2,3,6);hold on;
+			scatter(vecStimOnTime(2:end),diff(vecStimOnTime),'rx');
+			scatter(vecStimOnTime(2:end)+vecPupilOnsetCorrections(2:end),diff(vecStimOnTime+vecPupilOnsetCorrections),'bx');
+			xlabel('Time after T0 (s)');
+			ylabel('Inter-trial duration (s)');
+			title('Red=NI, blue=refined');
 			maxfig;drawnow;
 			
-			%save output
+			%% save output
 			strSyncMetricPath = fullpath(strLogPath,'VideoSyncMetrics');
 			if ~exist(strSyncMetricPath,'dir')
 				mkdir(strSyncMetricPath);
