@@ -5,7 +5,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	%optional output: sSyncStruct
 	
 	%remove all events that are not close to the reference
-	dblPrePostWindow = 5;
+	dblPrePostWindow = 1.5;
 	indRemEvents = vecNoisyHighResT < (vecReferenceT(1)-dblPrePostWindow) ...
 		| vecNoisyHighResT > (vecReferenceT(end)+dblPrePostWindow);
 	vecNoisyHighResT(indRemEvents) = [];
@@ -13,17 +13,21 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	%go through onsets to check which one aligns with timings
 	intEventNum = numel(vecNoisyHighResT);
 	vecError = nan(1,intEventNum);
+	vecDurCorr = nan(1,intEventNum);
+	vecRealDur = diff(vecReferenceT);
 	parfor intStartEvent=1:intEventNum
 		%select onsets
 		vecUseSignalOnT = vecNoisyHighResT(intStartEvent:end);
 		
 		%get ON times
-		[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT,vecUseSignalOnT);
+		[vecRefinedT,vecIntervalError] = SC_refineDiffT(vecReferenceT-vecReferenceT(1),vecUseSignalOnT-vecUseSignalOnT(1));
+		vecRefinedDur = diff(vecRefinedT);
 		vecError(intStartEvent) = nansum(vecIntervalError.^2);
+		vecDurCorr(intStartEvent) = corr(vecRefinedDur',vecRealDur');
 	end
 	[dblMin,intStartEvent] = min(vecError);
 	dblStartT = vecNoisyHighResT(intStartEvent);
-	
+	[dblMax,intStartEventR] = max(vecDurCorr);
 	
 	%% calculate probability & request input if low
 	%get probability
@@ -32,7 +36,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	[vecP,vecI]=findmax(vecSoftmin,10);
 	dblAlignmentCertainty = vecP(1)/sum(vecP);
 	fprintf('Aligned events with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
-	if dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)
+	if dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty) || (intStartEventR ~= intStartEvent)
 		if ~exist('sUserVars','var') || isempty(sUserVars)
 			warning([mfilename ':UncertainAlignment'],'Uncertain alignment & variables for manual intervention were not supplied');
 		else
