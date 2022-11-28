@@ -428,7 +428,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		
 		%get OFF times: ON + dur
 		if isfield(cellStim{intLogFile}.structEP,'ActOnSecs')
-			if all(isnan(isfield(cellStim{intLogFile}.structEP,'ActOnSecs')))
+			if all(isnan(cellStim{intLogFile}.structEP.ActOnSecs))
 				vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnNI;
 				vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffNI;
 				vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
