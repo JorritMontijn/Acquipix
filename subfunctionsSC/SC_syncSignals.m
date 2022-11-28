@@ -29,12 +29,27 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	dblStartT = vecNoisyHighResT(intStartEvent);
 	[dblMax,intStartEventR] = max(vecDurCorr);
 	
+	%check if any events are present
+	if numel(vecError) < 2
+		vecAlignedTime = vecReferenceT;
+		vecRefinedT = vecReferenceT;
+		vecError = zeros(size(vecReferenceT));
+		if nargout > 3
+			sSyncStruct = struct;
+			sSyncStruct.vecIntervalError = vecError;
+			sSyncStruct.dblFirstError = vecRefinedT(1);
+			sSyncStruct.vecAlignedTime0 = vecRefinedT;
+			sSyncStruct.intStartEvent = [];
+		end
+		return;
+	end
+	
 	%% calculate probability & request input if low
 	%get probability
 	[vecP,vecMax10]=findmax(-vecError,10);
-	vecSoftmin = softmax(vecP);
+	vecSoftmin = softmax(vecP(~isnan(vecP)));
 	[vecP,vecI]=findmax(vecSoftmin,10);
-	dblAlignmentCertainty = vecP(1)/sum(vecP);
+	dblAlignmentCertainty = vecP(1)/nansum(vecP);
 	fprintf('Aligned events with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
 	if dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty) || (intStartEventR ~= intStartEvent)
 		if ~exist('sUserVars','var') || isempty(sUserVars)
