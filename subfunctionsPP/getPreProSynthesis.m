@@ -428,10 +428,17 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		
 		%get OFF times: ON + dur
 		if isfield(cellStim{intLogFile}.structEP,'ActOnSecs')
-			vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
-			vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
-			vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
-			vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));
+			if all(isnan(isfield(cellStim{intLogFile}.structEP,'ActOnSecs')))
+				vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnNI;
+				vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffNI;
+				vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
+				vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));	
+			else
+				vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
+				vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
+				vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
+				vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));
+			end
 		else
 			vecStimActOnSecs = cellStim{intLogFile}.structEP.vecStimOnNI;
 			vecStimActOffSecs = cellStim{intLogFile}.structEP.vecStimOffNI;
