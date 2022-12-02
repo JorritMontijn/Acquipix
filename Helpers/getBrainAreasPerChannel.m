@@ -3,6 +3,8 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 	%   sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 	%
 	%Input can be sAP structure, sFile structure, sProbeCoords structure or a probe location matrix
+	%
+	%Update 20221202: new coordinate system to work with UPF files
 	
 	%load ABA data
 	if ~exist('boolCalcDistToBound','var') || isempty(boolCalcDistToBound)
@@ -31,18 +33,19 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 		matProbeVector = varIn;
 	end
 	
-	%get coords
+	% get coords
 	probe_n_coords = sqrt(sum(diff(matProbeVector,[],1).^2));
-	[probe_xcoords,probe_zcoords,probe_ycoords] = deal( ...
-		linspace(matProbeVector(1,1),matProbeVector(2,1),probe_n_coords), ...
-		linspace(matProbeVector(1,2),matProbeVector(2,2),probe_n_coords), ...
-		linspace(matProbeVector(1,3),matProbeVector(2,3),probe_n_coords));
+	[probe_xcoords,probe_ycoords,probe_zcoords] = deal( ...
+		linspace(matProbeVector(2,1),matProbeVector(1,1),probe_n_coords), ...
+		linspace(matProbeVector(2,2),matProbeVector(1,2),probe_n_coords), ...
+		linspace(matProbeVector(2,3),matProbeVector(1,3),probe_n_coords));
+	[probe_area_ids,probe_area_boundaries,probe_area_centers] = PH_GetProbeAreas(matProbeVector,av);
 	
 	%get areas
 	intSubSample = 2; %default: 5
 	av_red = av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end);
 	probe_area_av = interp3(single(av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end)), ...
-		round(probe_zcoords/intSubSample),round(probe_xcoords/intSubSample),round(probe_ycoords/intSubSample),'nearest')';
+		round(probe_xcoords/intSubSample),round(probe_ycoords/intSubSample),round(probe_zcoords/intSubSample),'nearest')';
 	probe_area_av(isnan(probe_area_av)) = 1;
 	%find parent structures per channel
 	intNotIdx = find(contains(st.safe_name,'nucleus of the optic tract','ignorecase',true));
@@ -94,29 +97,29 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 	vecDistToBoundaryPerCh = nan(1,numel(vecParentAreaPerCh_av));
 	if boolCalcDistToBound
 		[Z,Y,X] = meshgrid(1:intSubSample:size(av,1),1:intSubSample:size(av,2),1:intSubSample:size(av,3));
-		matCoordsPerCh = cat(1,probe_zcoords,probe_ycoords,probe_xcoords);
+		matCoordsPerCh = cat(1,probe_xcoords,probe_ycoords,probe_zcoords);
 		for intCh=1:numel(vecParentAreaPerCh_av)
-			vecUseZ = round(((-10:intSubSample:10) + probe_zcoords(intCh))/intSubSample); %AP,DV,ML
-			if min(vecUseZ) < 1,vecUseZ = vecUseZ - min(vecUseZ) + 1;end
-			if max(vecUseZ) > size(av_red_parent,1),vecUseZ = vecUseZ - max(vecUseZ) + size(av_red_parent,1);end
+			vecUseX = round(((-10:intSubSample:10) + probe_xcoords(intCh))/intSubSample); %AP,DV,ML
+			if min(vecUseX) < 1,vecUseX = vecUseX - min(vecUseX) + 1;end
+			if max(vecUseX) > size(av_red_parent,1),vecUseX = vecUseX - max(vecUseX) + size(av_red_parent,1);end
 			
 			vecUseY = round(((-10:intSubSample:10) + probe_ycoords(intCh))/intSubSample); %AP,DV,ML
 			if min(vecUseY) < 1,vecUseY = vecUseY - min(vecUseY) + 1;end
 			if max(vecUseY) > size(av_red_parent,2),vecUseY = vecUseY - max(vecUseY) + size(av_red_parent,2);end
 			
-			vecUseX = round(((-10:intSubSample:10) + probe_xcoords(intCh))/intSubSample); %AP,DV,ML
-			if min(vecUseX) < 1,vecUseX = vecUseX - min(vecUseX) + 1;end
-			if max(vecUseX) > size(av_red_parent,3),vecUseX = vecUseX - max(vecUseX) + size(av_red_parent,3);end
+			vecUseZ = round(((-10:intSubSample:10) + probe_zcoords(intCh))/intSubSample); %AP,DV,ML
+			if min(vecUseZ) < 1,vecUseZ = vecUseZ - min(vecUseZ) + 1;end
+			if max(vecUseZ) > size(av_red_parent,3),vecUseZ = vecUseZ - max(vecUseZ) + size(av_red_parent,3);end
 			
-			matSubAv= av_red_parent(vecUseY,vecUseZ,vecUseX);
+			matSubAv= av_red_parent(vecUseX,vecUseY,vecUseZ);
 			matX = X(vecUseY,vecUseZ,vecUseX);
 			matY = Y(vecUseY,vecUseZ,vecUseX);
 			matZ = Z(vecUseY,vecUseZ,vecUseX);
 			
 			matXd = (matX-probe_xcoords(intCh)).^2;
-			matZd = (matZ-probe_zcoords(intCh)).^2;
-			matYd = (matY-probe_ycoords(intCh)).^2;
-			matDist = sqrt(matXd + matZd + matYd);
+			matYd = (matZ-probe_ycoords(intCh)).^2;
+			matZd = (matY-probe_zcoords(intCh)).^2;
+			matDist = sqrt(matXd + matYd + matZd);
 			intThisArea = vecParentAreaPerCh_av(intCh);
 			vecAllDist = matDist(matSubAv~=intThisArea);
 			if isempty(vecAllDist)
