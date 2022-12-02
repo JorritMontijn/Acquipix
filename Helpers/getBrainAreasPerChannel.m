@@ -19,11 +19,14 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 	
 	%compile data
 	if isfield(varIn,'sSources')
-		matProbeVector = varIn.sSources.sProbeCoords.sProbeAdjusted.probe_vector([1 3 2],:)';
+		matProbeVector = varIn.sSources.sProbeCoords.sProbeAdjusted.probe_vector_cart;
+		%matProbeVector = varIn.sSources.sProbeCoords.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
 	elseif isfield(varIn,'sProbeCoords')
-		matProbeVector = varIn.sProbeCoords.sProbeAdjusted.probe_vector([1 3 2],:)';
+		matProbeVector = varIn.sProbeCoords.sProbeAdjusted.probe_vector_cart;
+		%matProbeVector = varIn.sProbeCoords.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
 	elseif isfield(varIn,'sProbeAdjusted')
-		matProbeVector = varIn.sProbeAdjusted.probe_vector([1 3 2],:)';
+		matProbeVector = varIn.sProbeAdjusted.probe_vector_cart;
+		%matProbeVector = varIn.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
 	elseif size(varIn,1) == 2 && size(varIn,2) == 3
 		matProbeVector = varIn;
 	end
