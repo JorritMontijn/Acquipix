@@ -1,52 +1,59 @@
-function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
+function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe_n_coords)
 	%getBrainAreasPerChannel Retrieves brain area for each channel using Allen Brain Atlas
-	%   sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
+	%   sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe_n_coords)
 	%
 	%Input can be sAP structure, sFile structure, sProbeCoords structure or a probe location matrix
 	%
-	%Update 20221202: new coordinate system to work with UPF files
+	%Update 20221202: new coordinate system to work with UPF files. Requires UniversalProbeFinder.
 	
 	%load ABA data
+	if ~exist('probe_n_coords','var') || isempty(probe_n_coords)
+		probe_n_coords = 384;
+	end
 	if ~exist('boolCalcDistToBound','var') || isempty(boolCalcDistToBound)
 		boolCalcDistToBound = true;
 	end
-	if ~exist('st','var') || isempty(boolCalcDistToBound)
+	if ~exist('sAtlas','var') || isempty(sAtlas)
 		sRP=RP_populateStructure();
 		strAllenCCFPath = sRP.strAllenCCFPath;
-		[tv,av,st] = RP_LoadABA(strAllenCCFPath); %AP,DV,ML
+		sAtlas = AL_PrepABA(strAllenCCFPath);
 	end
+	tv = sAtlas.tv;
+	av = sAtlas.av;
+	st = sAtlas.st;
 	st.parent_structure_id = int32(st.parent_structure_id);
 	st.id = int32(st.id);
 	st.index = uint16(st.index);
 	
 	%compile data
 	if isfield(varIn,'sSources')
-		matProbeVector = varIn.sSources.sProbeCoords.sProbeAdjusted.probe_vector_cart;
+		sProbeAdjusted = varIn.sSources.sProbeCoords.sProbeAdjusted;
 		%matProbeVector = varIn.sSources.sProbeCoords.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
 	elseif isfield(varIn,'sProbeCoords')
-		matProbeVector = varIn.sProbeCoords.sProbeAdjusted.probe_vector_cart;
+		sProbeAdjusted = varIn.sProbeCoords.sProbeAdjusted;
 		%matProbeVector = varIn.sProbeCoords.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
 	elseif isfield(varIn,'sProbeAdjusted')
-		matProbeVector = varIn.sProbeAdjusted.probe_vector_cart;
+		sProbeAdjusted = varIn.sProbeAdjusted;
 		%matProbeVector = varIn.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
-	elseif size(varIn,1) == 2 && size(varIn,2) == 3
-		matProbeVector = varIn;
+	else
+		error([mfilename ':FormatNotRecognized'],'Input does not contain "sProbeAdjusted"');
 	end
-	
 	% get coords
-	probe_n_coords = sqrt(sum(diff(matProbeVector,[],1).^2));
+	matProbeVector = sProbeAdjusted.probe_vector_cart;
 	[probe_xcoords,probe_ycoords,probe_zcoords] = deal( ...
 		linspace(matProbeVector(2,1),matProbeVector(1,1),probe_n_coords), ...
 		linspace(matProbeVector(2,2),matProbeVector(1,2),probe_n_coords), ...
 		linspace(matProbeVector(2,3),matProbeVector(1,3),probe_n_coords));
-	[probe_area_ids,probe_area_boundaries,probe_area_centers] = PH_GetProbeAreas(matProbeVector,av);
 	
 	%get areas
 	intSubSample = 2; %default: 5
-	av_red = av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end);
-	probe_area_av = interp3(single(av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end)), ...
-		round(probe_xcoords/intSubSample),round(probe_ycoords/intSubSample),round(probe_zcoords/intSubSample),'nearest')';
+	av_red = single(av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end));
+	probe_area_av = interp3(av_red, ... %for interp3, coords are in y,x,z...
+		round(probe_ycoords/intSubSample),round(probe_xcoords/intSubSample),round(probe_zcoords/intSubSample),'nearest'); 
 	probe_area_av(isnan(probe_area_av)) = 1;
+	if size(probe_area_av,1)==1
+		probe_area_av=probe_area_av';
+	end
 	%find parent structures per channel
 	intNotIdx = find(contains(st.safe_name,'nucleus of the optic tract','ignorecase',true));
 	intNotId = st.id(intNotIdx);
@@ -96,7 +103,7 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 	%calculate distance to boundary
 	vecDistToBoundaryPerCh = nan(1,numel(vecParentAreaPerCh_av));
 	if boolCalcDistToBound
-		[Z,Y,X] = meshgrid(1:intSubSample:size(av,1),1:intSubSample:size(av,2),1:intSubSample:size(av,3));
+		[X,Y,Z] = meshgrid(1:intSubSample:size(av,1),1:intSubSample:size(av,2),1:intSubSample:size(av,3));
 		matCoordsPerCh = cat(1,probe_xcoords,probe_ycoords,probe_zcoords);
 		for intCh=1:numel(vecParentAreaPerCh_av)
 			vecUseX = round(((-10:intSubSample:10) + probe_xcoords(intCh))/intSubSample); %AP,DV,ML
@@ -116,16 +123,17 @@ function sLocCh = getBrainAreasPerChannel(varIn,tv,av,st,boolCalcDistToBound)
 			matY = Y(vecUseY,vecUseZ,vecUseX);
 			matZ = Z(vecUseY,vecUseZ,vecUseX);
 			
-			matXd = (matX-probe_xcoords(intCh)).^2;
-			matYd = (matZ-probe_ycoords(intCh)).^2;
-			matZd = (matY-probe_zcoords(intCh)).^2;
+			%adjust by voxel size
+			matXd = ((matX-probe_xcoords(intCh)).*sAtlas.VoxelSize(1)).^2;
+			matYd = ((matY-probe_ycoords(intCh)).*sAtlas.VoxelSize(2)).^2;
+			matZd = ((matZ-probe_zcoords(intCh)).*sAtlas.VoxelSize(3)).^2;
 			matDist = sqrt(matXd + matYd + matZd);
 			intThisArea = vecParentAreaPerCh_av(intCh);
 			vecAllDist = matDist(matSubAv~=intThisArea);
 			if isempty(vecAllDist)
-				vecDistToBoundaryPerCh(intCh) = max(matDist(:))*10;
+				vecDistToBoundaryPerCh(intCh) = max(matDist(:));
 			else
-				vecDistToBoundaryPerCh(intCh) = min(vecAllDist)*10;
+				vecDistToBoundaryPerCh(intCh) = min(vecAllDist);
 			end
 		end
 	end
