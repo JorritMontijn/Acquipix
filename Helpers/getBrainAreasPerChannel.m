@@ -50,6 +50,7 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 		%micron vector
 		vecFracDepth = probe_n_coords/dblProbeLength;
 	end
+	if size(vecFracDepth,1) == 1,vecFracDepth=vecFracDepth';end
 	if max(vecFracDepth) > (1+1/dblProbeLength) || min(vecFracDepth) < 0
 		error([mfilename ':SizeError'],'Supplied depths contain values outside the probe; please check for unit mismatch. Depths should be in microns');
 	end
@@ -61,7 +62,7 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 	probe_zcoords = matProbeVoxels(:,3);
 	
 	%get areas
-	intSubSample = 2; %default: 5
+	intSubSample = 1; %default: 5
 	av_red = single(av(1:intSubSample:end,1:intSubSample:end,1:intSubSample:end));
 	probe_area_av = interp3(av_red, ... %for interp3, coords are in y,x,z...
 		round(probe_ycoords/intSubSample),round(probe_xcoords/intSubSample),round(probe_zcoords/intSubSample),'nearest');
@@ -110,6 +111,8 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 	vecDistToBoundaryPerCh = nan(numel(vecParentAreaPerCh_av),1);
 	matCoordsPerCh = cat(2,probe_xcoords,probe_ycoords,probe_zcoords);
 	if boolCalcDistToBound
+		error('check this')
+		
 		%reduce annoted volume to parent structures
 		vecStructures_av = unique(av_red(:));
 		av_red_parent = av_red;
@@ -128,7 +131,7 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 		end
 		
 		%find boundaries
-		[X,Y,Z] = meshgrid(1:intSubSample:size(av,1),1:intSubSample:size(av,2),1:intSubSample:size(av,3));
+		[Y,X,Z] = meshgrid(1:intSubSample:size(av,2),1:intSubSample:size(av,1),1:intSubSample:size(av,3));
 		for intCh=1:numel(vecParentAreaPerCh_av)
 			vecUseX = round(((-10:intSubSample:10) + probe_xcoords(intCh))/intSubSample); %AP,DV,ML
 			if min(vecUseX) < 1,vecUseX = vecUseX - min(vecUseX) + 1;end
@@ -163,6 +166,7 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 	end
 	
 	%construct output
+	sLocCh.vecAreaPerChAv = probe_area_av;
 	sLocCh.cellAreaPerCh = cellAreaPerCh;
 	sLocCh.cellParentAreaPerCh = cellParentAreaPerCh;
 	sLocCh.vecParentAreaPerCh_av = vecParentAreaPerCh_av;
