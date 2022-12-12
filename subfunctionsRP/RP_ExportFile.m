@@ -114,7 +114,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	cellFields = fieldnames(sJson);
 	for intField=1:numel(cellFields)
 		strField = cellFields{intField};
-		if isfield(sMetaVar,strField)
+		if isfield(sMetaVar,strField) && ~isfield(sJson,strField)
 			sJson.(strField) = sMetaVar.(strField);
 		end
 	end
