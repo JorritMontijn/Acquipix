@@ -39,10 +39,12 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	%get depths
 	intClustNum = numel(vecClustIdx);
 	vecDepth = nan(1,intClustNum);
+	vecDepthOnProbe = nan(1,intClustNum);
 	vecDepthFromPia = nan(1,intClustNum);
 	for intClust=1:intClustNum
 		intClustIdx = vecClustIdx(intClust);
 		dblTemplateDepth = round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
+		vecDepthOnProbe(intClust) = max(sSpikes.ycoords)-dblTemplateDepth;
 		vecDepth(intClust) = dblAdjustedProbeLength-dblTemplateDepth*dblResizeFactor;
 		vecDepthFromPia(intClust) = dblDepthOfTip-dblTemplateDepth*dblResizeFactor;
 	end
@@ -54,7 +56,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	end
 	
 	%get areas
-	[vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sProbeCoords,vecDepth);
+	[vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sProbeCoords,vecDepthOnProbe);
 	
 	%assign cluster data
 	sCluster = sSynthData.sCluster;

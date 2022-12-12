@@ -35,6 +35,8 @@ function sLocCh = getBrainAreasPerChannel(varIn,sAtlas,boolCalcDistToBound,probe
 	elseif isfield(varIn,'sProbeAdjusted')
 		sProbeAdjusted = varIn.sProbeAdjusted;
 		%matProbeVector = varIn.sProbeAdjusted.probe_vector_cart([1 3 2],:)';
+	elseif isfield(varIn,'stereo_coordinates') && isfield(varIn,'probe_vector_cart')
+		sProbeAdjusted = varIn;
 	else
 		error([mfilename ':FormatNotRecognized'],'Input does not contain "sProbeAdjusted"');
 	end
