@@ -3,7 +3,9 @@ function varargout = export_fig(varargin)
 	cellExportFigs= which(mfilename,'-all');
 	strThisFile = mfilename('fullpath');
 	indOtherFiles = ~contains(cellExportFigs,strThisFile);
-	if any(indOtherFiles)
+	strFile = varargin{1};
+	[a,b,strExt]=fileparts(strFile);
+	if any(indOtherFiles) && ~(strcmp(strExt,'.jpg') || strcmp(strExt,'.jpeg') || strcmp(strExt,'.tif') || strcmp(strExt,'.tiff'))
 		%invoke other function
 		strTarget = cellExportFigs{find(indOtherFiles,1)};
 		strPath=fileparts(strTarget);
