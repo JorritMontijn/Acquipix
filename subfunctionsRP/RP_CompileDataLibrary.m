@@ -61,30 +61,51 @@ function sFiles = RP_CompileDataLibrary(sRP,ptrText)
 		end
 		
 		%% ap
+		strPrompt = sprintf('Select AP file for %s at %s:',strNidqFile,strNidqPath);
 		strApFile = strrep(strNidqFile,'nidq','imec*.ap');
 		strTcatApFile = strrep(strApFile,'t0','tcat');
 		sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strTcatApFile));
 		if isempty(sEphysAp)
 			sEphysAp = dir(fullfile(sRP.strEphysPath, '**',strApFile));
-			if isempty(sEphysAp)
+			intSelectSource = RP_SelectSource(sEphysAp,strPrompt);
+			if isempty(intSelectSource) || intSelectSource == 0
 				sMetaAP = [];
 			else
-				sMetaAP = DP_ReadMeta(sEphysAp(1).name, sEphysAp(1).folder);
+				sMetaAP = DP_ReadMeta(sEphysAp(intSelectSource).name, sEphysAp(intSelectSource).folder);
 				sMetaAP.IsTcat = false;
 			end
 		else
 			% take tcat
-			sMetaAP = DP_ReadMeta(sEphysAp(1).name, sEphysAp(1).folder);
+			intSelectSource = RP_SelectSource(sEphysAp,strPrompt);
+			sMetaAP = DP_ReadMeta(sEphysAp(intSelectSource).name, sEphysAp(intSelectSource).folder);
 			sMetaAP.IsTcat = true;
+		end
+		if numel(sEphysAp) > 1
+			sEphysAp = sEphysAp(intSelectSource);
 		end
 		
 		%% lf
+		strPrompt = sprintf('Select LF file for %s at %s:',strNidqFile,strNidqPath);
 		strLfFile = strrep(strNidqFile,'nidq','imec*.lf');
-		sEphysLf = dir(fullfile(sRP.strEphysPath, '**',strLfFile));
+		strTcatLfFile = strrep(strLfFile,'t0','tcat');
+		sEphysLf = dir(fullfile(sRP.strEphysPath, '**',strTcatLfFile));
 		if isempty(sEphysLf)
-			sMetaLF = [];
+			sEphysLf = dir(fullfile(sRP.strEphysPath, '**',strLfFile));
+			intSelectSource = RP_SelectSource(sEphysLf,strPrompt);
+			if isempty(intSelectSource) || intSelectSource == 0
+				sMetaLF = [];
+			else
+				sMetaLF = DP_ReadMeta(sEphysLf(intSelectSource).name, sEphysLf(intSelectSource).folder);
+				sMetaLF.IsTcat = false;
+			end
 		else
-			sMetaLF = DP_ReadMeta(sEphysLf(1).name, sEphysLf(1).folder);
+			% take tcat
+			intSelectSource = RP_SelectSource(sEphysLf,strPrompt);
+			sMetaLF = DP_ReadMeta(sEphysLf(intSelectSource).name, sEphysLf(intSelectSource).folder);
+			sMetaLF.IsTcat = true;
+		end
+		if numel(sEphysLf) > 1
+			sEphysLf = sEphysLf(intSelectSource);
 		end
 		
 		%% processed kilosort data

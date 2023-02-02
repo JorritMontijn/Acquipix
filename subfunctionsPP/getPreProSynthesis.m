@@ -125,7 +125,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		vecChangeSyncPulsesImec = diff(boolVecSyncPulsesImec);
 		vecSyncPulseOnImec = (find(vecChangeSyncPulsesImec == 1)+1);
 		vecDiffPulsesImec = sort(diff(vecSyncPulseOnImec));
-		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | zscore(vecDiffPulsesImec) < 2;
+		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | abs(zscore(vecDiffPulsesImec)) < 2;
 		indUsePulsePeriods([1 end]) = false;
 		dblSampRateImec = mean(vecDiffPulsesImec(indUsePulsePeriods));
 		%compare real and pre-calibrated rate
@@ -455,6 +455,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.SampRateNI_Reported = dblSampRateReportedNI;
 		cellStim{intLogFile}.structEP.SampRateIM = dblSampRateImec;
 		cellStim{intLogFile}.structEP.SampRateIM_Reported = dblImecRateFromMetaData;
+		cellStim{intLogFile}.structEP.T0 = dblT0_NI_new;
 		
 		%% align eye-tracking data
 		%if no pupil data present, continue
