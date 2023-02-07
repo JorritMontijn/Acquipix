@@ -154,7 +154,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		
 		%take only reliable pulse durations to remove double-counted or missed pulses
 		vecDiffPulses = sort(diff(vecSyncPulseOn));
-		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | zscore(vecDiffPulses) < 2;
+		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | abs(zscore(vecDiffPulses)) < 2;
 		indUsePulsePeriods([1 end]) = false;
 		dblNISamprate = mean(vecDiffPulses(indUsePulsePeriods));
 		dblNIRateError=(1-(dblNISamprate/dblSampRateReportedNI));
