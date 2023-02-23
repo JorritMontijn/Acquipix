@@ -1,4 +1,4 @@
-%function sSynthesis = getPreProSynthesis(sFile,sRP)
+function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% show msg
 	ptrMsg = dialog('Position',[600 400 250 50],'Name','Source synthesis','WindowStyle','normal');
@@ -880,4 +880,4 @@
 	
 	%% delete msg
 	delete(ptrMsg);
-%end
+end
