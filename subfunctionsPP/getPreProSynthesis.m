@@ -1,4 +1,4 @@
-function sSynthesis = getPreProSynthesis(sFile,sRP)
+%function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% show msg
 	ptrMsg = dialog('Position',[600 400 250 50],'Name','Source synthesis','WindowStyle','normal');
@@ -22,80 +22,18 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%get channel mapping
 	vecChanIdx = readNPY(fullpath(sFile.sClustered.folder,'channel_map.npy'));
 	matChanPos = readNPY(fullpath(sFile.sClustered.folder,'channel_positions.npy'));
-	%load sync file if present
-	sFileSyncSY = dir(fullpath(sFile.sClustered.folder,'syncSY.mat'));
-	if isempty(sFileSyncSY)
-		% get metadata
-		strApFile = fullpath(sFile.sEphysAp.folder,sFile.sEphysAp.name);
-		sMeta = DP_ReadMeta(strApFile);
-		[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels
-		
-		% extract IM sync channel
-		try,ptrText.String = 'Extracting sync channel...';drawnow;catch,end
-		if SY>0
-			vecTypeCh = cumsum([AP,LF,SY]);
-			intSyncCh = vecTypeCh(3);
-			[strPath,strFile,strExt]=fileparts(strApFile);
-			strExt = strrep(strExt,'meta','bin');
-			vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %sync pulse
-			syncSY = DP_GetUpDown(vecSyncAp);
-			
-			%save file
-			strSyncSY = fullpath(sFile.sClustered.folder, 'syncSY.mat');
-			
-			try
-				save(strSyncSY, 'syncSY','sMeta','-v7.3');
-			catch sME
-				dispErr(sME);
-			end
-			sFileSyncSY = dir(strSyncSY);
-		else
-			syncSY = [];
-		end
-	end
-	
-	if ~isempty(sFileSyncSY)
-		sSyncAp = load(fullpath(sFile.sClustered.folder,'syncSY.mat'));
-		syncSY = sSyncAp.syncSY;
-		sMetaAp = sSyncAp.sMeta;
-		%check SHA1 keys; _original is appended when catgt resyncs the data
-		if isfield(sMetaAp,'fileCreateTime_original')
-			strCreateTimeAp = sMetaAp.fileCreateTime_original;
-		else
-			strCreateTimeAp = sMetaAp.fileCreateTime;
-		end
-		if isfield(sFile.sMeta,'fileCreateTime_original')
-			strCreateTime = sFile.sMeta.fileCreateTime_original;
-		else
-			strCreateTime = sFile.sMeta.fileCreateTime;
-		end
-		if ~strcmp(strCreateTimeAp,strCreateTime)
-			error([mfilename ':FileOriginMismatch'],'Origins of meta file and sync data do not match!');
-		end
-	else
-		syncSY = [];
-	end
 	
 	%% load NI sync stream times
 	try,ptrText.String = 'Loading NI & sync data...';drawnow;catch,end
-	%%
+	%paths
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
-	%fprintf('Processing recording at %s%s%s [%s]\n',strPathNidq,filesep,strFileNidq,getTime);
-	% Parse the corresponding metafile
-	sMetaNI = sFile.sMeta;
-	dblSampRateReportedNI = DP_SampRate(sMetaNI);
-	intFirstSample = str2double(sMetaNI.firstSample);
-	dblT0_NI_Reported = intFirstSample/dblSampRateReportedNI;
 	
-	% get recording configuration variables
+	% Parse the corresponding metafile
+	strFileMetaNI = fullpath(strPathNidq,strFileNidq);
+	sMetaNI = DP_ReadMeta(strFileMetaNI);
 	sMetaVar = sRP.sMetaVar;
 	sNiCh = PP_GetNiCh(sMetaVar,sMetaNI);
-	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh) && ~ isnan(sNiCh.intStimOnsetCh)
-		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
-	else
-		intStimOnsetCh = [];
-	end
 	if isfield(sNiCh,'intSyncPulseCh') && ~isempty(sNiCh.intSyncPulseCh) && ~ isnan(sNiCh.intSyncPulseCh)
 		intSyncPulseCh = sNiCh.intSyncPulseCh; %synchronization pulses
 	else
@@ -103,9 +41,68 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	
 	% Get NI data
-	%fprintf('   Loading raw data ... [%s]\n',getTime);
 	matDataNI = -DP_ReadBin(-inf, inf, sMetaNI, strrep(strFileNidq,'.meta','.bin'), strPathNidq); %1=PD,2=sync pulse
-	%fprintf('   Calculating sync pulses ... [%s]\n',getTime);
+	intCheckSyncPulseCh = PP_FindSyncPulseCh(matDataNI);
+	if isempty(intSyncPulseCh) || intSyncPulseCh ~= intCheckSyncPulseCh
+		warning('Sync pulse ch from sMetaVar: %d - Most likely sync pulse ch: %d; please check your sMetaVars!',...
+			intSyncPulseCh,intCheckSyncPulseCh)
+	end
+	[boolVecSyncPulsesNI,dblCritValSP] = DP_GetUpDown(matDataNI(intSyncPulseCh,:));
+	
+	%% reported NI rates
+	dblRateFromMetaDataNI = DP_SampRate(sMetaNI);
+	intFirstSampleNI = str2double(sMetaNI.firstSample);
+	dblRecLengthNI = str2double(sMetaNI.fileTimeSecs);
+	dblT0_NI_Reported = intFirstSampleNI/dblRateFromMetaDataNI;
+	
+	%% reported Imec AP rates
+	% get metadata & sync channel data
+	strImApFile = fullpath(sFile.sEphysAp.folder,sFile.sEphysAp.name);
+	[boolVecSyncPulsesImAp,sMetaImAp]=PP_GetImecSyncCh(strImApFile);
+	dblRateFromMetaDataImAp = DP_SampRate(sMetaImAp);
+	intFirstSampleImAp = str2double(sMetaImAp.firstSample);
+	dblRecLengthImAp = str2double(sMetaImAp.fileTimeSecs);
+	dblT0_ImAp_Reported = intFirstSampleImAp/dblRateFromMetaDataImAp;
+	
+	%% calc real rate for NI
+	%get NI sync pulses
+	dblSampRateNI = PP_GetPulseIntervalFromBinVec(boolVecSyncPulsesNI);
+	
+	%compare real and pre-calibrated rate
+	dblRateErrorNI=(1-(dblSampRateNI/dblRateFromMetaDataNI));
+	dblRateErrorPercentageNI  = dblRateErrorNI*100;
+	dblMaxFaultImAp = dblRecLengthNI*dblRateErrorNI;
+	fprintf('NI stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz\n',...
+		dblRateErrorPercentageNI,dblMaxFaultImAp*1000,dblRateFromMetaDataNI,dblSampRateNI);
+	
+	%corrected
+	dblT0_NI_new = intFirstSampleNI/dblSampRateNI; %the true onset
+	dblCorrectionFactor_NI = dblRateFromMetaDataNI/dblSampRateNI;
+	
+	%% calc real rate for Imec Ap
+	%get ImAp sync pulses
+	dblSampRateImAp = PP_GetPulseIntervalFromBinVec(boolVecSyncPulsesImAp);
+	
+	%compare real and pre-calibrated rate
+	dblRateErrorImAp=(1-(dblSampRateImAp/dblRateFromMetaDataImAp));
+	dblRateErrorPercentageImAp  = dblRateErrorImAp*100;
+	dblMaxFaultImAp = dblRecLengthImAp*dblRateErrorImAp;
+	fprintf('ImAp stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz\n',...
+		dblRateErrorPercentageImAp,dblMaxFaultImAp*1000,dblRateFromMetaDataImAp,dblSampRateImAp);
+	
+	%corrected: will be done later on direct kilosort sampling rates
+	dblT0_ImAp_new = intFirstSampleImAp/dblSampRateImAp; %the true onset
+	dblCorrectionFactor_ImAp = dblRateFromMetaDataImAp/dblSampRateImAp;
+	%dblCorrectionFactor_SpikeTimes = dblKilosortSampRateReported/dblSampRateImAp;
+	dblT0_CorrectionKilosort = dblT0_ImAp_Reported - dblT0_ImAp_new;
+	
+	
+	%% get stim onset channel
+	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh) && ~ isnan(sNiCh.intStimOnsetCh)
+		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
+	else
+		intStimOnsetCh = [];
+	end
 	if ~isempty(intStimOnsetCh)
 		vecDiodeSignal = matDataNI(intStimOnsetCh,:);
 		[boolVecScreenPhotoDiode,dblCritValPD] = DP_GetUpDown(vecDiodeSignal);
@@ -119,54 +116,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	else
 		vecStimOnScreenPD = [];
 	end
-	%get imec sync pulses
-	if ~isempty(syncSY)
-		boolVecSyncPulsesImec = syncSY;
-		vecChangeSyncPulsesImec = diff(boolVecSyncPulsesImec);
-		vecSyncPulseOnImec = (find(vecChangeSyncPulsesImec == 1)+1);
-		vecDiffPulsesImec = sort(diff(vecSyncPulseOnImec));
-		indUsePulsePeriods = abs(vecDiffPulsesImec-mean(vecDiffPulsesImec))<2 | abs(zscore(vecDiffPulsesImec)) < 2;
-		indUsePulsePeriods([1 end]) = false;
-		dblSampRateImec = mean(vecDiffPulsesImec(indUsePulsePeriods));
-		%compare real and pre-calibrated rate
-		dblImecRateFromMetaData = str2double(sMetaAp.imSampRate);
-		dblImecRateError=(1-(dblSampRateImec/dblImecRateFromMetaData));
-		dblImecRateErrorPercentage  = dblImecRateError*100;
-		%max deviation
-		dblMaxFault = str2double(sMetaAp.fileTimeSecs)*dblImecRateError;
-		if dblImecRateErrorPercentage < -1e-2 || dblImecRateErrorPercentage > 1e-2 || abs(dblMaxFault) > 1e-2
-			warning([mfilename 'E:SampRateFault'],'IMEC stream is badly calibrated; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, pulse-based rate is %.6f Hz!',...
-				dblImecRateErrorPercentage,dblMaxFault*1000,dblImecRateFromMetaData,dblSampRateImec);
-		end
-	else
-		error([mfilename 'E:SampRateFault'],'Cannot find sync pulses in IMEC stream!');
-	end
-	
-	%get nidq sync pulses & calculate samp rates
-	if ~isempty(intSyncPulseCh)
-		%get ni sync pulses
-		[boolVecSyncPulsesNidq,dblCritValSP] = DP_GetUpDown(matDataNI(intSyncPulseCh,:));
-		
-		%realign IMEC time to NI stream
-		vecChangeSyncPulses = diff(boolVecSyncPulsesNidq);
-		vecSyncPulseOn = (find(vecChangeSyncPulses == 1)+1);
-		clear vecChangeSyncPulses boolVecSyncPulses;
-		
-		%take only reliable pulse durations to remove double-counted or missed pulses
-		vecDiffPulses = sort(diff(vecSyncPulseOn));
-		indUsePulsePeriods = abs(vecDiffPulses-mean(vecDiffPulses))<2 | abs(zscore(vecDiffPulses)) < 2;
-		indUsePulsePeriods([1 end]) = false;
-		dblNISamprate = mean(vecDiffPulses(indUsePulsePeriods));
-		dblNIRateError=(1-(dblNISamprate/dblSampRateReportedNI));
-		dblSampRateFaultPercentage = dblNIRateError*100;
-		dblNICorrectionfactor = dblSampRateReportedNI/dblNISamprate;
-		if dblSampRateFaultPercentage < -1e-4 || dblSampRateFaultPercentage > 1e-4
-			warning([mfilename 'E:SampRateFault'],sprintf('Sampling rate fault is high: %e%%. I will correct this, but your calibration is probably off!',dblSampRateFaultPercentage));
-		end
-	else
-		warning([mfilename 'E:NoSyncPulseCh'],sprintf('No sync pulse channel found'));
-	end
-	
+
+	%% get variables
 	%check meta data
 	strExp = sFile.sMeta.strNidqName;
 	[intB,intE]=regexp(strExp,'\d{4}[-/]?(\d{2})[-/]?\d{2}');
@@ -312,13 +263,13 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimActOffNI = sOldSynthData.cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using old synthesis file. If this is not what you want, please remove the old synthesis file first. NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif isfield(cellStim{intLogFile}.structEP,'ActOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.ActOnNI))
-			dblT0_NI_new = intFirstSample/dblNISamprate; %the true onset
+			dblT0_NI_new = intFirstSampleNI/dblSampRateNI; %the true onset
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			vecStimActOnNI = cellStim{intLogFile}.structEP.ActOnNI;
 			vecStimActOffNI = cellStim{intLogFile}.structEP.ActOffNI;
 			fprintf('Aligned onsets using NI timestamps; start stim is at t=%.3fs\n',vecStimActOnNI(1));
 		elseif isfield(cellStim{intLogFile}.structEP,'vecStimOnNI') && ~all(isnan(cellStim{intLogFile}.structEP.vecStimOnNI))
-			dblT0_NI_new = intFirstSample/dblNISamprate;
+			dblT0_NI_new = intFirstSampleNI/dblSampRateNI;
 			cellStim{intLogFile}.structEP.strSyncType = 'Good: NI timestamps';
 			cellStim{intLogFile}.structEP.ActOnNI = cellStim{intLogFile}.structEP.vecStimOnNI;
 			cellStim{intLogFile}.structEP.ActOffNI = cellStim{intLogFile}.structEP.vecStimOffNI;
@@ -331,8 +282,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			cellStim{intLogFile}.structEP.strSyncType = 'Bad: only onset pulses';
 			
 			%approximate timings
-			vecStimOn = vecStimOnScreenPD/dblNISamprate;
-			vecStimOff = vecStimOffScreenPD/dblNISamprate;
+			vecStimOn = vecStimOnScreenPD/dblSampRateNI;
+			vecStimOff = vecStimOffScreenPD/dblSampRateNI;
 			%remove prior entries
 			vecStimOn(vecStimOn < dblLastStop) = [];
 			vecStimOff(vecStimOff < dblLastStop) = [];
@@ -373,7 +324,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			fprintf('Aligned onsets with %.3f%% certainty; start stim is at t=%.3fs\n',dblAlignmentCertainty*100,dblStartT);
 			if (dblAlignmentCertainty < 0.9 || isnan(dblAlignmentCertainty)) && ~isempty(vecDiodeSignal)
 				vecSubSampled = double(vecDiodeSignal(1:100:end));
-				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblNISamprate/100),numel(vecSubSampled)),intLogFile,vecStimActOnSecs);
+				[dblStartT,dblUserStartT] = askUserForSyncTimes(vecSubSampled,linspace(0,numel(vecSubSampled)/(dblSampRateNI/100),numel(vecSubSampled)),intLogFile,vecStimActOnSecs);
 			end
 			%ensure same starting time
 			vecStimActOnNI = vecStimActOnSecs + dblStartT;
@@ -393,9 +344,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			vecStimOnTime = sOldSynthData.cellStim{intLogFile}.structEP.vecStimOnTime;
 		elseif exist('vecStimOnScreenPD','var') && ~isempty(vecStimOnScreenPD)
 			dblMaxErr = 0.1;
-			vecPresStimOnT = vecStimActOnNI*dblNICorrectionfactor - dblT0_NI_new;
+			vecPresStimOnT = vecStimActOnNI*dblCorrectionFactor_NI - dblT0_NI_new;
 			vecTimestampSecsRaw = vecPresStimOnT;
-			vecSignalOnT = vecStimOnScreenPD/dblNISamprate;
+			vecSignalOnT = vecStimOnScreenPD/dblSampRateNI;
 			[vecStimOnTime,vecDiffOnT] = OT_refineT(vecPresStimOnT,vecSignalOnT,inf);
 			vecTimestampSecsRefined = vecStimOnTime;
 			indReplace = abs(vecDiffOnT) > dblMaxErr;
@@ -406,7 +357,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			
 			% plot
 			strPlotRec = sStimFiles(vecReorderStimFiles(intLogFile)).name;
-			hFig = PP_AlignEphys(vecDiodeSignal,dblNISamprate,vecTimestampSecsRaw,vecTimestampSecsRefined,vecTimestampSecsRefinedCorrected,strPlotRec);
+			hFig = PP_AlignEphys(vecDiodeSignal,dblSampRateNI,vecTimestampSecsRaw,vecTimestampSecsRefined,vecTimestampSecsRefinedCorrected,strPlotRec);
 			
 			%save sync output
 			strSyncMetricPath = fullpath(strLogPath,'EphysSyncMetrics');
@@ -423,7 +374,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			fprintf('Summary saved to %s (%s)\n',strSyncMetricPath,strFileOut);
 		else
 			dblMedianErr=0;
-			vecStimOnTime = vecStimActOnNI*dblNICorrectionfactor - dblT0_NI_new; %correct with true onset and new samp rate
+			vecStimOnTime = vecStimActOnNI*dblCorrectionFactor_NI - dblT0_NI_new; %correct with true onset and new samp rate
 		end
 		
 		%get OFF times: ON + dur
@@ -451,10 +402,10 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		cellStim{intLogFile}.structEP.vecStimOffTime = vecStimOffTime;
 		cellStim{intLogFile}.structEP.ActOnNI = vecStimActOnNI;
 		cellStim{intLogFile}.structEP.ActOffNI = vecStimActOffNI;
-		cellStim{intLogFile}.structEP.SampRateNI = dblNISamprate;
-		cellStim{intLogFile}.structEP.SampRateNI_Reported = dblSampRateReportedNI;
-		cellStim{intLogFile}.structEP.SampRateIM = dblSampRateImec;
-		cellStim{intLogFile}.structEP.SampRateIM_Reported = dblImecRateFromMetaData;
+		cellStim{intLogFile}.structEP.SampRateNI = dblSampRateNI;
+		cellStim{intLogFile}.structEP.SampRateNI_Reported = dblRateFromMetaDataNI;
+		cellStim{intLogFile}.structEP.SampRateIM = dblSampRateImAp;
+		cellStim{intLogFile}.structEP.SampRateIM_Reported = dblRateFromMetaDataImAp;
 		cellStim{intLogFile}.structEP.T0 = dblT0_NI_new;
 		
 		%% align eye-tracking data
@@ -495,7 +446,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			%retrieve data
 			vecTimeVid = matSyncData(1,:); %video time in secs since recording start (t0~=0)
 			vecFrameVid = matSyncData(2,:); %video frame # since video start (t0=0)
-			vecTimeNI = matSyncData(3,:)*dblNICorrectionfactor; %ni time in secs; corresponds to stim times
+			vecTimeNI = matSyncData(3,:)*dblCorrectionFactor_NI; %ni time in secs; corresponds to stim times
 			
 			%remove empty entries
 			indRem = isnan(vecTimeNI) | vecTimeNI==0;
@@ -652,7 +603,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	vecAllSpikeTimes = sSpikes.st;  %spiketimes based on old samprate
 	vecAllSpikeClust = sSpikes.clu;
 	vecClusters = unique(vecAllSpikeClust);
-	dblImecSampRateReported = sSpikes.sample_rate; %old samprate (rounded in kilosort output!)
+	dblKilosortSampRateReported = sSpikes.sample_rate; %old samprate (rounded in kilosort output!)
+	fprintf('Sampling rate from Imec AP: %.6f - Sampling rate from kilosort: %.6f\n',dblRateFromMetaDataImAp,dblKilosortSampRateReported);
+	
 	
 	%% load chanmap file
 	if isfield(sFile.sClustered,'ops') && isfield(sFile.sClustered.ops,'chanMap')
@@ -695,12 +648,28 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	cellSpikes = cell(1,intClustNum);
 	vecDepth = nan(1,intClustNum);
-	dblSampRateCorrectionImec = dblImecSampRateReported/dblSampRateImec; %correct spiketimes with new, recalibrated rate
+	dblSampRateCorrectionKilosort = dblKilosortSampRateReported/dblSampRateImAp; %correct spiketimes with new, recalibrated rate
 	for intCluster=1:intClustNum
 		intClustIdx = vecClusters(intCluster);
-		cellSpikes{intCluster} = vecAllSpikeTimes(vecAllSpikeClust==intClustIdx)*dblSampRateCorrectionImec;
+		cellSpikes{intCluster} = dblT0_CorrectionKilosort...
+			+ vecAllSpikeTimes(vecAllSpikeClust==intClustIdx)*dblSampRateCorrectionKilosort;
 		vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
 	end
+	
+	%% put all sync data in struct
+	sSyncData = struct;
+	sSyncData.dblRateFromMetaDataNI = dblRateFromMetaDataNI;
+	sSyncData.dblSampRateNI = dblSampRateNI;
+	sSyncData.dblT0_NI_Reported = dblT0_NI_Reported;
+	sSyncData.dblT0_NI_new = dblT0_NI_new;
+	sSyncData.dblCorrectionFactor_NI = dblCorrectionFactor_NI;
+	
+	sSyncData.dblRateFromMetaDataNI = dblRateFromMetaDataNI;
+	sSyncData.dblSampRateImAp = dblSampRateImAp;
+	sSyncData.dblT0_ImAp_Reported = dblT0_ImAp_Reported;
+	sSyncData.dblT0_ImAp_new = dblT0_ImAp_new;
+	sSyncData.dblT0_CorrectionKilosort = dblT0_CorrectionKilosort;
+	sSyncData.dblSampRateCorrectionKilosort = dblSampRateCorrectionKilosort;
 	
 	%% go through clusters
 	%check if zeta is present
@@ -869,6 +838,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%clusters & spikes
 	sSynthData.sCluster = sCluster;
 	
+	%sync data
+	sSynthData.sSyncData = sSyncData;
+	
 	%meta data
 	sSynthData.sMetaNI = sMetaNI;
 	sSynthData.sMiscNI = sMiscNI;
@@ -908,4 +880,4 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	
 	%% delete msg
 	delete(ptrMsg);
-end
+%end

@@ -71,9 +71,14 @@ function sClustered = getPreProClustering(sFile,sRP)
 	%1. AP = 16-bit action potential channels
 	%2. LF = 16-bit local field potential channels (some probes)
 	%3. SY = The single 16-bit sync input channel (sync is bit #6)
-	sMeta = DP_ReadMeta(ops.fbinary);
-	ops.fs = DP_SampRate(sMeta); %sampling rate
-	[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels
+	
+	% Create the matching metafile name
+	[strImecPath,strImecFile,strImecExt] = fileparts(ops.fbinary);
+	strImapShortFile = strcat(strImecFile, '.meta');
+	strImApFile = fullpath(strImecPath,strImapShortFile);
+	sMetaImAp = DP_ReadMeta(strImApFile);
+	ops.fs = DP_SampRate(sMetaImAp); %sampling rate
+	[AP,LF,SY] = DP_ChannelCountsIM(sMetaImAp); %IM channels
 	ops.trange = [0 Inf]; % time range to sort
 	ops.NchanTOT    = AP + LF + SY; % total number of channels; is this correct?
 	ops.fproc       = fullpath(strTempDir, 'temp_wh.dat'); % proc file on a fast SSD
@@ -102,25 +107,7 @@ function sClustered = getPreProClustering(sFile,sRP)
 	strStep = 'Extracting sync channel...';
 	intStep = 2;
 	waitbar(intStep/intStepNum, ptrWaitbarHandle, sprintf('%s (step %d/%d)',strStep,intStep,intStepNum));
-	if SY>0
-		vecTypeCh = cumsum([AP,LF,SY]);
-		intSyncCh = vecTypeCh(3);
-		[strPath,strFile,strExt]=fileparts(ops.fbinary);
-		
-		vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %sync pulse
-		syncSY = DP_GetUpDown(vecSyncAp);
-		
-		%save file
-		strSyncSY = fullpath(strDataOutputDir, 'syncSY.mat');
-		
-		try
-			save(strSyncSY, 'syncSY','sMeta','-v7.3');
-		catch sME
-			dispErr(sME);
-		end
-	else
-		syncSY = [];
-	end
+	[syncSY,sMetaImAp]=PP_GetImecSyncCh(strImApFile);
 	
 	%% run clustering
 	sWaitbar = struct;
