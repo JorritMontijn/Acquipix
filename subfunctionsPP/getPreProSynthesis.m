@@ -94,7 +94,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	dblT0_ImAp_new = intFirstSampleImAp/dblSampRateImAp; %the true onset
 	dblCorrectionFactor_ImAp = dblRateFromMetaDataImAp/dblSampRateImAp;
 	%dblCorrectionFactor_SpikeTimes = dblKilosortSampRateReported/dblSampRateImAp;
-	dblT0_CorrectionKilosort = dblT0_ImAp_Reported - dblT0_ImAp_new;
+	dblT0_CorrectionKilosort = dblT0_ImAp_new - dblT0_NI_new;
 	
 	
 	%% get stim onset channel
