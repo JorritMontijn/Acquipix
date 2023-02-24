@@ -72,12 +72,12 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	dblRateErrorNI=(1-(dblSampRateNI/dblRateFromMetaDataNI));
 	dblRateErrorPercentageNI  = dblRateErrorNI*100;
 	dblMaxFaultImAp = dblRecLengthNI*dblRateErrorNI;
-	fprintf('NI stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz\n',...
-		dblRateErrorPercentageNI,dblMaxFaultImAp*1000,dblRateFromMetaDataNI,dblSampRateNI);
 	
 	%corrected
 	dblT0_NI_new = intFirstSampleNI/dblSampRateNI; %the true onset
 	dblCorrectionFactor_NI = dblRateFromMetaDataNI/dblSampRateNI;
+	fprintf('NI stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz; correcting by %.6f\n',...
+		dblRateErrorPercentageNI,dblMaxFaultImAp*1000,dblRateFromMetaDataNI,dblSampRateNI,dblCorrectionFactor_NI);
 	
 	%% calc real rate for Imec Ap
 	%get ImAp sync pulses
@@ -87,16 +87,16 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	dblRateErrorImAp=(1-(dblSampRateImAp/dblRateFromMetaDataImAp));
 	dblRateErrorPercentageImAp  = dblRateErrorImAp*100;
 	dblMaxFaultImAp = dblRecLengthImAp*dblRateErrorImAp;
-	fprintf('ImAp stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz\n',...
-		dblRateErrorPercentageImAp,dblMaxFaultImAp*1000,dblRateFromMetaDataImAp,dblSampRateImAp);
 	
 	%corrected: will be done later on direct kilosort sampling rates
 	dblT0_ImAp_new = intFirstSampleImAp/dblSampRateImAp; %the true onset
 	dblCorrectionFactor_ImAp = dblRateFromMetaDataImAp/dblSampRateImAp;
-	%dblCorrectionFactor_SpikeTimes = dblKilosortSampRateReported/dblSampRateImAp;
 	dblT0_CorrectionKilosort = dblT0_ImAp_new - dblT0_NI_new;
 	
-	
+	fprintf('ImAp stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz; correcting by %.6f\n',...
+		dblRateErrorPercentageImAp,dblMaxFaultImAp*1000,dblRateFromMetaDataImAp,dblSampRateImAp,dblCorrectionFactor_ImAp);
+	fprintf('NI-T0 = %.3f s; ImAp-T0 = %.3f s; correcting spike times by %.1f ms\n',dblT0_NI_new,dblT0_ImAp_new,1000*dblT0_CorrectionKilosort);
+
 	%% get stim onset channel
 	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh) && ~ isnan(sNiCh.intStimOnsetCh)
 		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
@@ -370,7 +370,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			export_fig(strFileEphysSync1);
 			strFileEphysSync2 = fullpath(strSyncMetricPath,[strFileOut,'.pdf']);
 			export_fig(strFileEphysSync2);
-			fprintf('Average timing error is %.3fs for stimulus onsets; %d violations, %d corrected\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),sum(indReplace));
+			fprintf('Average timing error is %.3fs for stimulus onsets; %d/%d violations, %d/%d will be refined, %d/%d use raw NI times\n',mean(abs(vecDiffOnT)),sum(abs(vecDiffOnT) > dblMaxErr),numel(vecDiffOnT),sum(~indReplace),numel(indReplace),sum(indReplace),numel(indReplace));
 			fprintf('Summary saved to %s (%s)\n',strSyncMetricPath,strFileOut);
 		else
 			dblMedianErr=0;
