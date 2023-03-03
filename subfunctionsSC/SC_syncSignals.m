@@ -99,7 +99,7 @@ function [vecAlignedTime,vecRefinedT,vecError,sSyncStruct] = SC_syncSignals(vecR
 	else
 		strType = '';
 	end
-	fprintf('Mean duration error after alignment by %.3fs is %.3fsfor %ssync events; %d events refined by median\n',...
+	fprintf('Mean duration error after alignment by %.3fs is %.3fs for %s sync events; %d events refined by median\n',...
 		dblAlignment,dblMeanAbsErr,strType,sum(indReplace));
 	
 	

@@ -10,12 +10,12 @@ function [boolVecSyncPulses,sMeta]=PP_GetImecSyncCh(strFullFile)
 	sFileSyncSY = dir(fullpath([strPath filesep '**'],'syncSY.mat'));
 	if isempty(sFileSyncSY)
 		[AP,LF,SY] = DP_ChannelCountsIM(sMeta); %IM channels
+		strExt = strrep(strExt,'meta','bin');
 		
 		% extract IM sync channel
-		if SY>0
+		if SY>0 && isfile(fullpath(strPath,[strFile,strExt]))
 			vecTypeCh = cumsum([AP,LF,SY]);
 			intSyncCh = vecTypeCh(3);
-			strExt = strrep(strExt,'meta','bin');
 			vecSyncAp = -DP_ReadBin(-inf, inf, sMeta, [strFile,strExt],strPath,[],intSyncCh); %sync pulse
 			syncSY = DP_GetUpDown(vecSyncAp);
 			
@@ -28,6 +28,17 @@ function [boolVecSyncPulses,sMeta]=PP_GetImecSyncCh(strFullFile)
 				dispErr(sME);
 			end
 			sFileSyncSY = dir(strSyncSY);
+		else
+			%create dummy
+			fprintf('Sync data not found: will generate dummy signals based on metadata\n');
+			warning([mfilename ':SyncDataMissing'],'Sync data not found: will generate dummy signals based on metadata');
+			dblSampRate = str2double(sMeta.imSampRate);
+			dblRecDur = str2double(sMeta.fileTimeSecs);
+			intRecSamps = dblRecDur*dblSampRate;% - str2double(sMeta.firstSample);
+			boolVecSyncPulses = false(1,intRecSamps);
+			dblPulseDur = str2double(sMeta.syncSourcePeriod);
+			vecInjectPulses = round(1:((intRecSamps/dblRecDur)*dblPulseDur):intRecSamps);
+			boolVecSyncPulses(vecInjectPulses) = true;
 		end
 	end
 	if ~isempty(sFileSyncSY)
@@ -49,8 +60,6 @@ function [boolVecSyncPulses,sMeta]=PP_GetImecSyncCh(strFullFile)
 		if ~strcmp(strCreateTimeAp,strCreateTime)
 			error([mfilename ':FileOriginMismatch'],'Origins of meta file and sync data do not match!');
 		end
-	else
-		boolVecSyncPulses = [];
 	end
 end
 

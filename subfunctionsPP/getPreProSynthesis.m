@@ -28,6 +28,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%paths
 	strPathNidq = sFile.sEphysNidq.folder;
 	strFileNidq = sFile.sEphysNidq.name;
+	fprintf(' >  Aligning clocks and creating data synthesis for %s [%s]\n',...
+		strFileNidq,getTime);
 	
 	% Parse the corresponding metafile
 	strFileMetaNI = fullpath(strPathNidq,strFileNidq);
@@ -258,6 +260,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			cellStim{intLogFile}.structEP.strExpType = strStimType;
 		end
 		if exist('sOldSynthData','var')
+			dblT0_NI_new = intFirstSampleNI/dblSampRateNI; %the true onset
 			cellStim{intLogFile}.structEP.strSyncType = sOldSynthData.cellStim{intLogFile}.structEP.strSyncType;
 			vecStimActOnNI = sOldSynthData.cellStim{intLogFile}.structEP.ActOnNI;
 			vecStimActOffNI = sOldSynthData.cellStim{intLogFile}.structEP.ActOffNI;
@@ -701,7 +704,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			dblMeanP = 1;
 			if boolUseZeta
 				dblUseMaxDur = nanmin(diff(matStimOnOff(:,1)));
-				intResampNum = 50;
+				intResampNum = 25;
 				intPlot = 0;
 				intLatencyPeaks = 0;
 				[dblZetaP,sZETA] = zetatest(vecSpikeTimes,matStimOnOff,dblUseMaxDur,intResampNum,intPlot,intLatencyPeaks);
@@ -746,8 +749,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).dPrimeLR = dPrimeLR;
 		
 		%msg
-		fprintf('Cell %d/%d, Z-p=%.3f,M-p=%.3f, Non-stat=%.3f, Viol=%.3f, Contam=%.3f [%s]\n',...
-			intCluster,intClustNum,nanmin(ZetaP),nanmin(MeanP),sOut.dblNonstationarityIndex,sOut.dblViolIdx2ms,vecKilosortContamination(intCluster),getTime);
+		fprintf('Cell %d/%d, Z-p=%.3f,M-p=%.3f, Non-stat=%.3f, Viol=%.3f, Contam=%.0f [%s]\n',...
+			intCluster,intClustNum,nanmin(ZetaP),nanmin(MeanP),sOut.dblNonstationarityIndex,sOut.dblViolIdx1ms,vecKilosortContamination(intCluster),getTime);
 	end
 	
 	%% load LFP data
