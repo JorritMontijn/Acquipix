@@ -156,6 +156,9 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 		end
 	end
 	
+	%overwrite subject type
+	sAP.sCluster.SubjectType = sAP.sJson.subjecttype;
+	
 	%save
 	fprintf('Saving AP data to %s [%s]\n',strAPFileTarget,getTime);
 	save(strAPFileTarget,'sAP');
