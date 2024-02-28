@@ -14,12 +14,21 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	strFolder = sFile.sClustered.folder;
 	sClustTsv = loadClusterTsvs(strFolder);
 	vecClustIdx = [sClustTsv.cluster_id];
-	cellKilosortLabel = {sClustTsv.KSLabel};
-	vecKilosortGood = contains(cellKilosortLabel,'good');
-	vecKilosortContamination = cellfun(@str2double,{sClustTsv.ContamPct});
+	if isfield(sClustTsv,'KSLabel')
+		cellKilosortLabel = {sClustTsv.KSLabel};
+		vecKilosortGood = contains(cellKilosortLabel,'good');
+	else
+		cellKilosortLabel = cell(size(vecClustIdx));
+		vecKilosortGood = contains(cellKilosortLabel,'good');
+	end
+	if isfield(sClustTsv,'ContamPct')
+		vecKilosortContamination = cellfun(@str2double,{sClustTsv.ContamPct});
+	else
+		vecKilosortContamination = nan(size(vecClustIdx));
+	end
 	cellUsedFields = {'cluster_id','KSLabel','ContamPct'};
 	cellAllFields = fieldnames(sClustTsv);
-		
+	
 	%get channel mapping
 	vecChanIdx = readNPY(fullpath(sFile.sClustered.folder,'channel_map.npy'));
 	matChanPos = readNPY(fullpath(sFile.sClustered.folder,'channel_positions.npy'));
@@ -687,11 +696,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%go through cells and stim blocks
 	try,ptrText.String = 'Assigning metadata to clusters...';drawnow;catch,end
 	sCluster = struct;
-	parfor intCluster=1:intClustNum
+	for intCluster=1:intClustNum
 		%get cluster idx
 		intClustIdx = vecClusters(intCluster);
 		vecSpikeTimes = cellSpikes{intCluster};
-		sOut = getClusterQuality(vecSpikeTimes,0);
+		%sOut = getClusterQuality(vecSpikeTimes,0);
+		sOut.dblNonstationarityIndex = 0;
+		sOut.dblViolIdx1ms = 0;
+		sOut.dblViolIdx2ms = 0;
 		
 		%get responsiveness
 		ZetaP = nan(1,numel(cellStim));
@@ -723,9 +735,20 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 					vecSpikeCounts = getSpikeCounts(vecSpikeTimes,cellStim{intStim}.structEP.vecStimOnTime,cellStim{intStim}.structEP.vecStimOffTime);
 					vecRate = vecSpikeCounts ./ (cellStim{intStim}.structEP.vecStimOffTime - cellStim{intStim}.structEP.vecStimOnTime);
 					
-					dPrimeLR(intStim) = getdprime2(vecRate(indDirRight),vecRate(indDirLeft))
+					dPrimeLR(intStim) = getdprime2(vecRate(indDirRight),vecRate(indDirLeft));
 				end
 			end
+		end
+		
+		%get vars for backward compatibility
+		try
+			dblContamP = vecKilosortContamination(vecClustIdx==intClustIdx);
+			intKsGood = vecKilosortGood(vecClustIdx==intClustIdx);
+			strKsLabel = cellKilosortLabel{vecClustIdx==intClustIdx};
+		catch
+			dblContamP = nan;
+			intKsGood = nan;
+			strKsLabel = '';
 		end
 		
 		%assign to object
@@ -743,9 +766,9 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).NonStationarity = sOut.dblNonstationarityIndex;
 		sCluster(intCluster).Violations1ms = sOut.dblViolIdx1ms;
 		sCluster(intCluster).Violations2ms = sOut.dblViolIdx2ms;
-		sCluster(intCluster).Contamination = vecKilosortContamination(vecClustIdx==intClustIdx); %#ok<PFBNS>
-		sCluster(intCluster).KilosortGood = vecKilosortGood(vecClustIdx==intClustIdx); %#ok<PFBNS>
-		sCluster(intCluster).KilosortLabel = cellKilosortLabel(vecClustIdx==intClustIdx); %#ok<PFBNS>
+		sCluster(intCluster).Contamination = dblContamP;
+		sCluster(intCluster).KilosortGood = intKsGood;
+		sCluster(intCluster).KilosortLabel = strKsLabel;
 		sCluster(intCluster).ZetaP = ZetaP;
 		sCluster(intCluster).MeanP = MeanP;
 		sCluster(intCluster).dPrimeLR = dPrimeLR;
@@ -756,11 +779,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			for intField=1:numel(cellAllFields)
 				strField = cellAllFields{intField};
 				if ~ismember(strField,cellUsedFields)
-					cellData = sClustTsv(intSourceClust).(strField);
-					if isnumeric(cellData{1})
-						cellData = cell2vec(cellData);
-					end
-					sCluster(intCluster).(strField) = cellData;
+					sCluster(intCluster).(strField) = sClustTsv(intSourceClust).(strField);
 				end
 			end
 		end
@@ -813,7 +832,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sJson.id = strcat(strExp,strSubjectType,getDate());
 	
 	%additional fields
-	if ~exist('vecKilosortGood','var'),cellKilosortLabel=[];end
+	if ~exist('vecKilosortGood','var'),vecKilosortGood=[];end
 	sJson.experiment = strExp;
 	sJson.recording = strRec; %default, will be overwritten if rec name is present
 	sJson.recidx = strcat(sJson.id,strrep(getTime(),':',''));
@@ -821,8 +840,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	sJson.nstims = num2str(numel(cellStim));
 	sJson.stims = strjoin(cellfun(@(x) x.structEP.strExpType,cellStim,'uniformoutput',false),';');
 	sJson.trials = strjoin(cellfun(@(x) num2str(numel(x.structEP.vecStimOnTime)),cellStim,'uniformoutput',false),';');
-	sJson.nclust = numel(cellKilosortLabel);
-	sJson.ngood = sum(cellKilosortLabel);
+	sJson.nclust = intClustNum;
+	sJson.ngood = sum(vecKilosortGood);
 	
 	%check meta data
 	cellFields = fieldnames(sMetaNI);
