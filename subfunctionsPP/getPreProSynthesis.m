@@ -696,14 +696,11 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%go through cells and stim blocks
 	try,ptrText.String = 'Assigning metadata to clusters...';drawnow;catch,end
 	sCluster = struct;
-	for intCluster=1:intClustNum
+	parfor intCluster=1:intClustNum
 		%get cluster idx
 		intClustIdx = vecClusters(intCluster);
 		vecSpikeTimes = cellSpikes{intCluster};
-		%sOut = getClusterQuality(vecSpikeTimes,0);
-		sOut.dblNonstationarityIndex = 0;
-		sOut.dblViolIdx1ms = 0;
-		sOut.dblViolIdx2ms = 0;
+		sOut = getClusterQuality(vecSpikeTimes,0);
 		
 		%get responsiveness
 		ZetaP = nan(1,numel(cellStim));
