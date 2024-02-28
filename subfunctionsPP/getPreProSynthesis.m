@@ -26,7 +26,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	else
 		vecKilosortContamination = nan(size(vecClustIdx));
 	end
-	cellUsedFields = {'cluster_id','KSLabel','ContamPct'};
+	cellUsedFields = {'KSLabel','ContamPct'};
 	cellAllFields = fieldnames(sClustTsv);
 	
 	%get channel mapping
@@ -108,7 +108,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	fprintf('ImAp stream; %.4f%% error gives max fault of %.0f ms; calibrated rate is %.6f Hz, actual pulse-based rate is %.6f Hz; correcting by %.6f\n',...
 		dblRateErrorPercentageImAp,dblMaxFaultImAp*1000,dblRateFromMetaDataImAp,dblSampRateImAp,dblCorrectionFactor_ImAp);
 	fprintf('NI-T0 = %.3f s; ImAp-T0 = %.3f s; correcting spike times by %.1f ms\n',dblT0_NI_new,dblT0_ImAp_new,1000*dblT0_CorrectionKilosort);
-
+	
 	%% get stim onset channel
 	if isfield(sNiCh,'intStimOnsetCh') && ~isempty(sNiCh.intStimOnsetCh) && ~ isnan(sNiCh.intStimOnsetCh)
 		intStimOnsetCh = sNiCh.intStimOnsetCh; %screen diode channel
@@ -128,7 +128,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	else
 		vecStimOnScreenPD = [];
 	end
-
+	
 	%% get variables
 	%check meta data
 	strExp = sFile.sMeta.strNidqName;
@@ -396,7 +396,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 				vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnNI;
 				vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffNI;
 				vecStimActDurSecs = vecStimActOffSecs - vecStimActOnSecs;
-				vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));	
+				vecStimOffTime = vecStimOnTime + vecStimActDurSecs(~isnan(vecStimActDurSecs));
 			else
 				vecStimActOnSecs = cellStim{intLogFile}.structEP.ActOnSecs;
 				vecStimActOffSecs = cellStim{intLogFile}.structEP.ActOffSecs;
@@ -644,7 +644,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	fprintf('Assigning spikes to clusters... [%s]\n',getTime);
 	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
 	[vecClustIdx_WF,matClustWaveforms] = getWaveformPerCluster(sSpikes);
-		
+	
 	%remove nans
 	for intStim=1:numel(cellStim)
 		matStimOnOff = [cellStim{intStim}.structEP.vecStimOnTime;cellStim{intStim}.structEP.vecStimOffTime]';
@@ -696,6 +696,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	%go through cells and stim blocks
 	try,ptrText.String = 'Assigning metadata to clusters...';drawnow;catch,end
 	sCluster = struct;
+	vecTsvIds = [sClustTsv.cluster_id];
 	parfor intCluster=1:intClustNum
 		%get cluster idx
 		intClustIdx = vecClusters(intCluster);
@@ -771,7 +772,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).dPrimeLR = dPrimeLR;
 		
 		%add aditional cluster data
-		intSourceClust = find(vecClustIdx==intClustIdx);
+		intSourceClust = find(vecTsvIds==intClustIdx);
 		if ~isempty(intSourceClust)
 			for intField=1:numel(cellAllFields)
 				strField = cellAllFields{intField};
