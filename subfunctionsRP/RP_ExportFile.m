@@ -27,7 +27,7 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	dblDepthOfTip = r*mean(sProbeCoords.VoxelSize);
 	
 	%get cluster depths
-	vecDepthOnProbeInMicrons = sProbeCoords.sProbeAdjusted.depth_per_cluster*mean(sProbeCoords.VoxelSize);
+	vecClusterProbeId = sProbeCoords.sProbeAdjusted.cluster_id;
 	strPathKilosort = sFile.sClustered.folder;
 	sSpikes = loadKSdir(strPathKilosort);
 	vecAllSpikeClust = sSpikes.clu;
@@ -37,20 +37,41 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	[spikeAmps, vecAllSpikeDepth] = templatePositionsAmplitudes(sSpikes.temps, sSpikes.winv, sSpikes.ycoords, sSpikes.spikeTemplates, sSpikes.tempScalingAmps);
 	
 	%get depths
-	intClustNum = numel(vecClustIdx);
-	vecDepth = nan(1,intClustNum);
-	vecDepthOnProbe = nan(1,intClustNum);
-	vecDepthFromPia = nan(1,intClustNum);
-	for intClust=1:intClustNum
-		intClustIdx = vecClustIdx(intClust);
-		dblTemplateDepth = round(median(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx)));
-		vecDepthOnProbe(intClust) = max(sSpikes.ycoords)-dblTemplateDepth;
-		vecDepth(intClust) = dblAdjustedProbeLength-dblTemplateDepth*dblResizeFactor;
-		vecDepthFromPia(intClust) = dblDepthOfTip-dblTemplateDepth*dblResizeFactor;
+	vecCombinedIds = unique(cat(1,vecClusterProbeId(:),vecClustIdx(:)));
+	intClustNum = numel(vecCombinedIds);
+	sClustDepth = struct;
+	sClustDepth(intClustNum).cluster_id = nan;
+	sClustDepth(intClustNum).DepthEphys = nan;
+	sClustDepth(intClustNum).DepthOnProbe = nan;
+	sClustDepth(intClustNum).DepthFromPia = nan;
+	sClustDepth(intClustNum).DepthUPF = nan;
+	for intClustIdIdx=1:intClustNum
+		intClustId = vecCombinedIds(intClustIdIdx);
+		%ephys depth
+		indUseSpikes = vecAllSpikeClust==intClustId;
+		if sum(indUseSpikes) > 0
+			dblTemplateDepth = round(median(vecAllSpikeDepth(indUseSpikes)));
+		else
+			dblTemplateDepth = nan;
+		end
+		%upf depth
+		intProbeEntry = find(vecClusterProbeId==intClustId);
+		if ~isempty(intProbeEntry)
+			dblDepthUPF = sProbeCoords.sProbeAdjusted.depth_per_cluster(intProbeEntry);
+		else
+			dblDepthUPF = nan;
+		end
+		sClustDepth(intClustIdIdx).cluster_id = intClustId;
+		sClustDepth(intClustIdIdx).DepthEphys = dblAdjustedProbeLength-dblTemplateDepth*dblResizeFactor;
+		sClustDepth(intClustIdIdx).DepthOnProbe = max(sSpikes.ycoords)-dblTemplateDepth;
+		sClustDepth(intClustIdIdx).DepthBelowIntersect = dblDepthOfTip-dblTemplateDepth*dblResizeFactor;
+		sClustDepth(intClustIdIdx).DepthUPF = dblDepthUPF*mean(sProbeCoords.VoxelSize);
 	end
 	
 	%sanity check
-	rDepth = corr(vecDepthOnProbeInMicrons(:),vecDepthFromPia(:));
+	vecDepthOnProbe = [sClustDepth(:).DepthOnProbe];
+	vecDepthOnProbeInMicrons = [sClustDepth(:).DepthUPF];
+	rDepth = nancorr(vecDepthOnProbeInMicrons(:),vecDepthOnProbe(:));
 	if rDepth > -0.99 && rDepth < 0.99
 		error([mfilename ':DepthMismatch'],'Depth information mismatch between vecDepthOnProbeInMicrons and vecDepthFromPia!');
 	end
@@ -59,12 +80,18 @@ function [intResultFlag,sRP] = RP_ExportFile(sFile,sRP)
 	[vecClustAreaId,cellClustAreaLabel,cellClustAreaFull] = PF_GetAreaPerCluster(sProbeCoords,vecDepthOnProbe);
 	
 	%assign cluster data
+	vecDepthIds = [sClustDepth(:).cluster_id];
 	sCluster = sSynthData.sCluster;
 	intClustNum = numel(vecClustIdx);
 	for intClust=1:intClustNum
-		sCluster(intClust).Depth = vecDepth(intClust);%depth on probe
-		sCluster(intClust).Area = cellClustAreaFull{intClust};
-		sCluster(intClust).DepthBelowIntersect = vecDepthFromPia(intClust);%depth in brain
+		intId = sCluster(intClust).cluster_id;
+		intDepthEntry = find(vecDepthIds==intId);
+		if ~isempty(intDepthEntry)
+			sCluster(intClust).Depth = sClustDepth(intDepthEntry).DepthEphys; %depth on probe
+			sCluster(intClust).Area = cellClustAreaFull{intDepthEntry};
+			sCluster(intClust).DepthBelowIntersect = sClustDepth(intDepthEntry).DepthBelowIntersect;%depth in brain
+			sCluster(intClust).DepthUPF = sClustDepth(intDepthEntry).DepthUPF;%depth in brain
+		end
 	end
 	
 	%get sources
