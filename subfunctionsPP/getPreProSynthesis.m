@@ -615,6 +615,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	vecAllSpikeTimes = sSpikes.st;  %spiketimes based on old samprate
 	vecAllSpikeClust = sSpikes.clu;
+    vecAllTempScAmps = sSpikes.tempScalingAmps;
 	vecClusters = unique(vecAllSpikeClust);
 	dblKilosortSampRateReported = sSpikes.sample_rate; %old samprate (rounded in kilosort output!)
 	fprintf('Sampling rate from Imec AP: %.6f - Sampling rate from kilosort: %.6f\n',dblRateFromMetaDataImAp,dblKilosortSampRateReported);
@@ -661,12 +662,14 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 	end
 	cellSpikes = cell(1,intClustNum);
 	vecDepth = nan(1,intClustNum);
+    cellScAmps = cell(1,intClustNum);
 	dblSampRateCorrectionKilosort = dblKilosortSampRateReported/dblSampRateImAp; %correct spiketimes with new, recalibrated rate
 	for intCluster=1:intClustNum
 		intClustIdx = vecClusters(intCluster);
 		cellSpikes{intCluster} = dblT0_CorrectionKilosort...
 			+ vecAllSpikeTimes(vecAllSpikeClust==intClustIdx)*dblSampRateCorrectionKilosort;
 		vecDepth(intCluster) = mean(vecAllSpikeDepth(vecAllSpikeClust==intClustIdx));
+        cellScAmps{intCluster} = vecAllTempScAmps(vecAllSpikeClust==intClustIdx);
 	end
 	
 	%% put all sync data in struct
@@ -702,6 +705,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		intClustIdx = vecClusters(intCluster);
 		vecSpikeTimes = cellSpikes{intCluster};
 		sOut = getClusterQuality(vecSpikeTimes,0);
+        vecTempScAmps = cellScAmps{intCluster};
+        dblFractionMiss = getFractionMiss(vecTempScAmps);
 		
 		%get responsiveness
 		ZetaP = nan(1,numel(cellStim));
@@ -770,6 +775,7 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 		sCluster(intCluster).ZetaP = ZetaP;
 		sCluster(intCluster).MeanP = MeanP;
 		sCluster(intCluster).dPrimeLR = dPrimeLR;
+        sCluster(intCluster).FractionMiss = dblFractionMiss;
 		
 		%add aditional cluster data
 		intSourceClust = find(vecTsvIds==intClustIdx);
@@ -782,8 +788,8 @@ function sSynthesis = getPreProSynthesis(sFile,sRP)
 			end
 		end
 		%msg
-		fprintf('Cell %d/%d, Z-p=%.3f,M-p=%.3f, Non-stat=%.3f, Viol=%.3f, Contam=%.0f [%s]\n',...
-			intCluster,intClustNum,nanmin(ZetaP),nanmin(MeanP),sOut.dblNonstationarityIndex,sOut.dblViolIdx1ms,vecKilosortContamination(intCluster),getTime);
+		fprintf('Cell %d/%d, Z-p=%.3f,M-p=%.3f, Non-stat=%.3f, Viol=%.3f, Contam=%.0f, FracMiss=%.0f [%s]\n',...
+			intCluster,intClustNum,nanmin(ZetaP),nanmin(MeanP),sOut.dblNonstationarityIndex,sOut.dblViolIdx1ms,vecKilosortContamination(intCluster),dblFractionMiss,getTime);
 	end
 	
 	%% load LFP data
