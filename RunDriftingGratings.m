@@ -121,9 +121,10 @@ if boolUseSGL
 	end
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strRunName,strFilename,getTime);
 	
-	%retrieve some parameters
-	intStreamNI = -1;
-	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    %retrieve some parameters
+    intStreamNI = 0; %-1;
+%     dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    dblSampFreqNI = GetStreamSampleRate(hSGL, intStreamNI, strHostAddress);
 	
 	%% check disk space available
 	strDataDirSGL = GetDataDir(hSGL);
@@ -522,12 +523,13 @@ try
 				%set switch
 				boolFirstFlip = true;
 				
-				%log NI timestamp
-				if boolUseSGL
-					dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-				else
-					dblStimOnNI = nan;
-				end
+                %log NI timestamp
+                if boolUseSGL
+%                     dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+					dblStimOnNI = GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+                else
+                    dblStimOnNI = nan;
+                end
 				
 				%log flip
 				dblStimStartFlip = dblLastFlip;
@@ -542,12 +544,13 @@ try
 		dblStimOffFlip = Screen('Flip', ptrWindow, dblLastFlip + dblStimFrameDur/2);
 		dblStimDur = dblStimOffFlip-dblStimOnFlip;
 		
-		%log NI timestamp
-		if boolUseSGL
-			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-		else
-			dblStimOffNI = nan;
-		end
+        %log NI timestamp
+        if boolUseSGL
+            % 			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+            dblStimOffNI =  GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+        else
+            dblStimOffNI = nan;
+        end
 		
 		%close textures and wait for post trial seconds
 		Screen('Close',vecTex);

@@ -126,9 +126,10 @@ if boolUseSGL
 	end
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strRunName,strFilename,getTime);
 	
-	%retrieve some parameters
-	intStreamNI = -1;
-	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    %retrieve some parameters
+    intStreamNI = 0; %-1;
+%     dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    dblSampFreqNI = GetStreamSampleRate(hSGL, intStreamNI, strHostAddress);
 	
 	%% check disk space available
 	strDataDirSGL = GetDataDir(hSGL);
@@ -466,12 +467,13 @@ try
 				vecStimFlips(intFlipCounter) = dblLastFlip;
 				vecStimFrames(intFlipCounter) = intFrame;
 				
-				%log NI timestamp
-				if boolUseSGL
-					dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-				else
-					dblStimOnNI = nan;
-				end
+                %log NI timestamp
+                if boolUseSGL
+%                     dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+					dblStimOnNI = GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+                else
+                    dblStimOnNI = nan;
+                end
 			else
 				%flip
 				dblLastFlip = Screen('Flip', ptrWindow, dblNextFlip);
@@ -495,12 +497,13 @@ try
 		%back to background
 		dblStimOffFlip = dblNextFlip;
 		
-		%log NI timestamp
-		if boolUseSGL
-			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-		else
-			dblStimOffNI = nan;
-		end
+        %log NI timestamp
+        if boolUseSGL
+            % 			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+            dblStimOffNI =  GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+        else
+            dblStimOffNI = nan;
+        end
 		
 		%% save stimulus object
 		try

@@ -131,9 +131,10 @@ if boolUseSGL
 	end
 	fprintf('SGL saving to "%s", matlab saving to "%s.mat" [%s]...\n',strRunName,strFilename,getTime);
 	
-	%retrieve some parameters
-	intStreamNI = -1;
-	dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    %retrieve some parameters
+    intStreamNI = 0; %-1;
+%     dblSampFreqNI = GetSampleRate(hSGL, intStreamNI);
+    dblSampFreqNI = GetStreamSampleRate(hSGL, intStreamNI, strHostAddress);
 	
 	%% check disk space available
 	strDataDirSGL = GetDataDir(hSGL);
@@ -378,19 +379,20 @@ try
 		%% show stimulus
 		Screen('DrawTexture',ptrWindow,ptrTex);
 		dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
-		dblStimOnFlip = dblLastFlip;
-		
-		%log NI timestamp
-		if boolUseSGL
-			dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-		else
-			dblStimOnNI = nan;
-		end
-		
-		%wait until stim period is over
-		boolUseInversion = true;
-		dblLastInversion = 0;
-		dblStimDur = 0;
+        dblStimOnFlip = dblLastFlip;
+
+        %log NI timestamp
+        if boolUseSGL
+            %                     dblStimOnNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+            dblStimOnNI = GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+        else
+            dblStimOnNI = nan;
+        end
+
+        %wait until stim period is over
+        boolUseInversion = true;
+        dblLastInversion = 0;
+        dblStimDur = 0;
 		ptrUseTex = ptrTex;
 		while dblStimDur <= (dblStimDurSecs - dblStimFrameDur*2)
 			%check for inversion
@@ -413,18 +415,19 @@ try
 		%back to background
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
-		dblStimOffFlip = dblLastFlip;
-		
-		%log NI timestamp
-		if boolUseSGL
-			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
-		else
-			dblStimOffNI = nan;
-		end
-		
-		%close texture and wait for post trial seconds
-		Screen('Close',ptrTex);
-		clear ptrTex;
+        dblStimOffFlip = dblLastFlip;
+
+        %log NI timestamp
+        if boolUseSGL
+            % 			dblStimOffNI = GetScanCount(hSGL, intStreamNI)/dblSampFreqNI;
+            dblStimOffNI =  GetStreamSampleCount(hSGL, intStreamNI, strHostAddress)/dblSampFreqNI;
+        else
+            dblStimOffNI = nan;
+        end
+
+        %close texture and wait for post trial seconds
+        Screen('Close',ptrTex);
+        clear ptrTex;
 		if exist('ptrTexInverted','var')
 			Screen('Close',ptrTexInverted);
 			clear ptrTexInverted;
